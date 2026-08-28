@@ -696,12 +696,24 @@ def _wrong_resource(resource: str) -> str | None:
     if not resource:
         return None
     canonical = mcp_oauth.mcp_resource_url()
-    # The legacy hosts' resource URLs stay valid: a pre-move client discovered its `resource` from
-    # the old domain's metadata and will keep sending it for the lifetime of the grant.
-    if any(resource.rstrip("/") == aud.rstrip("/") for aud in mcp_oauth.mcp_resource_audiences()):
+    # Host aliases and slash variants stay valid within one surface. V1 and V2 stay distinct.
+    version = mcp_oauth.mcp_resource_version(resource)
+    if version == "v2" and not get_settings().claude_connector_enabled:
+        return "the Claude catalog connector is not enabled on this deployment"
+    if version is not None:
         return None
-    return (f"this server issues tokens for {canonical} only — use the `resource` value from "
+    return (f"this server issues tokens for {canonical} or {mcp_oauth.mcp_resource_url('v2')} only "
+            "— use the `resource` value from "
             f"/.well-known/oauth-protected-resource")
+
+
+def _effective_mcp_resource(resource: str, scope: str) -> str:
+    """Use an explicit resource, or the V2 scope marker when hosted Claude omits it."""
+    if resource:
+        return mcp_oauth.normalize_resource(resource)
+    requested_scopes = set((scope or "").split())
+    version = "v2" if mcp_oauth.DIRECTORY_SCOPE in requested_scopes else "v1"
+    return mcp_oauth.mcp_resource_url(version)
 
 
 def _same_mcp_resource(a: str, b: str) -> bool:
@@ -712,8 +724,9 @@ def _same_mcp_resource(a: str, b: str) -> bool:
     na, nb = mcp_oauth.normalize_resource(a), mcp_oauth.normalize_resource(b)
     if a == b or na == nb:
         return True
-    auds = mcp_oauth.mcp_resource_audiences()
-    return na in auds and nb in auds
+    a_version = mcp_oauth.mcp_resource_version(na)
+    b_version = mcp_oauth.mcp_resource_version(nb)
+    return a_version is not None and a_version == b_version
 
 
 async def _authorize_request(client_id: str, redirect_uri: str, response_type: str,
@@ -746,7 +759,7 @@ def _redirect_refusal(error: str, description: str) -> OAuthServerError:
 
 async def prepare_oauth_authorization(
     *, client_id: str, redirect_uri: str, response_type: str, code_challenge: str,
-    code_challenge_method: str, resource: str, session_cookie: str,
+    code_challenge_method: str, resource: str, scope: str, session_cookie: str,
 ) -> OAuthAuthorizationView | None:
     async with database.session_maker() as db:
         client = await _authorize_request(
@@ -760,7 +773,8 @@ async def prepare_oauth_authorization(
             raise _redirect_refusal(
                 "invalid_request", "PKCE with code_challenge_method=S256 is required",
             )
-        if (bad_target := _wrong_resource(resource)) is not None:
+        effective_resource = _effective_mcp_resource(resource, scope)
+        if (bad_target := _wrong_resource(effective_resource)) is not None:
             raise _redirect_refusal("invalid_target", bad_target)
 
         user = await _user_from_session(session_cookie, db)
@@ -806,7 +820,8 @@ async def approve_oauth_authorization(
         if decision != "allow":
             # Cancel is a real answer and the client is entitled to hear it, rather than hang.
             raise _redirect_refusal("access_denied", "the user declined")
-        if (bad_target := _wrong_resource(resource)) is not None:
+        effective_resource = _effective_mcp_resource(resource, scope)
+        if (bad_target := _wrong_resource(effective_resource)) is not None:
             raise _redirect_refusal("invalid_target", bad_target)
         if not code_challenge or code_challenge_method != "S256":
             raise _redirect_refusal(
@@ -825,7 +840,7 @@ async def approve_oauth_authorization(
         code = OAuthCode(
             code=_secrets.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
             redirect_uri=redirect_uri, code_challenge=code_challenge,
-            resource=mcp_oauth.normalize_resource(resource) if resource else mcp_oauth.mcp_resource_url(),
+            resource=effective_resource,
             scope=scope,
             expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(seconds=AUTH_CODE_TTL_S))

@@ -29,6 +29,9 @@ os.environ["TREG_EMAIL_DEV_MODE"] = "true"  # tests need the returned OTP code (
 os.environ["TREG_RESEND_API_KEY"] = ""  # never fire a real Resend send from the test suite (send_otp/send_invite skip when empty)
 os.environ["TREG_RUN_ALLOWED_BINS"] = "sh,echo,true,false,cat,sleep,treg-nonexistent-bin-xyz"  # allow the test CLIs for --server run tests
 os.environ["TREG_PROXY_SSRF_CHECK"] = "false"
+# The production default is OFF. The established connector tests and committed route snapshots test
+# the enabled product surface; dedicated tests below also prove the disabled deployment shape.
+os.environ["TREG_CLAUDE_CONNECTOR_ENABLED"] = "true"
 # Blank every registry credential so the suite NEVER inherits a developer's real .env. Settings
 # reads .env, and a real env var beats it — so without this, a machine with Google/X/LinkedIn
 # credentials configured runs a different suite than CI, and provider tests pass or fail depending

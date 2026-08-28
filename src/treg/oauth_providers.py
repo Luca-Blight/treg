@@ -322,8 +322,10 @@ class OAuthProvider:
 
 
 # ---- the registry ------------------------------------------------------------------------
-# One Google OAuth client covers Search Console, Analytics, Ads and Business Profile — but each is
-# registered separately so a connect only ever requests its own capability's scopes.
+# One shared Google OAuth client covers Search Console, Analytics, Business Profile, Tag Manager
+# and YouTube — but each is registered separately so a connect only ever requests its own
+# capability's scopes. Google Ads is the exception: its developer token is welded to a dedicated
+# Cloud project, so GOOGLE_ADS below names the separate google_ads_client_id pair.
 
 GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     service="google-search-console",
@@ -450,6 +452,58 @@ GOOGLE_BUSINESS_PROFILE = OAuthProvider(
     discover_key="accounts",
     discover_id_field="name",
     discover_label_field="accountName",
+)
+
+_GTM_READ = [
+    "https://www.googleapis.com/auth/tagmanager.readonly",
+]
+_GTM_WRITE = [
+    *_GTM_READ,
+    "https://www.googleapis.com/auth/tagmanager.edit.containers",
+]
+
+GOOGLE_TAG_MANAGER = OAuthProvider(
+    service="google-tag-manager",
+    display_name="Google Tag Manager",
+    auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
+    token_uri="https://oauth2.googleapis.com/token",
+    # Three honest tiers mirror GTM's release workflow. `write` can prepare changes in a workspace
+    # but cannot turn them into a live release; `manage` adds version creation and publishing.
+    # Deliberately absent: delete.containers, manage.users and manage.accounts. An agent that can
+    # configure and publish tags does not also need authority to erase the whole container, change
+    # who can access it, or administer the account.
+    scopes={
+        "read": _GTM_READ,
+        "write": _GTM_WRITE,
+        "manage": [
+            *_GTM_WRITE,
+            "https://www.googleapis.com/auth/tagmanager.edit.containerversions",
+            "https://www.googleapis.com/auth/tagmanager.publish",
+        ],
+    },
+    client_id_setting="google_client_id",
+    client_secret_setting="google_client_secret",
+    category="Advertising",
+    summary=(
+        "Audit tags, triggers and variables, prepare changes in a workspace, and publish a reviewed container version."
+    ),
+    base_url="https://tagmanager.googleapis.com",
+    docs_url="https://developers.google.com/tag-platform/tag-manager/api/v2",
+    examples=(
+        {"method": "GET", "path": "tagmanager/v2/accounts",
+         "note": "Every GTM account this Google user can access. Choose an account, then list its containers."},
+    ),
+    resource_label="account",
+    probe_path="/tagmanager/v2/accounts",
+    discover_path="/tagmanager/v2/accounts",
+    discover_key="account",
+    discover_id_field="path",
+    discover_label_field="name",
+    resource_example={
+        "method": "GET", "path": "tagmanager/v2/{resource}/containers",
+        "note": "List the GTM containers in your selected account “{resource_name}”. Choose a container "
+                "before listing its workspaces, tags, triggers or variables.",
+    },
 )
 
 GOOGLE_ADS = OAuthProvider(
@@ -1511,6 +1565,43 @@ AVIATO = OAuthProvider(
     probe_path="/billing/balance",
 )
 
+EXA = OAuthProvider(
+    service="exa",
+    display_name="Exa",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Exa API key",
+    # Exa takes the key as an x-api-key header (or Authorization: Bearer). Header, so the key never
+    # lands in a logged URL.
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://dashboard.exa.ai/api-keys",
+    setup_action_label="Get your Exa API key",
+    setup_steps=(
+        "Sign in to the Exa dashboard and open API Keys.",
+        "Create a key and copy it.",
+    ),
+    setup_note=(
+        "Every call is metered in dollars from your Exa balance (search $7/1k, page contents $1/1k, "
+        "answer $5/1k). Connecting spends one cached contents call, $0.001."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary=(
+        "Semantic web search, people/company/news/publication search, page contents, similar links "
+        "and cited answers over Exa's own web index."
+    ),
+    base_url="https://api.exa.ai",
+    docs_url="https://docs.exa.ai/reference/getting-started",
+    # Exa has no free account route (/v0/teams/me answers 404 on every key, 2026-08-27). The cheapest
+    # authenticated call is /contents on a cached public page: $0.001, 401 INVALID_API_KEY on a bad key.
+    probe_path="/contents",
+    probe_method="POST",
+    probe_json={"urls": ["https://example.com"], "text": {"maxCharacters": 1}},
+)
+
 
 # ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
 # Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
@@ -2307,13 +2398,14 @@ PINTEREST_ADS = OAuthProvider(
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
-        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
+        GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_TAG_MANAGER,
+        GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
         SCRAPECREATORS,
         # SEO API-key providers
-        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
+        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT, EXA,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI, CRUSTDATA, AVIATO,
         COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
@@ -2382,6 +2474,15 @@ SCOPE_LABELS: dict[str, str] = {
         "Manage your business listings, reviews and posts",
     "https://www.googleapis.com/auth/adwords":
         "Read campaigns, spend and performance, and manage campaigns",
+    # Google — Tag Manager
+    "https://www.googleapis.com/auth/tagmanager.readonly":
+        "View your Tag Manager accounts, containers, workspaces and configuration",
+    "https://www.googleapis.com/auth/tagmanager.edit.containers":
+        "Create and change tags, triggers, variables and other workspace configuration",
+    "https://www.googleapis.com/auth/tagmanager.edit.containerversions":
+        "Create and manage Tag Manager container versions",
+    "https://www.googleapis.com/auth/tagmanager.publish":
+        "Publish Tag Manager container versions to your sites and apps",
     # Google — YouTube
     "https://www.googleapis.com/auth/youtube.readonly":
         "See your channel, videos and playlists",

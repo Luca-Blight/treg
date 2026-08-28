@@ -57,6 +57,7 @@ from .types import (
     CallInput,
     FinalizationState,
     GatewayFailed,
+    ResolutionFailed,
     UpstreamRequest,
     UpstreamResponse,
 )
@@ -272,20 +273,29 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
-    try:
-        target = await _await_before_reserve(
-            resolve_call_target(rest, caller, _resolve_call), request, call_ref)
-        request.context.target = target
-        tool, upstream_url = target.tool, target.upstream
-    except CallFailure as exc:
-        # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
-        # Only the 404 falls through, so an org tool with the same name always wins.
-        ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
+    ep: dict | None = None
+    if request.context.input.catalog_only:
+        # This reviewed surface accepts only a catalog id. A same-named team tool cannot shadow it.
+        ep = _catalog_endpoint_for(rest)
         if ep is None:
-            raise
-        if (isinstance(exc.detail, dict)
-                and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
-            own_tool_miss = exc.detail
+            raise ResolutionFailed("target_not_found", status_code=404, detail=(
+                f"unknown catalog endpoint {rest!r} — use catalog_search for a valid endpoint id"))
+    else:
+        try:
+            target = await _await_before_reserve(
+                resolve_call_target(rest, caller, _resolve_call), request, call_ref)
+            request.context.target = target
+            tool, upstream_url = target.tool, target.upstream
+        except CallFailure as exc:
+            # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
+            # Only the 404 falls through, so an org tool with the same name always wins.
+            ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
+            if ep is None:
+                raise
+            if (isinstance(exc.detail, dict)
+                    and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
+                own_tool_miss = exc.detail
+    if ep is not None:
         try:
             mk = await _await_before_reserve(resolve_marketplace_target(
                 ep,

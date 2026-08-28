@@ -39,6 +39,7 @@ class CallInputContract:
     body: RequestBodyPort
     caller: object
     client_ip: str
+    catalog_only: bool = False
 
 
 @dataclass
@@ -83,6 +84,7 @@ def test_call_dto_and_port_shapes_are_frozen() -> None:
     assert [field.name for field in fields(CallInputContract)] == [
         "method", "raw_rest", "raw_headers", "query_items", "raw_query", "body", "caller",
         "client_ip",
+        "catalog_only",
     ]
     assert [field.name for field in fields(UpstreamResponseContract)] == [
         "status", "raw_headers", "body_stream", "close",

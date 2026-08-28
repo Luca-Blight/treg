@@ -9,6 +9,7 @@ sources:
   - src/treg/db.py
   - src/treg/email.py
   - src/treg/audit.py
+  - scripts/dev-local.sh
   - render.yaml
 related:
   - architecture/data-model.md
@@ -144,6 +145,14 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
 - `proxy_ssrf_check` (`TREG_PROXY_SSRF_CHECK`) — the **call-time SSRF guard** on the proxy: resolve the
   upstream host and refuse an internal/private target. **On by default**; only the test suite disables it
   (its upstream is an in-process ASGI transport, not real DNS).
+- `claude_connector_enabled` (`TREG_CLAUDE_CONNECTOR_ENABLED`) — enables the catalog-only Claude
+  connector at `/mcp/v2/`. The default is false. Keep it false during normal deployment. Set it to
+  true for a controlled test window. Set it back to false to disable V2 without changing the existing
+  `/mcp/` connector.
+- `connect_demo_enabled` (`TREG_CONNECT_DEMO_ENABLED`) — enables the developer OAuth test page and
+  callback at `/connect-demo`. The default is false, and both routes return 404 when it is false. The
+  local development script enables it. Staging can enable it explicitly for controlled tests; leave
+  it false in production.
 - `intercom_app_id` / `intercom_secret` (`TREG_INTERCOM_APP_ID` / `TREG_INTERCOM_SECRET`) — support
   chat via the **Intercom Messenger** (treg's own workspace). Empty app_id = the widget is OFF
   everywhere — `/meta`
@@ -295,6 +304,15 @@ injects the provider metadata pin `x-api-version: 2025-11-01`; Aviato uses its n
 The `fx.yaml` rates are the replacement costs configured on the accounts: Crustdata $150/500 credits
 ($0.30), Aviato $10/1,000 credits ($0.01). Crustdata settles from `X-Credits-Used`; Aviato fixed and
 conditional prices are derived from the authenticated rate card plus request/response shape.
+
+## Exa platform key (2026-08-27)
+
+`TREG_PLATFORM_KEY_EXA` is Jason's own Exa API key (dollar-metered, $20 signup credit + $10/month
+free tier; top up on the Exa dashboard). Add `exa` to `TREG_PLATFORM_PROVIDERS` to serve its nine
+routes on tier 4. Binding is the plain `x-api-key` header; no `fx.yaml` row because Exa prices in
+USD. Platform billing settles every call from the response's `costDollars.total`, so a 20-result
+search or a contents call with three content types bills exactly what Exa charged, not the catalog
+base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 on a 12-result search.
 
 ## A db.py change needs a Postgres-shaped deploy plan
 

@@ -3190,6 +3190,1200 @@ USE_CASE_PAGES["news-for-a-ticker"] = {
 }
 
 
+USE_CASE_PAGES["live-crypto-prices-and-history"] = {
+    "label": "Live crypto prices and history",
+    "sentence": "CoinGecko API and Tiingo through one key: a crypto price API for live prices and history, per call",
+    "title": "CoinGecko API for {agent}: crypto prices and history | treg.to",
+    "lede": (
+        "Give your agent a coin and get its price back as data: the current price in any quote "
+        "currency for a whole watchlist in one call, or the price, market cap and volume series "
+        "over a day, a month or the coin's whole life. CoinGecko and Tiingo answer through one "
+        "treg.to key, from {cheapest} at the provider's own rate with no markup, and there is no "
+        "CoinGecko key to paste into a spreadsheet, a dashboard or a device. What comes back is "
+        "an aggregate price, not an order book, and it is polled, not streamed."),
+    "prompt": "Using treg, get the current price and 24h change for bitcoin, ethereum and solana in "
+              "USD in one call, then pull the last 30 days of daily prices for each and tell me "
+              "which one moved most against its 30-day average. Show me the price per call first.",
+    "prompt_why": [
+        ("Use CoinGecko coin ids", "The call takes ids like bitcoin and ethereum, not tickers. BTC is not a coin id, and several tokens share a symbol."),
+        ("Ask for the whole watchlist at once", "Current price takes a comma-separated list of coins and currencies. One call for fifty coins costs the same as one call for one."),
+        ("Say the window", "History takes 1, 7, 30, 365 or max days, and the granularity follows the window: five-minute points under a day, hourly under 90 days, daily beyond."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a daily refresh of a hundred coins will spend."),
+    ],
+    "result_noun": "price",
+    "result_image": None,
+    "q_cheapest": "Which crypto price API is cheapest per call?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do CoinGecko and Tiingo compare?",
+    "what_is_heading": "What is the CoinGecko API?",
+    "what_is": (
+        "The CoinGecko API is the query interface to CoinGecko's aggregate market data: a "
+        "current price for any listed coin in any quote currency, with market cap, 24h volume and "
+        "24h change on request, and a history endpoint that returns the price, market cap and "
+        "volume series for a coin over a window you choose. The number is an aggregate across "
+        "the exchanges CoinGecko tracks, which is what a dashboard or an agent wants and what a "
+        "trader on one exchange does not. Tiingo is the other provider here and answers a "
+        "different shape: open, high, low, close and volume bars for a pair like btcusd, at a "
+        "resample frequency from a minute to a day."),
+    "notes": [
+        "The rate is per request, not per coin. CoinGecko bills one credit for a successful "
+        "call whatever the endpoint, and the current-price call takes a list of coin ids and a "
+        "list of quote currencies, so the forum's \"it only returns 28 of my 131 coins\" is a "
+        "pagination problem on a different endpoint, not a ceiling here. On treg.to's own key "
+        "that credit is metered from your team's balance at the provider's rate; on your own "
+        "CoinGecko key nothing is metered and the plan's limits are between you and CoinGecko.",
+        "History depth is CoinGecko's, and the page will not stretch it. The series call "
+        "returns per-coin prices over 1, 7, 30, 365 or max days with granularity set by the "
+        "window, and the snapshot call returns one coin's price, market cap and volume on a "
+        "date. Neither is a total-market-cap history and neither is a top-N-by-day table; an "
+        "agent builds that by looping coins, one metered call each. Tiingo's bars are the "
+        "exchange-style alternative, served free on treg.to's key at 20 calls a day per team, "
+        "then on your own Tiingo key.",
+        "The price is an aggregate and it passes through unchanged. CoinGecko's market cap and "
+        "supply figures are its own, and the research has real examples of both being wrong "
+        "for small tokens; treg.to relays the answer verbatim and adds no consensus, no spread "
+        "and no second opinion. If a number matters, pull the Tiingo bar for the same pair and "
+        "let the agent compare, which is a comparison you make, not one treg.to makes for you. "
+        "Nothing here is a websocket, an order book or an exchange connection.",
+    ],
+    "faq": [
+        ("Is the CoinGecko API free through treg.to?",
+         "Not free, cheap: one CoinGecko credit per successful call, metered from your team's "
+         "prepaid balance at CoinGecko's own rate with $0.000 added. Each new team gets $1.00 to "
+         "start, which is a lot of price calls. Register your own CoinGecko key and the calls "
+         "are never metered."),
+        ("How far back does the history go?",
+         "As far as CoinGecko's series for that coin goes, with days set to max, at daily "
+         "granularity. Sub-daily points come only inside the recent windows: five-minute under "
+         "a day, hourly under 90 days. Tiingo's bars go down to one minute for the pairs it "
+         "carries, on its own history."),
+        ("Can my agent stream prices or trade on them?",
+         "No. Both providers here answer a request with a number; there is no websocket, no "
+         "order book and no exchange execution. An agent that refreshes a watchlist every few "
+         "minutes is the fit; a bot that needs a tick feed is not."),
+        ("Which provider should my agent use?",
+         "CoinGecko for coin ids, quote currencies and the aggregate market view; Tiingo for "
+         "OHLCV bars on a pair. treg.to shows both with the rate and the measured success side "
+         "by side; it compares, it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Crypto data threads are two-thirds noise: of the ~170 Reddit and X posts read in August "
+        "2026, most were token shills, subscription resellers and two 'finally found a free "
+        "API' posts with the same arc in two subreddits. These five are people building "
+        "something on a price feed."),
+    "voices": [
+        ("The free tier's rate limit is the first thing that breaks",
+         "There I ran into a problem with Rate limit from the Coingecko api itself.",
+         "r/coingecko", "https://www.reddit.com/r/coingecko/comments/1cibixi/google_sheet_not_working_rate_limits/",
+         "That poster was calling from Google Sheets, where every request leaves a shared "
+         "Google IP. Through treg.to the call is one metered request on a paid key, a whole "
+         "watchlist per call, and the sheet, the dashboard or the device holds no key at all."),
+        ("Twelve months is where the free history stops",
+         "CoinGecko only goes back 12 months, but I was hoping to go back further",
+         "r/CryptoCurrency", "https://www.reddit.com/r/CryptoCurrency/comments/1kq99z1/historic_market_cap_data/",
+         "Per coin, the series call with days set to max returns the daily history CoinGecko "
+         "holds, on the paid key treg.to serves it from. That poster wanted total market cap "
+         "history, which is not this endpoint, and the page will not pretend it is."),
+        ("Free is for testing; what happens at scale is the question",
+         "Free APIs are fine for testing but I want something that scales.",
+         "r/ethdev, 6 points", "https://www.reddit.com/r/ethdev/comments/1rf4ehy/best_crypto_market_data_api_for_real_time/",
+         "Scale here means one credit a call, metered, with no plan tier to jump when the "
+         "dashboard grows. What it does not mean is streaming: the feed is polled, and a "
+         "bot that needs every tick is on a different product."),
+        ("Nobody's number agrees with anybody else's",
+         "CoinGecko API shows wrongs market capital data for 700M !",
+         "r/SmoothLovePotion", "https://www.reddit.com/r/SmoothLovePotion/comments/sq6odb/coingecko_api_shows_wrongs_market_capital_data/",
+         "No comparison table can answer that. The price is the provider's aggregate and "
+         "treg.to relays it as is. The cheap check is to pull the same pair as a Tiingo bar "
+         "and let the agent flag the gap, which it can do in the same prompt."),
+        ("The agent wrote the rate limiter",
+         "until I had ChatGPT incorporate rate-limiting given the 500 rate limit/min",
+         "r/api_connector", "https://www.reddit.com/r/api_connector/comments/1dg1of5/coingecko_api_x_mixed_analytics_crypto_tracker/",
+         "The agent already does the plumbing. What it lacks is the key and the price, and one "
+         "setup line gives it both: the call, the rate shown before it spends, and no "
+         "CoinGecko token in its context."),
+    ],
+    "related": ("Current quote for a ticker", "Daily price history",
+                "Coins trending right now", "News for a ticker"),
+}
+
+
+USE_CASE_PAGES["employee-reviews-of-a-company"] = {
+    "label": "Employee reviews of a company",
+    "sentence": "Glassdoor API and Glassdoor scraper, through one key: a company's employee reviews as rows your agent can read",
+    "title": "Glassdoor API for {agent}: employee reviews as data | treg.to",
+    "lede": (
+        "Give your agent a company and get its employee reviews back as rows: rating, title, "
+        "pros, cons, date and whether the reviewer still works there. Glassdoor closed its "
+        "partner API, so the two providers here read the reviews for you, by company website "
+        "or by Glassdoor page URL, from {cheapest} at the provider's own rate with no markup. "
+        "There is no Glassdoor login, no bot wall and no give-to-get review to write first. "
+        "What comes back is what Glassdoor shows; nobody here vets the reviewers."),
+    "prompt": "Using treg, pull the last 100 employee reviews for canva.com, show me the price "
+              "first, then split them into current and former staff, give me the three "
+              "complaints that recur most in the cons, and flag any month where the rating "
+              "dropped sharply.",
+    "prompt_why": [
+        ("Give the website, or the Glassdoor URL", "Akta keys on the company's website; Bright Data on the Glassdoor page URL. Say which one you have and the agent picks the row that takes it."),
+        ("Ask for a count you can afford", "Akta bills per 50 reviews returned and defaults to 10. A hundred reviews is a few cents; every review a big employer has is not."),
+        ("Split current from former", "Each row carries the reviewer's status. The two groups tell different stories, and a mean over both hides both."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a list of fifty companies will spend."),
+    ],
+    "result_noun": "review",
+    "result_image": None,
+    "q_cheapest": "Which Glassdoor reviews provider is cheapest per review?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do Akta and Bright Data compare?",
+    "what_is_heading": "Is there a Glassdoor API?",
+    "what_is": (
+        "Not one you can sign up for. Glassdoor ran a partner API and stopped taking new "
+        "partners, so the phrase on the forums, Glassdoor API, now means one of two things: a "
+        "scraper you run yourself against pages that block plain requests and render reviews "
+        "through GraphQL, or a data provider that does the reading and returns rows. The two "
+        "providers here are the second kind. Akta returns employee reviews and ratings for a "
+        "company by its website, so a list of company names and domains is enough; Bright "
+        "Data's Glassdoor reviews dataset takes the Glassdoor company page URL and returns "
+        "the records, pay per record delivered."),
+    "notes": [
+        "The input decides the provider. Akta takes a company website, which is what a "
+        "spreadsheet of targets usually has, and returns reviews in pages of up to 100. Bright "
+        "Data wants the Glassdoor page URL itself, and finding that URL from a company name is "
+        "the step the forum's scrapers kept failing at. If you have websites, start at Akta; "
+        "if you have Glassdoor URLs, either row works.",
+        "Neither endpoint has been called live through treg.to yet, and the page says so "
+        "rather than hiding it. Akta's rate is documented as 1.5 credits per 50 reviews, Bright "
+        "Data's as $1.50 per 1,000 records on a pay-per-success basis, and both are the "
+        "provider's own rate with $0.000 added. Bright Data's scraper answers within a minute "
+        "for a handful of URLs and falls back to a snapshot id past that, so a long list is a "
+        "job to poll, not a single call.",
+        "Rows are what Glassdoor shows, not what is true. The research has retail investors "
+        "using review scrapes for due diligence and hiring managers reading the cons before an "
+        "offer, and it also has the same people asking how many reviews are bots or bought. No "
+        "provider here answers that. What the rows do carry is date, status and sub-ratings, "
+        "which is enough for an agent to weight recent reviews, separate current staff from "
+        "former, and show its working.",
+    ],
+    "faq": [
+        ("Does Glassdoor have a public API?",
+         "No. The partner programme stopped accepting new partners, which is why the people "
+         "who asked for access on the forums were turned away. The providers here read the "
+         "public review pages for you and return rows; you never fetch glassdoor.com yourself."),
+        ("Do I need a Glassdoor account?",
+         "No. Both calls run on treg.to's own key and return review text without a login, so "
+         "the sign-up wall that asks you to review your own employer first does not apply to "
+         "the agent. Register your own Akta or Bright Data key and the calls are never metered."),
+        ("Can it tell me which reviews are fake?",
+         "No, and this page will not pretend otherwise. The rows are Glassdoor's, unvetted. "
+         "Use the date and the current-or-former flag to weight them, and treat a cluster of "
+         "five-star reviews in one week as a question, not an answer."),
+        ("Which provider should my agent use?",
+         "The one whose input you hold: website for Akta, Glassdoor URL for Bright Data. "
+         "treg.to shows both with the rate side by side; it compares, it does not route or "
+         "fail over for you."),
+    ],
+    "voices_intro": (
+        "Glassdoor threads split in two: people who want the data and people who hate the "
+        "sign-up wall. Of the ~165 Reddit and X posts read in August 2026, about 25 were "
+        "organic and on the job; the vendor share was scraper launches, one identical "
+        "cross-post in two subreddits, and a review-removal service. These five are the "
+        "people doing the work."),
+    "voices": [
+        ("The API everyone reaches for first is closed",
+         "I was planning to use Glassdoor’s API to gather this data, but unfortunately, they’ve stopped API partnerships for now.",
+         "r/learnprogramming", "https://www.reddit.com/r/learnprogramming/comments/1j8k0ji/glassdoor_api_access_denied_any_alternatives_for/",
+         "Still closed, and the page does not know a way in. What it does have is two "
+         "providers that return the reviews as rows without a Glassdoor app, priced per "
+         "review or per record, with the rate shown before the call."),
+        ("A company name is not a Glassdoor URL",
+         "For Glassdoor it is more complicated. I cannot just add the company website to the Glassdoor url to locate and scrape the correct page",
+         "r/learnpython", "https://www.reddit.com/r/learnpython/comments/wcxmdk/glassdoor_web_scraping/",
+         "That is the exact input Akta takes: the company website, no Glassdoor URL needed. "
+         "A dataframe of names and domains is the whole job, one call per company."),
+        ("Is it even worth trying to scrape it for free?",
+         "is it possible to scrape Glassdoor reviews (completely free). I don’t want to waste my time if I can’t.",
+         "r/webscraping", "https://www.reddit.com/r/webscraping/comments/13ef7yh/glassdoor_reviews/",
+         "The honest answer from the same thread is that plain requests get a bot page. "
+         "Through treg.to it is not free, it is a fraction of a cent per review at the "
+         "provider's rate, and the first dollar is on the house for a new team."),
+        ("Nobody knows how many of the reviews are real",
+         "there is not much transparency about how many reviews on the website are made by nefarious actors (e.g. bots).",
+         "r/RKLB, 13 points", "https://www.reddit.com/r/RKLB/comments/143o18g/glassdoor_reviews_vacancies_analysis/",
+         "No comparison table can answer that, and neither provider vets a reviewer. What "
+         "an agent can do is what that investor did by hand: pull the rows, weight by date "
+         "and status, and compare the shape against peers."),
+        ("The rating is a hiring signal, whether or not it is fair",
+         "developers are keen to weed out companies with ratings like this.",
+         "r/cscareerquestions, 1,108 points", "https://www.reddit.com/r/cscareerquestions/comments/sofqaq/my_ceos_rating_on_glassdoor_is_so_bad_that_all_we/",
+         "Which is why a list of target companies with their recent reviews is worth a few "
+         "cents a row to a recruiter, a seller or a candidate. The agent reads the cons; "
+         "the page only gets it the rows."),
+    ],
+    "related": ("Job postings across companies", "Enrich a company from its domain",
+                "A business's reviews", "Hiring, headcount and news signals"),
+}
+
+
+USE_CASE_PAGES["keywords-a-domain-bids-on"] = {
+    "label": "Keywords a domain bids on",
+    "sentence": "Competitor PPC keywords: the Google Ads keywords a domain bids on, with CPC, from SpyFu or Semrush",
+    "title": "Competitor PPC keywords API: what a domain bids on | treg.to",
+    "lede": (
+        "Give your agent a competitor's domain and get the Google Ads keywords it bids on "
+        "back as rows: keyword, search volume, cost per click, estimated monthly spend and who "
+        "else bids on it. SpyFu and Semrush answer through one treg.to key, from {cheapest} "
+        "at the provider's own rate with no markup, priced per row rather than per seat. Both "
+        "are estimates built from a crawl of the ads they saw, not Google's own numbers, and "
+        "the page says so before the comparison does."),
+    "prompt": "Using treg, get the top 200 Google Ads keywords that competitor.com bids on in "
+              "the US, show me the price first, then drop their brand terms and give me the "
+              "twenty highest-volume keywords we are not bidding on, with CPC.",
+    "prompt_why": [
+        ("Give a domain, and a country", "The call takes the advertiser's domain and a country code. A brand that advertises in five markets has five different keyword lists."),
+        ("Cap the rows", "SpyFu's page size defaults to 5 and goes to 10,000, and every row is billed. Two hundred rows is a strategy; ten thousand is a bill."),
+        ("Strip their brand", "Every advertiser bids on its own name. Ask the agent to drop those rows before it ranks the rest, or the top of the list is noise."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a full pull across ten competitors will spend."),
+    ],
+    "result_noun": "keyword",
+    "result_image": None,
+    "q_cheapest": "Which competitor PPC keywords API is cheapest per row?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do SpyFu and Semrush compare?",
+    "what_is_heading": "How do you find the keywords a competitor bids on?",
+    "what_is": (
+        "Google will not tell you. Auction Insights shows which advertisers overlapped with "
+        "your campaign, not which keywords they bought, and Keyword Planner's competition "
+        "index counts your own ads. The third-party answer is a crawl: SpyFu and Semrush "
+        "sample Google results, record which domains' ads appear against which queries, and "
+        "estimate volume, CPC and spend from there. That is what a competitor PPC keywords "
+        "API returns, one domain at a time, and why two tools will not agree with each other "
+        "or with the advertiser's own account."),
+    "notes": [
+        "SpyFu bills per row and defaults to five. At $2.00 per 1,000 rows, a first look at a "
+        "domain is a fraction of a cent and a ten-thousand-row dump is $20, so the page size "
+        "is the cost dial. Rows carry the keyword, search volume, ranking difficulty, monthly "
+        "clicks, broad and exact CPC, estimated monthly cost and the count of competing "
+        "advertisers, and the endpoint has answered every call treg.to has measured so far.",
+        "Semrush prices in API units bought up front, 20 per line on the current view and "
+        "100 per line for a past date, and publishes no dollar rate for a unit, so the page "
+        "prints no price for it. Its rows add the position and the live ad copy, which SpyFu "
+        "does not carry. Send a display limit: the default is 10,000 lines, and an agent that "
+        "loops without one spends real units. It has not been called live through treg.to "
+        "yet.",
+        "Both are crawl estimates, and the research is full of the consequences: a local "
+        "advertiser missing entirely, a tool showing one bidder on a keyword that had "
+        "several, two tools disagreeing on a domain's traffic by a factor of four. No "
+        "comparison table settles which is right for your niche. The cheap test is to pull "
+        "the same domain from both and treat the overlap as the confident set.",
+    ],
+    "faq": [
+        ("Is this Google's own data?",
+         "No. Google publishes no per-keyword view of another advertiser's account. SpyFu and "
+         "Semrush estimate it from the ads their crawls observed, which is why the monthly cost "
+         "column is an estimate and a competitor's max bid is not on the page at all."),
+        ("Do I need a SpyFu or Semrush subscription?",
+         "Not for SpyFu: treg.to serves it on its own key, metered per row from your team's "
+         "balance at SpyFu's rate with $0.000 added. Semrush's API units come with a Semrush "
+         "plan, so that row runs on your own Semrush key, never metered by treg.to."),
+        ("Can I see a competitor's budget or impression share?",
+         "No. The rows carry an estimated monthly spend per keyword, built from volume, CPC and "
+         "observed position. Impression share, bids and search terms Google does not disclose "
+         "are not in any third-party tool, and this page will not imply they are."),
+        ("Which provider should my agent use?",
+         "SpyFu for a priced, verified per-row pull; Semrush when you hold a plan and want the "
+         "ad copy. treg.to shows both side by side with the rate and the measured success; it "
+         "compares, it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "PPC tool threads are heavily seeded: of the ~95 distinct Reddit and X posts read in "
+        "August 2026, one vendor's cluster ran to seven posts across three subreddits and two "
+        "listicles were posted twice each. These five are advertisers and SEOs asking on "
+        "their own behalf."),
+    "voices": [
+        ("Google's own report does not answer the question",
+         "Auction Insights only provides a campaign summary, which lacks detail.",
+         "r/PPC", "https://www.reddit.com/r/PPC/comments/1gdyefi/see_if_competitor_is_bidding_on_a_specific/",
+         "It names the overlapping advertisers and stops. The per-domain rows here are the "
+         "detail it lacks: which keywords, at what estimated CPC, against how many other "
+         "bidders, one call per competitor."),
+        ("The estimate missed the other bidders",
+         "I tried Spyfu, and it was a little inaccurate. It showed me that only my brand was bidding on a specific keyword",
+         "r/PPC", "https://www.reddit.com/r/PPC/comments/1gdyefi/see_if_competitor_is_bidding_on_a_specific/",
+         "A crawl only records the ads it saw, and small or local advertisers fall through. "
+         "No table fixes that. Pull the same keyword from both providers and treat a bidder "
+         "both report as real; treat one nobody reports as unknown, not absent."),
+        ("Do you have to buy both tools?",
+         "Given Spyfu is only $9/month, do you think there is a case to be made to just purchase both?",
+         "r/PPC, 35 points", "https://www.reddit.com/r/PPC/comments/wmvyd4/spyfu_vs_semrush_for_ppc/",
+         "Through treg.to nobody buys either seat. SpyFu is metered per row on treg.to's key; "
+         "Semrush runs on a plan you already hold. Calling both for one domain costs rows, "
+         "not subscriptions."),
+        ("The two tools do not agree with each other",
+         "one site I put into SEMrush shows 12.6k in traffic while Spyfu shows 3.2k",
+         "r/bigseo, 8 points", "https://www.reddit.com/r/bigseo/comments/4b4gwi/could_someone_explain_to_me_semrush_numbers_vs/",
+         "Different crawls, different models, different numbers, and neither is Google's. "
+         "The page shows the two side by side and leaves the choice to you; it does not "
+         "average them or pick a winner."),
+        ("The subscriptions are priced for agencies, not for one question",
+         "I wanted to do some keyword research yesterday and was surprised by how expensive Ahrefs / Semrush were.",
+         "r/TechSEO, 40 points", "https://www.reddit.com/r/TechSEO/comments/1r7qifp/open_source_seo_tool_that_uses_your_own/",
+         "One competitor's keyword list is a per-row call, a fraction of a cent for the first "
+         "page, with the rate printed before the agent spends it. The seat-priced tools "
+         "stay on their own sites, linked, not restated."),
+    ],
+    "related": ("Ads a competitor is running now", "Keywords a domain ranks for",
+                "Your own campaign performance", "Keyword volume, CPC and competition"),
+}
+
+
+USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
+    "label": "Backlink profile of a domain",
+    "sentence": "Backlink API: the backlink profile of a domain from Moz, DataForSEO, Serpstat, SE Ranking, Majestic or Semrush, per call",
+    "title": "Backlink API: backlink profile of a domain, {n} providers | treg.to",
+    "lede": (
+        "Give your agent a domain and get its backlink profile back as one row: total "
+        "backlinks, referring domains, follow and nofollow split, the vendor's authority score "
+        "and, from some providers, the spam and anchor breakdowns. {n} providers answer through "
+        "one treg.to key, from {cheapest}, each at its own rate with no markup and none of them "
+        "behind a monthly plan or a credit reset. Ahrefs is not among them. Every index is that "
+        "vendor's own crawl, so the counts differ by design, and the page shows them side by "
+        "side rather than picking one."),
+    "prompt": "Using treg, get the backlink summary for our domain and our three main "
+              "competitors from the cheapest verified provider, show me the price first, then "
+              "put referring domains, follow share and the authority score in one table and "
+              "tell me where the gap is widest.",
+    "prompt_why": [
+        ("Give bare domains", "Most rows want the domain without scheme or www, and a page URL where you mean a page. Say which, or the agent guesses."),
+        ("One call per domain", "Each provider prices the summary per target, and the dearest per-call row is ten times the cheapest. Four domains is four calls."),
+        ("Name the score you mean", "Moz DA, Majestic Trust Flow, Semrush Authority Score: each belongs to its vendor and compares only to itself. Ask for one and stick to it."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a thousand expired domains will spend before it starts."),
+    ],
+    "result_noun": "domain",
+    "result_image": None,
+    "q_cheapest": "Which backlink API is cheapest per call?",
+    "q_reliable": "Which backlink API is the most reliable?",
+    "q_compare": "How do the backlink providers compare?",
+    "what_is_heading": "What is a backlink API?",
+    "what_is": (
+        "A backlink API returns what a link index knows about a domain or a page as data: how "
+        "many pages link to it, from how many distinct domains, how many of those links pass "
+        "authority, and a score the vendor computes from all of it. The summary endpoint on "
+        "this page is the one-row version, the profile rather than the list of links; the "
+        "list is a different job. Each provider runs its own crawler and its own index, so "
+        "DataForSEO, Moz, Serpstat, SE Ranking, Majestic and Semrush will each give a "
+        "different referring-domain count for the same domain, and none of them is the "
+        "count. Ahrefs, the index most of the forum pays for, is not in the catalog."),
+    "notes": [
+        "Per-call is the point. The forum's problem is not the data, it is the plan: an API "
+        "tier priced for enterprises, a credit allowance that resets in two weeks, a seat that "
+        "costs hundreds a month for one column. Here Serpstat's summary is $0.0025 a call, "
+        "Moz's two quota rows come to $0.0133, SE Ranking's 100 credits to $0.0179 per target "
+        "and DataForSEO's request to $0.024 plus a fraction of a cent per returned row, "
+        "metered from a prepaid balance at the provider's rate with $0.000 added. A new "
+        "team's free dollar is a few hundred Serpstat summaries.",
+        "Two rows are the odd ones. Majestic charges one index item unit per target, and it is "
+        "the same command as its URL metrics call, so ask for one and read both sets of "
+        "columns rather than paying twice. Semrush charges 40 API units flat for the overview "
+        "and publishes no dollar rate for a unit, so the page prints no price and it runs on "
+        "your own Semrush plan. Neither has been called live through treg.to yet; the other "
+        "four have, and the measured success rates on this page come from that traffic.",
+        "The columns are not the same shape. Moz's call is its URL metrics with distributions "
+        "on, which adds histograms by domain authority, spam score and root domains; SE "
+        "Ranking's summary is ten times the price of its metrics call and adds the full "
+        "breakdown, so use metrics when you only need totals; DataForSEO returns the counts, "
+        "rank and spam score with breakdown arrays you can cap. Read the docs linked on each "
+        "row before the agent loops.",
+    ],
+    "faq": [
+        ("Is there an Ahrefs API here?",
+         "No. Ahrefs is not in the catalog, and this page does not resell or proxy it. The "
+         "six indexes here are the alternatives, each priced per call at its own rate, and "
+         "the honest note is that their counts and scores are theirs, not Ahrefs'."),
+        ("Why do the backlink counts differ between providers?",
+         "Because each provider crawls the web itself and keeps its own index. A link one "
+         "crawler found last week is one another has not reached. There is no correct count; "
+         "pick one index and compare domains within it, or pull two and treat the overlap as "
+         "the confident set."),
+        ("Is Domain Authority in the response?",
+         "Moz's DA is in Moz's row, and only there; Majestic returns Trust Flow and Citation "
+         "Flow, Semrush its Authority Score, DataForSEO and SE Ranking their own rank. Each "
+         "score is comparable only to itself, and no provider's number should be read as "
+         "another's."),
+        ("Which provider should my agent use?",
+         "The one whose columns match the question and whose rate fits the volume. treg.to "
+         "shows all six side by side with the rate and the measured success; it compares, it "
+         "does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Backlink threads are among the most seeded in SEO: of the ~163 Reddit and X posts "
+        "read in August 2026, one vendor's ring ran to eleven posts across five subreddits "
+        "with the same template, and link sellers filled most of the rest. These five are "
+        "people paying for the data themselves."),
+    "voices": [
+        ("The API plan is priced for a different kind of company",
+         "Don't really want to drop $14K to have access to the ahrefs API",
+         "r/bigseo", "https://www.reddit.com/r/bigseo/comments/1fyki5o/if_i_want_to_identify_ranking_keywords_for_a/",
+         "That is a plan, and here there is none. A summary is a call, priced per call at the "
+         "provider's rate, from a prepaid balance with no minimum and no tier to unlock."),
+        ("Credits reset on the vendor's calendar, not yours",
+         "two more weeks until my @ahrefs API credits reset. BRUTAL. this may push me to the $449/mo plan.",
+         "X", "https://x.com/i/status/2091997435379773762",
+         "Nothing here resets. The balance is money, it is spent per call, and the rate is "
+         "printed before the agent spends it. When it runs out you top it up; you do not "
+         "wait."),
+        ("Whose data do you trust for link building?",
+         "Just started testing APIs for backlinks of the two.. Which ones data do you prefer when it comes to linkbuilding?",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1r5gxxd/ahrefs_vs_semrush_backlinks_data/",
+         "No comparison table can answer that for your niche. The cheap experiment is on this "
+         "page: pull the same domain from Serpstat, Moz and DataForSEO for a few cents and "
+         "see which index has the links you know exist."),
+        ("A hundred domains a day makes the seat price absurd",
+         "DA checks are way too expensive at volume",
+         "r/Domains, 7 points", "https://www.reddit.com/r/Domains/comments/1oof78c/whats_your_workflow_for_checking_da_on_100/",
+         "At volume the per-call rate is the whole story: Moz's DA row is two quota rows a "
+         "call, and the cheaper summaries here carry their own vendor's score. An agent "
+         "looping a list of expired domains is the fit; the price of the loop is the rate "
+         "times the list."),
+        ("If DR is gameable, which score is not?",
+         "If Ahrefs DR should be ignored, then which “domain rating” you should care about?",
+         "X", "https://x.com/i/status/2092739835694137635",
+         "None of them is more than its vendor's model, and this page will not crown one. "
+         "What it can do is put four vendors' scores for the same domain in one table, with "
+         "the referring-domain counts beside them, so the agent shows its working."),
+    ],
+    "related": ("Keywords a domain ranks for", "List backlinks and find link gaps",
+                "Google results for a keyword", "On-page audit of a URL"),
+}
+
+
+USE_CASE_PAGES["search-posts-by-keyword"] = {
+    "label": "Search posts by keyword",
+    "sentence": "Reddit search API and X search API: posts by keyword on Reddit, X, LinkedIn and TikTok, per call",
+    "title": "Reddit and X search API: posts by keyword, per call | treg.to",
+    "lede": (
+        "Give your agent a keyword and get the posts back as rows: title, text, author, "
+        "score, date and the link, from Reddit, X, LinkedIn or TikTok, each through the same "
+        "treg.to key, from {cheapest} at the provider's own rate with no markup. No Reddit "
+        "developer app to apply for, no X Basic tier to subscribe to, and no account of yours "
+        "on the line. The networks are not alternatives to each other; the platform is the "
+        "choice, and the rows are relayed as the provider returns them."),
+    "prompt": "Using treg, search Reddit and X for posts mentioning our product name from the "
+              "last week, show me the price per platform first, then group them by theme, "
+              "flag anything that reads as a complaint, and give me the link for each.",
+    "prompt_why": [
+        ("Name the platforms", "Each network is its own shelf with its own providers. Reddit and X is two calls; all four is four."),
+        ("Put a window on it", "X's official recent search covers the last seven days and the archive call the rest. Say which week you mean."),
+        ("Ask for the price per platform", "The rates differ by an order of magnitude between rows. treg.to prints each before the call, so the agent can say what a daily watch will spend."),
+        ("Keep the link", "The rows carry the permalink. A complaint is only useful if a human can open it."),
+    ],
+    "result_noun": "post",
+    "result_image": None,
+    "q_cheapest": "Which search API is cheapest, per platform?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare, per platform?",
+    "what_is_heading": "What is a Reddit search API, and what happened to the official one?",
+    "what_is": (
+        "A Reddit search API returns the posts matching a keyword as data, across every "
+        "subreddit, with the score, the comment count and the permalink. Reddit's own API "
+        "still exists, but self-service app keys stopped, anonymous JSON calls now answer with "
+        "a 403, and access runs through an approval queue, which is why the forum's Reddit "
+        "MCP servers keep breaking and rebuilding on RSS. X's official search API is open but "
+        "priced per post returned and capped per month. The providers on this page read "
+        "both networks for you, plus LinkedIn's public posts as Google indexes them and "
+        "TikTok's keyword search, and return rows; the official X call is here too, on your "
+        "own X developer account."),
+    "notes": [
+        "Reddit is three third-party providers, none of them Reddit. ScrapeCreators bills one "
+        "credit a call, TikHub a tenth of a cent per successful call, JustOneAPI per "
+        "success in yuan; all run on treg.to's own key with no developer app. What they "
+        "search is Reddit's own search, so relevance is Reddit's, and the rows are posts: "
+        "comment trees, votes and anything that writes to Reddit still need an approved app "
+        "of your own.",
+        "X is the one platform with an official row. X's recent search runs on your own X "
+        "developer account at X's own per-post rate, never metered by treg.to; the archive "
+        "call covers history at the same rate. The two scraper rows are cheaper and, on the "
+        "traffic treg.to has measured, answer more often, and they use no account of yours. "
+        "They are also scraping, and the provider carries that risk, not the page; the "
+        "reliability section shows what the live traffic looks like rather than promising.",
+        "LinkedIn and TikTok are narrower shelves. LinkedIn post search is one provider "
+        "reading what Google has indexed of public posts, so a post the index has not "
+        "reached is not there. TikTok keyword search returns videos, with three providers. "
+        "There is no Facebook or Instagram keyword search in the catalog, and monitoring is "
+        "the agent's loop: no alerts, no schedule and no sentiment score come with the rows.",
+    ],
+    "faq": [
+        ("Do I need a Reddit API key?",
+         "No. The three Reddit rows are third-party providers on treg.to's own key, billed per "
+         "call from your team's balance at the provider's rate with $0.000 added. If you hold "
+         "an approved Reddit app, that is for posting and comment trees; searching posts "
+         "does not need it here."),
+        ("How much does the X search cost?",
+         "Two ways. The official recent search bills at X's own per-post rate on your own X "
+         "developer account, and treg.to meters none of it. The scraper rows bill per "
+         "successful call on treg.to's key, at a rate the page prints beside each. Neither "
+         "needs an X Basic subscription."),
+        ("Can I monitor a keyword continuously?",
+         "The agent can, by calling on a schedule you give it. treg.to has no alerting, no "
+         "scheduler and no sentiment layer; it returns the posts and the price. A daily watch "
+         "on two platforms is two calls a day."),
+        ("Which provider should my agent use?",
+         "The platform decides the shelf. Within it, treg.to shows each row's rate and "
+         "measured success side by side, and the agent picks, or you tell it; treg.to does "
+         "not route or fail over between them."),
+    ],
+    "voices_intro": (
+        "Keyword-monitoring threads are a vendor parade: of the ~165 Reddit and X posts read "
+        "in August 2026, one launch campaign ran to six near-identical tweets and two "
+        "reposts into vendor-run subreddits, and a dozen monitoring tools pitched themselves "
+        "to the same questions. These five are people hitting the wall themselves."),
+    "voices": [
+        ("Reddit closed the side door",
+         "Reddit now blocks anonymous access to its JSON API at the network level.",
+         "r/ClaudeAI, 20 points", "https://www.reddit.com/r/ClaudeAI/comments/1tsis6e/i_built_a_tiny_mcp_server_to_use_reddit_from/",
+         "That poster's Reddit MCP stopped returning rows and was rebuilt on RSS. The Reddit "
+         "rows here are providers with their own access, priced per call, and the agent "
+         "calls them with the same setup line it uses for everything else."),
+        ("A developer app just to search is the wrong shape",
+         "They require setting up Reddit developer apps and OAuth tokens just to do basic searches.",
+         "r/mcp, 57 points", "https://www.reddit.com/r/mcp/comments/1vtig8g/redditmcpai_an_mcp_server_for_searching_reddit/",
+         "Agreed, and none of the Reddit rows here asks for one. The honest limit is that "
+         "they return posts through Reddit's own search; the comment tree and the vote are "
+         "still the official API's."),
+        ("The official X rate adds up fast",
+         "25 cents for 2 requests? This is just for a basic post search.",
+         "X", "https://x.com/i/status/2074000371908043033",
+         "That is X's per-post rate, and the official row here carries exactly it, on your own "
+         "account. The two scraper rows sit beside it at a fraction of the price, with what "
+         "the live traffic says about each, so the choice is yours with the numbers in front "
+         "of you."),
+        ("Searching from your own account can get it flagged",
+         "doing any programmatic actions outside of the official API will flag an account",
+         "X, 1,287 likes", "https://x.com/i/status/2030491364056830011",
+         "That warning is about your account. The scraper providers here use none of yours, "
+         "so the risk sits with the provider; the page does not call that safe, it calls it "
+         "theirs, and shows their measured success instead."),
+        ("The old objection, still the objection",
+         "Why is he charging for low volume pull requests too?",
+         "r/sysadmin, 5,377 points", "https://www.reddit.com/r/sysadmin/comments/12s95sl/is_elon_on_crack_im_not_paying_42k_per_month_for/",
+         "Low volume is what per-call pricing is for. Ten posts a day on a scraper row is "
+         "cents a month, with no tier, no minimum and the rate printed before each call."),
+    ],
+    "related": ("Mine the comments", "Find creators by keyword",
+                "A competitor's recent posts", "Posts under a hashtag"),
+}
+
+
+USE_CASE_PAGES["app-store-search"] = {
+    "label": "App store search",
+    "sentence": "App store API: search the Apple App Store and Google Play by keyword, per call",
+    "title": "App store API: search the App Store and Google Play | treg.to",
+    "lede": (
+        "Give your agent a keyword and get the store listing rows back: app name, developer, "
+        "rating, review count, price and the store link, from the Apple App Store and from "
+        "Google Play, both through one treg.to key from {cheapest} a search at the provider's "
+        "own rate with $0.000 added. No Apple developer account, no Play console, no proxy "
+        "pool and no scraper of your own to keep alive when a store changes its markup. The "
+        "two stores are separate shelves here, not two views of one dataset, so ask for both "
+        "when you want both."),
+    "prompt": "Using treg, search the Apple App Store and Google Play for apps matching "
+              "a habit tracker, show me the price per search first, then put the results "
+              "from each store in one table with developer, rating, review count and price, "
+              "and mark the apps that appear in both.",
+    "prompt_why": [
+        ("Name both stores", "Apple and Google Play are separate calls with separate app ids and separate rankings. One store is one search; both is two."),
+        ("Say which country", "Store results are per storefront. The US list and the UK list are different lists, and the agent will pick for you if you do not."),
+        ("Ask for the columns", "The rows carry the developer, the rating, the review count, the price and the link. Name the ones you want or the whole listing comes back."),
+        ("Ask for the price first", "treg.to prints the rate before the call, so a hundred keywords across two stores has a number on it before anything runs."),
+    ],
+    "result_noun": "app",
+    "result_image": None,
+    "q_cheapest": "What does an app store search cost?",
+    "q_reliable": "Which store search is the most reliable?",
+    "q_compare": "How do the two stores compare?",
+    "what_is_heading": "What is an app store API?",
+    "what_is": (
+        "An app store API returns what a store's search results page holds, as data: the apps "
+        "matching a keyword, in the store's own order, with the developer, the rating, the "
+        "review count, the price and the listing link. It is not App Store Connect and it is "
+        "not the Google Play Developer API. Those are the accounts you own, and they only "
+        "cover your own apps. It is also not Apple's public iTunes Search endpoint, which is "
+        "free, answers a different query shape, and is not in this catalog. The two rows here "
+        "read the two public stores and relay what the store returned."),
+    "notes": [
+        "One provider serves both stores at one rate. SerpApi runs the Apple App Store engine "
+        "and the Google Play engine at the same flat price per successful search, metered "
+        "from your team's prepaid balance at SerpApi's own rate with $0.000 added, and its "
+        "rate card says a failed or cached search is not billed. Both rows were verified "
+        "against the live API on 2026-07-28. A new team's free dollar is a few dozen searches "
+        "across both stores.",
+        "The two engines take different parameters, and the Play row does two jobs. Apple's "
+        "engine wants a search term; Google Play's wants a query, and the same row answers "
+        "the store charts as well as a keyword search depending on what you send. Read the "
+        "docs linked on each row before an agent loops, because treg.to relays the store's "
+        "own response verbatim and models neither store's API.",
+        "What is not here is the part most people are really after. This is search, not rank "
+        "tracking: nothing stores yesterday's position, and there is no keyword popularity "
+        "index, no download or revenue estimate and no review feed on these two rows. Google "
+        "Play also stops exposing results publicly at shallow depth, which android developers "
+        "have measured for themselves, so a position deeper than the first page or two is not "
+        "a number any public search can honestly return. An agent can rebuild position over "
+        "time by running the same search on a schedule you give it and keeping the results.",
+    ],
+    "faq": [
+        ("Do I need an Apple or Google developer account?",
+         "No. Both rows run on treg.to's own key and bill per successful search from your "
+         "team's balance at SerpApi's rate with no markup. A developer account is for "
+         "publishing apps and reading your own; this reads the public store."),
+        ("Is this App Store Connect or the Play Developer API?",
+         "No. Those two are your own account's APIs and they only see apps you publish: your "
+         "installs, your ratings, your revenue. This page is the public store search, so it "
+         "sees any app but none of the private numbers behind it."),
+        ("Can I track where my app ranks for a keyword over time?",
+         "Your agent can, by running the search on a schedule you set and keeping the "
+         "results. treg.to has no scheduler, no history and no ASO rank tracker. The honest "
+         "limit is depth: the stores expose only so many results, and a rank below that is a "
+         "guess wherever you read it."),
+        ("Can I get reviews, downloads or keyword volume?",
+         "Not from these two rows. They return the search listing and nothing more. The "
+         "catalog carries app review and app data endpoints from other providers on their own "
+         "shelves, and Apple's keyword popularity is a relative index behind an Apple Search "
+         "Ads account, not a search volume figure anyone can resell."),
+    ],
+    "voices_intro": (
+        "App store threads are unusually seeded: of the ~140 Reddit and X posts read in "
+        "August 2026, more than half were builders announcing their own scrapers, one ran the "
+        "same review-scraper copy through seven subreddits, and one post seeded zero-width "
+        "spaces at every paragraph break. These five are developers hitting the wall in "
+        "public."),
+    "voices": [
+        ("Deep store ranks are interpolated, not measured",
+         "The paid SERP APIs go deeper, but tools that don't pay for them and still show you 'rank #63' are interpolating, not measuring.",
+         "r/androiddev, 11 points", "https://www.reddit.com/r/androiddev/comments/1va99d9/psa_google_play_only_exposes_30_search_results/",
+         "That is the honest ceiling and this page will not pretend past it. The rows return "
+         "the store's own results in the store's own order, as deep as the store exposes "
+         "them, and treg.to publishes no rank number of its own."),
+        ("Apple's free endpoint stops answering without notice",
+         "As of this morning (April 16), all my requests to the /search endpoint are returning HTTP 404 Not Found.",
+         "r/iOSProgramming, 11 points", "https://www.reddit.com/r/iOSProgramming/comments/1sn3k1m/itunes_search_api_returning_404_for_search/",
+         "That is Apple's public iTunes Search endpoint, which is free, undocumented in "
+         "practice, and not in this catalog. The rows here are a paid provider's store "
+         "engines, billed only on a successful search, with what the live traffic shows "
+         "rather than an uptime promise."),
+        ("Everything is API first except the store itself",
+         "To have to scrape them from the app store pages when everything else is so API first seems like a miss.",
+         "X, 19 likes", "https://x.com/i/status/2092565867145879853",
+         "Agreed, and that is the whole reason this row exists. The agent sends a keyword and "
+         "a country and gets rows; the scraping, the proxies and the markup changes are the "
+         "provider's problem, at a price printed before the call."),
+        ("The free endpoint carries none of the numbers you want",
+         "the itunes search api does not give downloads, subscriptions, or any financial metrics, and it does not provide subscription pricing either.",
+         "X, 69 likes", "https://x.com/i/status/1994112990866518506",
+         "True, and neither do these rows. Listing price, rating and review count come back; "
+         "installs and revenue do not exist in any public store response, and no provider on "
+         "this page can conjure them."),
+        ("The whole store is bigger than the context window",
+         "welp, even using a 1M token context limit, the data is too large.",
+         "r/shopifyDev, 77 points", "https://www.reddit.com/r/shopifyDev/comments/1o4ugbp/an_analysis_of_15003_apps_in_the_shopify_app_store/",
+         "Which is the argument for asking for columns rather than everything. Say which "
+         "fields a row needs in the prompt, cap the result count, and the agent reads a table "
+         "instead of drowning in a store dump."),
+    ],
+    "related": ("Amazon search and best sellers", "TikTok Shop products and reviews",
+                "Product reviews", "Google results for a keyword"),
+}
+
+
+USE_CASE_PAGES["transcripts-of-x-and-facebook-video-posts"] = {
+    "label": "Transcripts of X and Facebook video posts",
+    "sentence": "Facebook video transcript and X video transcript: the words in a video post, from its URL",
+    "title": "Facebook and X video transcript by URL, per call | treg.to",
+    "lede": (
+        "Paste your agent the URL of a Facebook video post or an X video post and get the "
+        "spoken words back as text, through one treg.to key from {cheapest} a call at the "
+        "provider's own rate with $0.000 added. No download step, no ffmpeg, no Whisper run "
+        "of your own and no developer account on either network. The price is per call, not "
+        "per minute of video, so a fifty minute livestream and a twenty second clip cost the "
+        "same. Public posts only, and a post that has been taken down is gone for everyone."),
+    "prompt": "Using treg, get the transcript of this Facebook video post and this X video "
+              "post, show me the price per call first, then give me the text of each with the "
+              "source link above it, and tell me plainly if either one came back empty.",
+    "prompt_why": [
+        ("Give the post URL, not the video file", "Both rows take the URL of the post. Getting the media off the platform is the part that normally breaks, and it is the provider's job here."),
+        ("Say which network", "Facebook and X are separate rows behind separate calls. One post is one call, on the network the URL belongs to."),
+        ("Ask for the text, not a summary", "The rows return what was said. A summary is the agent's own work afterwards, and it is worth reading the transcript first."),
+        ("Handle the empty case out loud", "A post with no speech, or one the provider cannot reach, comes back with nothing and still costs the call. Tell the agent to say so rather than invent."),
+    ],
+    "result_noun": "transcript",
+    "result_image": None,
+    "q_cheapest": "What does a transcript cost, per network?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the two networks compare?",
+    "what_is_heading": "What is a Facebook video transcript API?",
+    "what_is": (
+        "It is a call that takes the URL of a video post and returns the words spoken in it as "
+        "text. The hard part was never the speech recognition: it is getting the media out of "
+        "a network that does not want to hand it over. Facebook Reels carry no automatic "
+        "transcription and Facebook blocks the usual downloaders, so the do it yourself path "
+        "runs download, extract audio, transcribe, and falls over at the first step. X posts "
+        "have their own wall around saving the file. Both rows here take the URL and do all "
+        "of it on the provider's side, so your agent gets text and never touches the video."),
+    "notes": [
+        "One provider covers both networks at one rate. ScrapeCreators bills a credit per "
+        "call for the X row and for the Facebook row alike, metered from your team's prepaid "
+        "balance at ScrapeCreators' own rate with $0.000 added. Per call means per call: an "
+        "empty answer is billed the same as a full transcript, so budget the rate times the "
+        "number of posts, not the number of transcripts you keep.",
+        "Neither row has been called live through treg.to yet, and the catalog says so. Both "
+        "carry a documented price and a documented shape from the provider's docs, neither "
+        "has a verified date, and the Facebook row's stored test request does not even name a "
+        "URL. Treat them as documented rather than proven, run one post before an agent runs "
+        "a thousand, and read the docs linked on each row.",
+        "The limits are the platforms', and they are worth saying out loud. Public posts "
+        "only: a friends only, group only or age gated Facebook video is not reachable. A "
+        "deleted post is gone, and no provider recovers it. YouTube transcripts are a "
+        "different and much cheaper shelf with its own page, and TikTok and Instagram "
+        "transcripts are not in the catalog at all. Grok will also transcribe an X video "
+        "inside X if a human is doing it by hand; these rows are for the case where an agent "
+        "needs a hundred of them.",
+    ],
+    "faq": [
+        ("Do I need an X or Facebook developer account?",
+         "No. Both rows run on treg.to's own key and bill per call from your team's balance at "
+         "the provider's rate with no markup. Nothing uses an account of yours, so nothing "
+         "puts one at risk."),
+        ("Does it work on any post?",
+         "Video posts, and public ones. A text post has nothing to transcribe, a private or "
+         "age gated Facebook video is not reachable, and a post that has been removed is gone "
+         "for the provider too. The call still costs its rate when the answer comes back "
+         "empty, which is why the prompt above asks the agent to say so."),
+        ("What about YouTube, TikTok or Instagram?",
+         "YouTube has its own page and its own much cheaper row. TikTok and Instagram video "
+         "transcripts are not in the catalog today, and this page will not pretend otherwise. "
+         "Rumble is there, on its own shelf."),
+        ("Is this cheaper than running Whisper myself?",
+         "That depends on what your time is worth. Whisper is free and the audio is not: the "
+         "download is what fails, and the published attempts at doing this with an agent end "
+         "in blocked downloaders, expired tokens and a fallback to a paid speech API anyway. "
+         "These rows are one call at a printed rate, with no pipeline to maintain."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~180 Reddit and X posts read in "
+        "August 2026 only about twenty were on the job, and the loudest block of pain "
+        "language in the Facebook dumps came from one bot posting the same six templates. "
+        "These five are people doing it the hard way."),
+    "voices": [
+        ("Facebook Reels have no captions to fall back on",
+         "Facebook blocks most AIs by default, and Reels don't have automatic transcription, so there's no shortcut.",
+         "r/claude, 6 points", "https://www.reddit.com/r/claude/comments/1s22ccw/i_tested_claude_to_see_if_they_could_get_a/",
+         "That is the honest state of Facebook video, and it is why this row exists. The "
+         "shortcut is somebody else's fetch: your agent sends the post URL and reads text "
+         "back, at a rate printed before the call."),
+        ("The agent's problem was the fetch, never the transcription",
+         "It tried again, used yt-dlp, said that it was blocked because FB blocks bots.",
+         "r/claude, 6 points", "https://www.reddit.com/r/claude/comments/1s22ccw/i_tested_claude_to_see_if_they_could_get_a/",
+         "In that thread the model eventually got there through a third party downloader, an "
+         "expired token and a paid speech API, after four nudges. One call replaces the "
+         "chain; what it cannot do is reach a post that is private or gone."),
+        ("Hand typing is the fallback people actually use",
+         "Please note, the transcript may not be 100% accurate as it was typed out by hand.",
+         "r/Superstonk, 6,923 points", "https://www.reddit.com/r/Superstonk/comments/qmnan7/computershare_ama_part_1_video_link_with/",
+         "Machine text is faster and it is not automatically better on accents or crosstalk. "
+         "The useful version is both: get the transcript in a second, then spot check the "
+         "lines you are going to quote against the video."),
+        ("Nobody asked for a summary, they asked what was said",
+         "For those who can't wade through the whole 12 minutes or so, here's a rough and ready transcript.",
+         "X, 6 likes", "https://x.com/i/status/2092561667783573707",
+         "Which is why the prompt on this page asks for the text first. The rows return the "
+         "words; summarising, quoting and pulling a clip out of them is your agent's own work "
+         "afterwards, on data it can show you."),
+        ("A video post with nothing to read",
+         "Finally found a video on Facebook that doesn't have captions or a transcript. WTH.",
+         "X", "https://x.com/i/status/1716876952337068536",
+         "That is the ordinary case on Facebook rather than the unlucky one. The row does not "
+         "read captions off the post, so a video with none is still readable, as long as the "
+         "post is public."),
+    ],
+    "related": ("Get a video's transcript", "Search posts by keyword",
+                "A competitor's recent posts", "Video details, views and stats"),
+}
+
+
+USE_CASE_PAGES["get-a-linkedin-profile"] = {
+    "label": "Get a LinkedIn profile",
+    "sentence": "LinkedIn API and LinkedIn scraper: a person's profile by URL, headline, experience and education",
+    "title": "LinkedIn API: fetch a profile by URL, {n} providers | treg.to",
+    "lede": (
+        "Give your agent a LinkedIn profile URL and get the profile back as data: name, "
+        "headline, location, current role, past roles and education. {n} providers answer "
+        "through one treg.to key, the cheapest of them a tenth of a cent a profile, each "
+        "at its own rate with no markup and none behind a monthly seat. No session cookie of yours, no browser "
+        "extension, no Sales Navigator subscription and no account of yours making the "
+        "request. LinkedIn's own row is here too and it is honest about what it is: it "
+        "returns the profile of the account you connected, and nobody else's."),
+    "prompt": "Using treg, fetch these 40 LinkedIn profile URLs from the cheapest verified "
+              "provider, show me the price per profile first, then give me name, headline, "
+              "current company and years in the current role as a table, and list the URLs "
+              "that came back empty.",
+    "prompt_why": [
+        ("Give the profile URL", "Most rows take the public profile URL or its slug. A name and a company is a different job, and a different page."),
+        ("Say which fields you need", "A full profile is a large object. Naming the columns keeps the table readable and keeps the agent from spending its context on someone's volunteering history."),
+        ("Ask for the price first", "The rates here differ by more than an order of magnitude per profile. treg.to prints the rate before the call, so 40 profiles has a number on it before anything runs."),
+        ("Ask for the misses by name", "Every provider misses some profiles. A list of the URLs that came back empty is worth more than a table that quietly has 34 rows instead of 40."),
+    ],
+    "result_noun": "profile",
+    "result_image": None,
+    "q_cheapest": "Which LinkedIn API is cheapest per profile?",
+    "q_reliable": "Which LinkedIn API is the most reliable?",
+    "q_compare": "How do the LinkedIn providers compare?",
+    "what_is_heading": "What is a LinkedIn API, and why is there no official one?",
+    "what_is": (
+        "A LinkedIn API, as people mean the phrase, returns a person's public profile as "
+        "structured data: headline, location, the roles they have held with dates, and where "
+        "they studied. LinkedIn's official API does not do this. It is an OAuth API for the "
+        "account that authorised it, so it can tell you your own name and email and it cannot "
+        "tell you a stranger's job history; that product does not exist for you. Everything "
+        "else on this page is a third-party provider that reads public profiles with its own "
+        "infrastructure and sells the result per profile. Proxycurl, which was the default "
+        "answer here for years, shut down, which is why the question keeps being asked."),
+    "notes": [
+        "Five third-party rows and one official one, and the official one is a different job. "
+        "LinkedIn's own OAuth row is free, runs on your team's connected account and is never "
+        "metered, and it returns that account's own profile: name, email, member id. It "
+        "cannot fetch a prospect. The other five fetch anyone's public profile and none of "
+        "them uses an account of yours, so no cookie of yours, no extension in your browser "
+        "and no view on your activity log.",
+        "The units differ, so read the rate and the word after it. TikHub bills per "
+        "successful call, ScrapeCreators per call whether or not the profile comes back, "
+        "Bright Data per record delivered, JustOneAPI per success priced in yuan and "
+        "converted, and Fiber per credit for a live fetch. The cheapest claim on this page is "
+        "made inside one unit and never across them. ScrapeCreators, Bright Data, TikHub and "
+        "JustOneAPI have been called live and carry a verified date in the catalog; the Fiber "
+        "row and the LinkedIn OAuth row are documented from the provider's own docs and have "
+        "not been verified through treg.to.",
+        "What nobody can promise is coverage, and this page will not. Each provider reads "
+        "LinkedIn its own way, so a profile one returns in full is one another returns "
+        "thin, and the fields most often missing are exactly the ones people want: the dated "
+        "experience list. The cheap experiment is the honest answer: run the same twenty URLs "
+        "through three rows for a few cents and count who filled the columns you need. "
+        "treg.to shows the rows side by side and the agent picks; it does not route between "
+        "them and it does not fail over.",
+    ],
+    "faq": [
+        ("Is there an official LinkedIn API for other people's profiles?",
+         "No. LinkedIn's OAuth API returns the profile of the member who authorised your app, "
+         "so it answers \"who am I\" and never \"who is this person\". The row on this page "
+         "is that call, marked free and run on your own connection. Everything else here is a "
+         "third party."),
+        ("Will this get my LinkedIn account banned?",
+         "None of the five third-party rows uses an account of yours: no cookie, no session, "
+         "no extension, so there is nothing of yours for LinkedIn to restrict. That is not "
+         "the same as zero risk in general, because the restriction stories in the forum "
+         "include people who were only browsing. The risk these rows remove is the automation "
+         "risk on your own login; the provider carries its own."),
+        ("What replaced Proxycurl?",
+         "Nothing single replaced it. The five third-party rows here are what the catalog "
+         "carries for a person profile by URL, priced per profile with no plan, and the "
+         "honest note is that they are not a drop-in: the field coverage and the freshness "
+         "are each provider's own. Company pages, job changes and people search are separate "
+         "jobs on separate rows."),
+        ("Which provider should my agent use?",
+         "The one whose fields survive your list at a rate that fits the volume. treg.to puts "
+         "the rate, the billing unit and the measured success rate beside each other and the "
+         "agent chooses, or you tell it which to use. treg.to compares; it does not pick for "
+         "you."),
+    ],
+    "voices_intro": (
+        "LinkedIn data is one of the most seeded topics on Reddit: of the ~170 posts read in "
+        "August 2026, one account posted fourteen actor listings in a subreddit it appears to "
+        "run, one promo shipped with its template placeholder still in the body, and one "
+        "seeded thread carried a zero-width space. These five are practitioners, and the last "
+        "one is the reason the page will not claim zero risk."),
+    "voices": [
+        ("An extension got an SDR restricted in days",
+         "My SDR got his account limited after using PhantomBuster for like 3 days.",
+         "r/b2bmarketing, 16 points", "https://www.reddit.com/r/b2bmarketing/comments/1sv9jwv/linkedin_lead_scraping_tools_whats_safe_that_wont/",
+         "That risk is the one thing these rows genuinely remove. A call here runs on the "
+         "provider's infrastructure, not on your seat, so there is no cookie of yours and no "
+         "activity on your account to flag."),
+        ("Being banned is not survivable for some jobs",
+         "I review hundreds of Linkedin profiles a week for a living and it is not viable to be banned from the platform.",
+         "r/apify", "https://www.reddit.com/r/apify/comments/1u7pogx/how_concerned_about_a_linkedin_ban_should_i_be/",
+         "Which is the argument for keeping the fetch off your login entirely. Read the "
+         "profiles through a provider, keep your own account for the human work, and pay per "
+         "profile rather than per seat."),
+        ("The enrichment tools are priced for a different buyer",
+         "Tools like Clay's 'Enrich Profile' feature or APIs like Brightdata feel quite pricey. Any suggestions or alternative approaches?",
+         "r/revops, 5 points", "https://www.reddit.com/r/revops/comments/1i4xwzh/cheapest_way_to_enrich_full_linkedin_profile/",
+         "Bright Data is one of the rows here, at its own per-record rate with nothing added, "
+         "and it is not the cheapest one. The point is the shape: a profile is a call, there "
+         "is no plan to be on, and the rate is printed before the agent spends it."),
+        ("The default answer shut down",
+         "Looking for a good alternative to Proxycurl (they shut down) for B2B sales automation",
+         "r/n8n, 6 points", "https://www.reddit.com/r/n8n/comments/1myqu0v/looking_for_a_good_alternative_to_proxycurl_they/",
+         "This page is five of the alternatives with their prices next to each other. It is "
+         "worth saying that the forum has not moved on to one successor, so the checklist "
+         "that thread asks for, profile plus company plus job changes, is three jobs here and "
+         "three rows."),
+        ("The restriction can arrive with no automation at all",
+         "the funny thing is i wasnt using anything to automate linkedin, just clicking around and opening new tabs",
+         "X, 199 likes", "https://x.com/i/status/2059841283674533977",
+         "Which is why this page says the rows remove the automation risk on your own login "
+         "and stops there. Nothing here makes LinkedIn safer for the account you browse with; "
+         "it just stops needing it."),
+    ],
+    "related": ("Find people by role, company or location",
+                "Enrich a person from an email or LinkedIn URL",
+                "Find professional emails", "Find phone numbers"),
+}
+
+
+USE_CASE_PAGES["find-phone-numbers"] = {
+    "label": "Find phone numbers",
+    "sentence": "Phone number lookup API: a prospect's mobile from a LinkedIn URL or work email",
+    "title": "Phone number lookup API: a mobile from a LinkedIn URL | treg.to",
+    "lede": (
+        "Give your agent a LinkedIn profile URL, a work email or a name and company, and get "
+        "a direct mobile number back where one exists. {n} providers answer through one "
+        "treg.to key, from {cheapest}, each at its own rate with no markup and none of them "
+        "behind a seat or an annual contract. This runs one way only: person to number. It is "
+        "not a reverse lookup, it will not tell you who owns a number you already have, and "
+        "no provider here finds a number for everyone you ask about."),
+    "prompt": "Using treg, find mobile numbers for these 25 LinkedIn URLs, show me the price "
+              "per found number for each provider first, use the cheapest one, then give me a "
+              "table of who was found and who was not, and do not guess a number for anyone "
+              "who came back empty.",
+    "prompt_why": [
+        ("Give the identifier, not the name alone", "Most rows resolve from a LinkedIn URL or a work email. A bare name and company is the weakest input and the one that misses most."),
+        ("Ask for the misses explicitly", "A list of 25 that returns 11 numbers is the normal outcome. The 14 that missed are the information; a table that silently has 11 rows is not."),
+        ("Ask for the price per found number", "The rates here span more than five times per number. treg.to prints each before the call, so 25 people has a worst case before anything runs."),
+        ("Never let the agent infer a number", "A model asked for a phone number will happily produce a plausible one. Say out loud that an empty answer stays empty."),
+    ],
+    "result_noun": "number",
+    "result_image": None,
+    "q_cheapest": "Which phone finder is cheapest per number found?",
+    "q_reliable": "Which phone finder is the most reliable?",
+    "q_compare": "How do the phone finders compare?",
+    "what_is_heading": "What is a phone number lookup API?",
+    "what_is": (
+        "In business-to-business terms it is a call that takes a person, usually as a LinkedIn "
+        "profile URL or a work email, and returns a direct mobile number for them if the "
+        "provider has one. The direction matters: this is person to number. The consumer "
+        "product that goes the other way, number to person, is a different thing entirely and "
+        "is not on this page. Every provider here is assembling the same kind of data from "
+        "the same kinds of sources, which is why the useful question is not who has the best "
+        "database in the abstract but who fills your list, in your countries, this month."),
+    "notes": [
+        "The prices are per number found, and they span the page. Tomba is the cheapest per "
+        "found number, Aviato next, then LeadMagic, Findymail and LeadsForge, which is more "
+        "than five times the cheapest; LeadsForge also has a bulk row at the same rate per "
+        "row. Ocean.io meters in credits and publishes no dollar rate, so the page prints "
+        "none. All of it is the provider's own rate with $0.000 added, from a prepaid balance "
+        "with no minimum.",
+        "Read the miss rule carefully, because it is where the money goes. The rate cards say "
+        "a miss is free, and one row on this page proves it through treg.to: LeadMagic "
+        "reports its own charge back on every call, so a miss settles at zero. The others do "
+        "not report a charge, so the call settles at the catalog rate whether or not a number "
+        "came back. Until that changes, budget the printed rate times every attempt, not "
+        "times the numbers you keep.",
+        "Nobody publishes an honest hit rate, including this page. What the practitioners in "
+        "the forum say instead is that coverage swings by geography and vertical, that a "
+        "provider strong on US technology can be thin on European professional services, and "
+        "that a number being current is not the same as somebody answering it. The cheap "
+        "experiment is the only real answer: run the same twenty rows through three providers "
+        "for a couple of dollars and count. treg.to shows the rates side by side; the agent "
+        "picks, and treg.to never routes or fails over between them.",
+    ],
+    "faq": [
+        ("Can I find out who owns a phone number I already have?",
+         "No. Every row here runs person to number: you give a profile URL, an email or a "
+         "name and company, and get a mobile back. Reverse lookup is a consumer product and a "
+         "different job, and the catalog does not carry it."),
+        ("What hit rate should I expect?",
+         "Nobody on this page will give you a number, and any published match rate you find "
+         "elsewhere was written by whoever is selling. Expect a minority of a cold list to "
+         "resolve, expect it to be worse outside the US, and measure it on your own rows: "
+         "twenty people through three providers costs a couple of dollars."),
+        ("Do I pay for a miss?",
+         "By the providers' rate cards, no. Through treg.to today, only LeadMagic settles a "
+         "miss at zero, because it is the one row that reports its own charge back on the "
+         "call. On the others the call settles at the catalog rate, so budget per attempt."),
+        ("Is a found number safe to call?",
+         "That is your call to make, not the data's. These rows return a number and nothing "
+         "about consent: do not call screening, no suppression list and no country by country "
+         "guidance. Whatever your obligations are under the rules that apply to you, they "
+         "stay yours."),
+    ],
+    "voices_intro": (
+        "This is the most heavily seeded category behind any of these pages: of the ~380 Reddit and X "
+        "posts read in August 2026 roughly seven in ten were vendor marketing, including a "
+        "ring of six fabricated review subreddits and one post that hid a combining grapheme "
+        "joiner inside half its words. That post was the most quotable in the set, and it is "
+        "not quoted here. These five are practitioners."),
+    "voices": [
+        ("Better data does not make somebody answer",
+         "Post Covid, office lines don't even seem to exist now and connect rates on cell phones are abysmal.",
+         "r/sales, 102 points", "https://www.reddit.com/r/sales/comments/1jfuzv7/cold_calling_is_it_actually_harder_now_or_am_i/",
+         "So this page will not claim to fix connect rates. What a row here can raise is the "
+         "share of your dials that reach a current mobile at all. Whether anyone picks up is "
+         "carrier screening and human behaviour, and no provider sells that."),
+        ("Paying for the data is not the same as the data being right",
+         "The mistake is assuming that paying for contact data means every record will be correct.",
+         "r/RecruitmentAgencies", "https://www.reddit.com/r/RecruitmentAgencies/comments/1v1gi34/best_tools_to_grow_a_recruiting_desk/",
+         "Agreed, and the shape of this page follows from it. Per call pricing means testing "
+         "three providers on your own rows costs less than one seat's first day, which beats "
+         "trusting anyone's accuracy claim, this page's included."),
+        ("It is hard to tell what is good from what is hype",
+         "I've looked at tools like Apollo, ZoomInfo, Lusha, Seamless, Cognism, etc., but it's hard to tell what's good vs hype.",
+         "r/salestechniques, 8 points", "https://www.reddit.com/r/salestechniques/comments/1qi5fx8/b2b_prospecting_tools_that_actually_work_in_europe/",
+         "It is hard because most of what you find when you search is seeded, which the "
+         "research behind this page ran into head first. The answer this page offers is not "
+         "another review: it is the raw result on your own list, for cents, from several "
+         "providers at once."),
+        ("Coverage is a function of where your buyers are",
+         "We tested a few vendors and the data quality changes a lot depending on region. Some are strong in US but weak in Europe.",
+         "r/AppBusiness", "https://www.reddit.com/r/AppBusiness/comments/1s28iwb/what_are_the_best_enrichment_tools_for_mobile/",
+         "No comparison table can tell you which of these is strong in your market, and this "
+         "one does not try. It puts the rates and the billing units side by side so the "
+         "experiment that would tell you is cheap enough to actually run."),
+        ("The ask is plain and nobody answers it plainly",
+         "Basically looking for a reliable provider for cold calling that gives accurate direct dials without breaking the bank.",
+         "r/sales_intelligence", "https://www.reddit.com/r/sales_intelligence/comments/1vh77bm/need_suggestions_on_providers_for_cold_calling/",
+         "The honest version: here are six, here is what each charges per number found, here "
+         "is which one gives you a free miss today, and here is how to test them on twenty of "
+         "your own rows before you commit to any of them."),
+    ],
+    "related": ("Find professional emails", "Check a phone number is real",
+                "Enrich a person from an email or LinkedIn URL", "Get a LinkedIn profile"),
+}
+
+
+USE_CASE_PAGES["keyword-volume-cpc-and-competition"] = {
+    "label": "Keyword volume, CPC and competition",
+    "sentence": "Keyword research API: Google search volume, CPC and competition for a list of keywords",
+    "title": "Keyword research API: Google search volume and CPC | treg.to",
+    "lede": (
+        "Hand your agent a list of keywords and get a figure back for each one: average "
+        "monthly searches, the competition level and the top of page bid range. {n} providers "
+        "answer through one treg.to key: a twentieth of a cent per keyword on the cheapest "
+        "row, a flat rate per request on another, each at the provider's own rate with no markup. Google's own row is free on your connected "
+        "Google Ads account and never metered, and it answers with a number per keyword rather "
+        "than the bucket the Keyword Planner screen shows you. It is the row the research "
+        "behind these pages runs on."),
+    "prompt": "Using treg, get the average monthly searches, competition and top of page bid "
+              "for these 200 keywords in the US in English, show me the price per provider "
+              "first, batch them into as few calls as the provider allows, and sort the table "
+              "by volume with the ones that returned no data listed separately.",
+    "prompt_why": [
+        ("Batch, do not loop", "One row charges a flat rate per request for up to a thousand keywords. Sending them one at a time on that row multiplies the bill by a thousand for the same answer."),
+        ("Name the country and language", "Volume is per market. A keyword measured across everywhere is a number that describes nowhere, and every row here wants the market stated."),
+        ("Ask for the price per provider first", "The rows meter in three different ways: per request, per keyword returned, and free on your own account. treg.to prints each before the call."),
+        ("Keep the empty rows visible", "Google returns nothing for some ordinary words, and a provider that drops them quietly leaves you reading a shorter list than you sent."),
+    ],
+    "result_noun": "keyword",
+    "result_image": None,
+    "q_cheapest": "Which keyword research API is cheapest?",
+    "q_reliable": "Which keyword data provider is the most reliable?",
+    "q_compare": "How do the keyword data providers compare?",
+    "what_is_heading": "What is a keyword research API?",
+    "what_is": (
+        "It is a call that takes a list of keywords and returns what an advertiser's data set "
+        "knows about each one: roughly how many times a month people search it, how "
+        "contested it is, and what advertisers are paying at the top of the page. The reason "
+        "people want it as an API rather than a screen is volume and shape. The Keyword "
+        "Planner screen shows bucketed ranges to accounts that are not spending, its CSV "
+        "export collapses everything to a handful of round numbers, and neither is something "
+        "you can join onto twenty thousand rows. Every provider here answers per keyword, in "
+        "a response an agent can put in a table."),
+    "notes": [
+        "The Google Ads row is free, and it is the real thing. It runs on your team's "
+        "connected Google Ads account, is never metered by treg.to, counts only against the "
+        "developer token's own daily operation limit, and it returns a figure per keyword "
+        "rather than the range the Keyword Planner screen shows. The figure is Google's own "
+        "rounded number and not a raw count. The cost of this row is not money, it is access: "
+        "Google's flow pushes you towards creating a campaign on the way in, and the "
+        "developer token is its own approval.",
+        "The paid rows meter in two different shapes, and the shape decides the bill. "
+        "DataForSEO charges a flat rate per request that covers one keyword or a thousand "
+        "alike, so batching is the whole game; the catalog uses the rate card's price rather "
+        "than the lower one on the public pricing page, because the rate card is what the "
+        "account is actually charged. Serpstat and SE Ranking charge per keyword returned, "
+        "and Serpstat bills its one credit minimum even when a keyword comes back empty. "
+        "Semrush charges API units with no published dollar rate, so the page prints no price "
+        "for it and it runs on your own Semrush plan.",
+        "The numbers will not agree, and no row here is ground truth. Each provider models "
+        "Google's data its own way, so the same keyword comes back with different volumes on "
+        "different rows, and Search Console will show you clicks on queries that none of them "
+        "list at all. The bid range is an estimate of an auction rather than the auction: "
+        "practitioners regularly report paying many times the figure, or a fraction of it. "
+        "Use these fields to rank keywords against each other and take your real cost from "
+        "your own campaign data. treg.to puts the rows side by side; the agent picks, and "
+        "treg.to never routes or fails over between them.",
+    ],
+    "faq": [
+        ("Is this the same data as Google Keyword Planner?",
+         "The Google Ads row is, on your own connected account, and it answers with a figure "
+         "per keyword instead of the range the screen shows. The other rows are each "
+         "provider's own model of the same underlying signal, which is why their numbers "
+         "differ from Google's and from each other."),
+        ("Do I need a Google Ads account?",
+         "Only for the free row, which runs on your own connection and is never metered. The "
+         "paid rows need nothing of yours: they run on treg.to's key and bill from your "
+         "team's prepaid balance at the provider's rate with $0.000 added, so a list of "
+         "keywords does not require a developer token or an ad campaign."),
+        ("Why do the volume numbers differ between providers?",
+         "Because none of them is counting searches. Each one models Google's published "
+         "signal in its own way, and this page will not crown one, because there is no "
+         "ground truth to crown it against. Pull the same list from two rows for a few cents "
+         "and treat the disagreement as the error bar."),
+        ("How much does ten thousand keywords cost?",
+         "It depends entirely on which row and how you batch. A flat per request row covering "
+         "up to a thousand keywords is ten calls; a per keyword row is ten thousand "
+         "chargeable results however you send them; the Google Ads row is free and bounded by "
+         "a daily operation limit instead. treg.to prints each rate before the call so the "
+         "agent can say the number first."),
+    ],
+    "voices_intro": (
+        "SEO tooling threads are seeded on an industrial scale: of the ~180 Reddit and X "
+        "posts read in August 2026, three near identical six week bake off posts landed on "
+        "the same recommendation in the same house style, two subreddits in the results were "
+        "review farms, and one post ran word for word from two different accounts. These "
+        "five are people with a spreadsheet and a problem."),
+    "voices": [
+        ("The screen answers in buckets",
+         "It keeps showing me ranges such as 100-1k. This is very hard for me to guess for any good decision I wish to make.",
+         "r/googleads", "https://www.reddit.com/r/googleads/comments/1dodfc3/how_do_i_see_the_exact_monthly_search_volume/",
+         "The free row on this page is the same Keyword Planner data through the API, and it "
+         "answers with a figure per keyword rather than a range. That figure is Google's own "
+         "rounded number, so treat it as a rank rather than a count."),
+        ("The export rounds everything to nothing",
+         "when i export in CSV it's either 50, 500, 5000 or 50000 for all results",
+         "r/googleads", "https://www.reddit.com/r/googleads/comments/1dz73xx/important_features_missing_from_keyword_planner/",
+         "That is the data quality floor the API is worth having for. Every row here returns "
+         "a per keyword field an agent can sort, join and put in a table, which the export "
+         "cannot give you at any spend level."),
+        ("The bid estimate and the invoice are different numbers",
+         "Keyword planner says Low competition keyword top page bid high range is 0.03 cent. Why am I paying 1.28?",
+         "r/PPC, 8 points", "https://www.reddit.com/r/PPC/comments/1grv58y/google_ads_keyword_planner_says_low_competition/",
+         "No provider on this page fixes that, and any page that says otherwise is selling. "
+         "The bid fields are an estimate of an auction. Use them to rank keywords against one "
+         "another, and take what you actually pay from your own campaign data."),
+        ("Twenty thousand keywords is not a spreadsheet job",
+         "there are like 20,000 keywords, so it's not something a standard VLOOKUP will work for",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1dj6b4z/keyword_api_suggestions/",
+         "This is the case per call pricing is for. A flat per request row batches up to a "
+         "thousand keywords at a time, so twenty thousand is twenty calls at a rate printed "
+         "before the first one, with no plan to be on."),
+        ("The tools do not know about traffic you are already getting",
+         "lately we've been seeing a lot of traffic in Google Search Console from keywords that don't even exist in the tools we're using",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1ry5v7o/should_i_trust_tools_on_keyword_search_volume/",
+         "Which is the honest limit of every row here. These are models of demand, not "
+         "records of it. Your own Search Console data is the one source that is actually "
+         "counting, and it is a free own account row in this same catalog."),
+    ],
+    "related": ("Keyword ideas from a seed", "Google results for a keyword",
+                "Keywords a domain ranks for", "Keywords a domain bids on"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A

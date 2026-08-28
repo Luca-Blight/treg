@@ -195,6 +195,8 @@ class CallInput:
     body: RequestBody
     caller: CallerSnapshot
     client_ip: str
+    # The reviewed /catalog/call surface accepts only a catalog id — team tools never shadow it.
+    catalog_only: bool = False
 
 
 class FinalizationState(Enum):
