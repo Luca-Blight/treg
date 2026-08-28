@@ -629,6 +629,11 @@ async def agent_page(request: Request, agent: str):
     if as_md:
         md = [f"# {title}", "", definition, "", f"## Install in {name}", ""]
         md += [f"{i}. {html_mod.unescape(st)}" for i, st in enumerate(steps_text, 1)]
+        if agent_pages.WORKFLOWS:
+            md += ["", f"## Sequences {name} can run from one prompt", ""]
+            md += [f"- [{wspec['sentence']}]({base}/workflows/{ws}), {len(wspec.get('steps', ()))} steps, "
+                   f"each priced, with the receipt from a real run"
+                   for ws, wspec in agent_pages.WORKFLOWS.items()]
         md += ["", f"## What {name} can do now", "",
                "One row per job. Prices are the provider's own rate with $0.000 markup; rows marked FREE run on your own account and are never metered.", ""]
         for category, prompt, rows in menu:
@@ -762,6 +767,21 @@ async def agent_page(request: Request, agent: str):
         f'<div class="cards">{"".join(cards)}</div>'
         f'<p style="margin-top:20px"><a href="/catalog">Browse all {n} endpoints &rarr;</a> &middot; '
         f'<a href="/use-cases">read the job guides &rarr;</a></p></div></section>'
+
+        # The workflows: several jobs from the menu chained into one prompt, each with a receipt from
+        # a real run. Linked from every agent page so the page that describes what an agent can do
+        # also names the sequences it can run; before this the workflow pages were reachable from
+        # the hub alone.
+        + (f'<section id="workflows"><div class="wrap"><div class="seclab">Workflows</div>'
+           f'<h2>Sequences {_esc_html(name)} can run from one prompt</h2>'
+           '<p>Several jobs from the menu, chained. Each step is priced from the catalog and the page '
+           'prints the receipt from a real run, not a rate card.</p><div class="cards">'
+           + "".join(f'<a class="card" href="/workflows/{_esc_html(ws)}"><h3>{_esc_html(wspec["sentence"])}</h3>'
+                     f'<p>{len(wspec.get("steps", ()))} steps, each a metered call, with the price shown before '
+                     f'{_esc_html(name)} spends it.</p></a>'
+                     for ws, wspec in agent_pages.WORKFLOWS.items())
+           + f'</div><p style="margin-top:20px"><a href="/workflows">All workflows &rarr;</a></p></div></section>'
+           if agent_pages.WORKFLOWS else "")
 
         + "".join(sections)
 

@@ -2686,6 +2686,24 @@ AGENTS["grok-bot"] = {
     "install_image_bar": "Grok Bot  ·  Plugins",
     "install_image_caption": "Steps 1 and 2: Plugins in the sidebar, search treg, Add.",
     "faq": [
+        ("Can Grok Bot do lead generation with this?",
+         "Yes, and it is the sequence most people ask for first. A research bot or a sales bot in "
+         "Grok Bot can browse, but browsing is not data. With the plugin it can build a company "
+         "list by industry, size or funding, find the decision maker at each one, find and verify a "
+         "work email, and pull a recent news event for the opener. The whole sequence is on the "
+         "workflows page above with the receipt from a real run. Each step is priced before the bot "
+         "spends, and a miss on a per-success provider costs nothing."),
+        ("What research can a Grok Bot do with the catalog?",
+         "Company research: funding rounds, headcount, job postings, tech stack and recent news by "
+         "domain. People research: a LinkedIn profile, a person's recent posts, their work email. "
+         "Market research: who is hiring for a role this month, what employees say about a company, "
+         "which ads a competitor is running, keyword volumes and who ranks. Every job on the menu "
+         "below is one call, priced per call."),
+        ("What can it not do yet?",
+         "It does not send anything: email goes through your sequencer and LinkedIn through your "
+         "own account, on your own key. It cannot search LinkedIn by topic or list a post's likers, "
+         "and it has no page-to-markdown scraper today, so reading a prospect's website is a job for "
+         "a tool you already have. The catalog says so on the page rather than pretending."),
         ("Is treg.to free to use in Grok Bot?",
          "Adding it is free and every new team starts with $1.00 of calls. After that, each call is "
          "metered from the team's prepaid balance at the provider's own rate, with no markup and no "

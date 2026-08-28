@@ -523,3 +523,13 @@ registered in `bootstrap.py`'s ownership table like every other public route.
 Tests: `test_every_surface_links_the_three_hubs`, `test_provider_page_names_the_jobs_it_serves`,
 `test_job_page_names_the_workflows_that_chain_it`, `test_compare_titles_carry_the_cheapest_price`,
 `test_provider_title_leads_with_pricing`, `test_indexnow_key_is_served_from_the_root`.
+
+### Agent pages name the workflows
+
+`/agents/<agent>` (and its `.md` twin) carries a **Workflows** section listing every entry in
+`agent_pages.WORKFLOWS` with its step count, between "The menu" and the category sections. Before
+this the workflow pages were reachable from `/workflows` alone. `AGENTS["grok-bot"]` also carries
+three Grok-Bot-specific FAQ entries (lead generation, research, what it cannot do yet) because
+"grok bot lead generation" is the one emerging term in the outbound research that passed all seven
+gates; the use-case map lives in `marketing/rebuild/06-grok-bot-use-cases.md`. Test:
+`test_agent_pages_name_the_workflows`.

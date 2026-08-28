@@ -441,3 +441,11 @@ async def test_indexnow_key_is_served_from_the_root(clients: AsyncClient):
     from treg.routers.web import INDEXNOW_KEY
     r = await clients.get(f"/{INDEXNOW_KEY}.txt")
     assert r.status_code == 200 and r.text == INDEXNOW_KEY
+
+
+async def test_agent_pages_name_the_workflows(clients: AsyncClient):
+    html = (await clients.get("/agents/grok-bot")).text
+    assert 'id="workflows"' in html
+    assert 'href="/workflows/find-and-verify-a-lead-list"' in html
+    md = (await clients.get("/agents/grok-bot.md")).text
+    assert "/workflows/find-and-verify-a-lead-list" in md
