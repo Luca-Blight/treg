@@ -4807,8 +4807,8 @@ USE_CASE_PAGES["build-a-company-list-by-industry-size-or-tech"] = {
         "having changed title or employer while the email still resolved. Treat every "
         "headcount and industry field as a claim from the month it was indexed. The rows "
         "that were called live through treg.to carry a verified date in the table; Apollo, "
-        "Coresignal, Crunchbase, Fiber AI, Findymail, Hunter and The Companies API are "
-        "documented but not yet verified through treg.to, so run one page before an agent "
+        "Coresignal, Crunchbase, Fiber AI, Findymail and The Companies API are documented "
+        "but not yet verified through treg.to, so run one page before an agent "
         "runs a thousand.",
     ],
     "faq": [
@@ -5020,7 +5020,7 @@ USE_CASE_PAGES["daily-price-history"] = {
     ],
     "result_noun": "bar",
     "result_image": None,
-    "q_cheapest": "Which historical stock data API is free?",
+    "q_cheapest": "What does daily price history cost?",
     "q_reliable": "Which is the most reliable?",
     "q_compare": "How do the providers compare?",
     "what_is_heading": "What is a historical stock data API?",
@@ -5055,9 +5055,9 @@ USE_CASE_PAGES["daily-price-history"] = {
         "cover US plus a range of international symbols; the research turned up real demand "
         "for Indian and Sri Lankan exchange data and nothing here promises it. Nothing on "
         "this page serves intraday history except Polygon's bars and Twelve Data's series, "
-        "and the crypto history page covers coins. All six rows were verified on 2026-08-15 "
-        "and the routed row, labelled treg, is the explicit opt in where you ask treg.to to "
-        "choose among them, your own keys first.",
+        "and the crypto history page covers coins. The five provider rows were verified on "
+        "2026-08-15; the row labelled treg is the routed endpoint, the explicit opt in where "
+        "you ask treg.to to choose among them, your own keys first, and it is unverified.",
     ],
     "faq": [
         ("Is there a free historical stock data API here?",
