@@ -94,6 +94,7 @@ def test_role_manifests_are_explicit_and_match_the_created_app(role):
     }
 
     assert app.state.role == role
+    assert app.state.endpoint_observation_reader is not None
     assert app.state.role_manifest == expected
     assert _actual_routes(app) == expected["routes"]
 

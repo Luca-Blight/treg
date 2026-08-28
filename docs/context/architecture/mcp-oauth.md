@@ -64,7 +64,7 @@ of shared behavior.
 
 | Area | Must stay shared | Intentional difference |
 |---|---|---|
-| catalog search | loading, ranking, price view, observed data, near misses | next-call guidance and event source |
+| catalog search | loading, ranking, price view, near misses, and the same process observation cache and refresh Task used by HTTP | next-call guidance and event source |
 | endpoint details | the `/catalog/endpoints/{id}` route and error shape | client attribution |
 | calls | request assembly, credentials, policy, limits, idempotency, relay, errors, metering, audit | team MCP accepts team tools; V2 accepts catalog ids only and splits read/write methods |
 | balance | team selection, grant labels, balance route, error shape | client attribution |

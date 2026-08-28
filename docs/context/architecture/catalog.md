@@ -930,21 +930,22 @@ on that page and an agent will not make a second round-trip to compare reliabili
 The aggregate is authoritative but no longer request-time. `stats.EndpointObservationReader` is the
 narrow domain port, and bootstrap supplies `CachedEndpointObservationReader` around a
 `PostgresEndpointObservationReader`. Entries are keyed by endpoint id. They are fresh for five
-minutes; from five through thirty minutes the route serves the old value immediately and starts a
-refresh; after thirty minutes it publishes no observation until a refresh succeeds. A cold process
-therefore answers the first requests without reliability weighting instead of making public Catalog
-traffic wait for Postgres. The API shape does not change: `observed` is `null` when no acceptable
-entry exists.
+minutes; from five through thirty minutes HTTP and MCP search serve the old value immediately and
+start a refresh; after thirty minutes they publish no observation until a refresh succeeds. A cold
+process therefore answers the first requests without reliability weighting instead of making either
+Catalog entry point wait for Postgres. The API shape does not change: `observed` is `null` when no
+acceptable entry exists.
 
 Refresh is process-level singleflight. Concurrent misses join one shared Task, duplicate endpoint ids
 already in flight are not queued again, and the Task batches the requested ids. Its
 `PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
-closes it as soon as the two queries finish. `/catalog/search` itself has no DB dependency and checks
-out zero connections. A refresh failure keeps stale entries, backs off before retry, and never changes
-the Catalog response status; a failure with no cached entry is honest emptiness. The adapter exposes
-entry-level `fresh`, `stale`, and `miss` counters plus `refresh` and `refresh_failure` counts. Its
-invalidation story is the two TTLs: deploys and process restarts begin cold, and no cross-instance
-correctness depends on the cache.
+closes it as soon as the two queries finish. HTTP `/catalog/search` and both MCP catalog-search tools
+receive the same reader instance from bootstrap, so their request paths have no observation DB
+dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+entries, backs off before retry, and never changes the Catalog response status; a failure with no
+cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
+counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
+and process restarts begin cold, and no cross-instance correctness depends on the cache.
 
 Five rules worth keeping:
 

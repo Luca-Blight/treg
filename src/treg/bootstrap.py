@@ -422,6 +422,10 @@ def _lifespan(api_module, role: AppRole):
             if ROLE_BACKGROUND_TASKS[role] and adsconv.enabled()
             else None
         )
+        endpoint_observations = app.state.endpoint_observation_reader
+        mcp_reader_bound = role != "control" and _mcp is not None
+        if mcp_reader_bound:
+            _mcp.configure_endpoint_observation_reader(endpoint_observations)
         try:
             if role == "control" or _mcp is None:
                 yield
@@ -434,9 +438,9 @@ def _lifespan(api_module, role: AppRole):
         finally:
             if ads_task is not None:
                 ads_task.cancel()
-            endpoint_observations = getattr(app.state, "endpoint_observation_reader", None)
-            if endpoint_observations is not None:
-                await endpoint_observations.aclose()
+            if mcp_reader_bound:
+                _mcp.clear_endpoint_observation_reader(endpoint_observations)
+            await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()
             await app.state.http.aclose()
@@ -461,10 +465,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
         docs_url="/docs/api" if expose_docs else None,
         redoc_url=None,
     )
-    if role != "dataplane":
-        app.state.endpoint_observation_reader = CachedEndpointObservationReader(
-            PostgresEndpointObservationReader(session_maker)
-        )
+    app.state.endpoint_observation_reader = CachedEndpointObservationReader(
+        PostgresEndpointObservationReader(session_maker)
+    )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
     app.add_middleware(_LegacyHostRedirectMiddleware)

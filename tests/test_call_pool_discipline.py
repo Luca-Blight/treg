@@ -36,6 +36,7 @@ from treg.infra.upstream.relay import relay as upstream_relay
 from treg.models import CallRecord, Hold
 
 from test_marketplace_call import EP, EP_MICRO, platform_on  # noqa: F401 — fixture reuse
+from test_mcp import _call_tool, mcp_session
 
 PoolTimeoutError = A.PoolTimeoutError
 
@@ -186,6 +187,50 @@ async def test_a_catalog_search_storm_cannot_starve_calls_of_the_pool(
         (r.status_code, r.text) for r in calls
     ]
     assert refresh_calls == 1, "100 identical searches must share one refresh task"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TREG_TEST_DB_URL"), reason="requires the Postgres test database"
+)
+async def test_http_and_mcp_catalog_search_share_one_nonblocking_refresh(
+    clients: AsyncClient, monkeypatch, dispose_exhausted_pool_on_its_own_loop,
+):
+    """The agent entry point must share HTTP's cache, task, and single refresh connection."""
+    original = catalog_stats.observed
+    refresh_started = asyncio.Event()
+    release_refresh = asyncio.Event()
+    refresh_calls = 0
+
+    async def _slow_observed(db, endpoint_ids, **kwargs):
+        nonlocal refresh_calls
+        refresh_calls += 1
+        await db.execute(select(CallRecord.id).limit(1))
+        refresh_started.set()
+        await asyncio.wait_for(release_refresh.wait(), timeout=15)
+        return await original(db, endpoint_ids, **kwargs)
+
+    monkeypatch.setattr(catalog_stats, "observed", _slow_observed)
+    token = clients.headers["X-Treg-Token"]
+    async with mcp_session(clients) as mcp_client:
+        http_search = asyncio.create_task(clients.get("/catalog/search?q=backlinks&limit=8"))
+        mcp_search = asyncio.create_task(_call_tool(
+            mcp_client, "catalog_search", {"query": "backlinks", "limit": 8}, token=token,
+        ))
+        await asyncio.wait_for(refresh_started.wait(), timeout=5)
+        try:
+            http_response, mcp_response = await asyncio.wait_for(
+                asyncio.gather(http_search, mcp_search), timeout=5,
+            )
+            assert http_response.status_code == 200, http_response.text
+            assert mcp_response["results"]
+            assert _engine.pool.checkedout() == 1, (
+                "only the independent refresh session may hold a pooled connection"
+            )
+            assert refresh_calls == 1, "HTTP and MCP must join the same process refresh task"
+        finally:
+            release_refresh.set()
+
+    await A.app.state.endpoint_observation_reader.wait_for_idle()
 
 
 async def test_a_settle_that_loses_the_pool_once_retries_and_still_charges(
