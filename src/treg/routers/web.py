@@ -22,8 +22,9 @@ from ..domain.identity import session as sess
 from ..config import PUBLIC_HOST_ALIASES, get_settings
 from ..db import get_session
 from ..models import User
-from .catalog import (_observed_or_empty, _platform_rows, _provider_display,
-                      catalog_platform)
+from ..domain.catalog import stats as endpoint_stats
+from .catalog import (_endpoint_observation_reader, _observed_or_empty, _platform_rows,
+                      _provider_display, catalog_platform)
 from ..domain.identity.access import _user_from_session
 from .auth_helpers import OAUTH_RETURN_COOKIE, _is_https, _take_oauth_return
 from .signup_cookies import _remember_referral
@@ -849,7 +850,8 @@ async def use_case_job_page_nested(category: str, job: str):
 @app.get("/use-cases/{job}.md", include_in_schema=False)
 @app.get("/use-cases/{job}", include_in_schema=False)
 async def use_case_job_page(request: Request, job: str,
-                            db: AsyncSession = Depends(get_session)):
+                            observations: endpoint_stats.EndpointObservationReader = Depends(
+                                _endpoint_observation_reader)):
     """One job. The reader does one thing, the prompt; everything else is what the agent sees
     before it calls. The page takes one of three FORMS, chosen from the data rather than by hand:
 
@@ -890,7 +892,7 @@ async def use_case_job_page(request: Request, job: str,
     eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
     if not eps:
         raise HTTPException(status_code=404, detail="no endpoints for this job")
-    obs = await _observed_or_empty(db, [e["id"] for e in eps])
+    obs = await _observed_or_empty(observations, [e["id"] for e in eps])
     provs = _uc_providers(cat, eps, obs)
 
     def usd_of(e):
@@ -1365,7 +1367,8 @@ def _wf_use_case_link(cap: str, agent_slug: str) -> str:
     return f"/agents/{agent_slug}"
 
 
-async def _wf_steps(cat, db, spec: dict, agent_slug: str) -> list[dict]:
+async def _wf_steps(cat, observations: endpoint_stats.EndpointObservationReader,
+                    spec: dict, agent_slug: str) -> list[dict]:
     """One dict per step, priced live from the catalog: the endpoint the worked run used, its
     price per billing unit, how many providers do the step, and the observed stats when any."""
     out = []
@@ -1375,7 +1378,7 @@ async def _wf_steps(cat, db, spec: dict, agent_slug: str) -> list[dict]:
         cv = cat.cost_view(used.get("cost"), used.get("provider")) if used else None
         usd = cv["usd"] if cv and cv["usd"] else None
         unit = _UNIT_WORDS.get(((used or {}).get("cost") or {}).get("type"), "call")
-        st = (await _observed_or_empty(db, [ep_id])).get(ep_id) or {} if used else {}
+        st = (await _observed_or_empty(observations, [ep_id])).get(ep_id) or {} if used else {}
         prov = used["provider"] if used else ep_id.split(".")[0]
         out.append({
             "name": name, "cap": cap, "asks": asks, "why": why, "ep": used, "ep_id": ep_id,
@@ -1419,7 +1422,9 @@ async def workflow_csv(slug: str):
 
 @app.get("/workflows/{slug}.md", include_in_schema=False)
 @app.get("/workflows/{slug}", include_in_schema=False)
-async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(get_session)):
+async def workflow_page(request: Request, slug: str,
+                        observations: endpoint_stats.EndpointObservationReader = Depends(
+                            _endpoint_observation_reader)):
     """One workflow: the sequence a person runs, as ONE prompt. A use-case page answers one job;
     this chains several, with a per-step price pulled live from the catalog, a receipt and CSV from
     a real run (hand-recorded in `agent_pages.WORKFLOWS`, dated), and the failure modes. `.md`
@@ -1436,7 +1441,7 @@ async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(
     cat = catalog_store.load()
     base = get_settings().public_url.rstrip("/")
     agent_slug, agent_name = _uc_agent()
-    steps = await _wf_steps(cat, db, spec, agent_slug)
+    steps = await _wf_steps(cat, observations, spec, agent_slug)
     run = spec["run"]
     n_steps = len(steps)
     n_prov = len({s["provider"] for s in steps})
@@ -1627,7 +1632,8 @@ async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(
 
 
 @app.get("/workflows", include_in_schema=False)
-async def workflows_hub(db: AsyncSession = Depends(get_session)):
+async def workflows_hub(observations: endpoint_stats.EndpointObservationReader = Depends(
+        _endpoint_observation_reader)):
     """The hub the workflow pages hang from: one card per workflow, priced per row from the catalog."""
     if not _hosted():
         raise HTTPException(status_code=404, detail="not found")
@@ -1636,7 +1642,7 @@ async def workflows_hub(db: AsyncSession = Depends(get_session)):
     agent_slug, _agent_name = _uc_agent()
     cards = []
     for slug, spec in agent_pages.WORKFLOWS.items():
-        steps = await _wf_steps(cat, db, spec, agent_slug)
+        steps = await _wf_steps(cat, observations, spec, agent_slug)
         # Per row: a once-per-run step (the list page) is spread over the run's rows.
         rows_in = int(spec["run"].get("rows_in") or 0) or 1
         once = set(spec.get("once") or ())

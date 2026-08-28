@@ -939,7 +939,8 @@ acceptable entry exists.
 Refresh is process-level singleflight. Concurrent misses join one shared Task, duplicate endpoint ids
 already in flight are not queued again, and the Task batches the requested ids. Its
 `PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
-closes it as soon as the two queries finish. HTTP `/catalog/search` and both MCP catalog-search tools
+closes it as soon as the two queries finish. HTTP `/catalog/search`, both MCP catalog-search tools,
+and the prose pages that print observed stats (`/use-cases/*`, `/workflows` and `/workflows/*`)
 receive the same reader instance from bootstrap, so their request paths have no observation DB
 dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
 entries, backs off before retry, and never changes the Catalog response status; a failure with no
