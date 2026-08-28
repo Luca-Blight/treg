@@ -216,6 +216,7 @@ async def clients():
     # before it, to keep an old write out of the new schema, and after the test, to finish its own.
     await audit.drain()
     await reset_db()
+    await app.state.endpoint_observation_reader.reset()
     app.state.hook_hits = []  # webhook POSTs the upstream received (for alerting assertions)
     app.state.http = AsyncClient(transport=ASGITransport(app=make_upstream(app.state.hook_hits)), base_url="http://upstream")
     try:

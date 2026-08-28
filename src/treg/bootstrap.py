@@ -25,6 +25,10 @@ from .bootstrap_http import (
 )
 from .config import get_settings
 from .db import init_db, session_maker
+from .infra.catalog_observations import (
+    CachedEndpointObservationReader,
+    PostgresEndpointObservationReader,
+)
 from .routers import call as call_routes
 
 
@@ -430,6 +434,10 @@ def _lifespan(api_module, role: AppRole):
             if ROLE_BACKGROUND_TASKS[role] and archive.worker_enabled()
             else None
         )
+        endpoint_observations = app.state.endpoint_observation_reader
+        mcp_reader_bound = role != "control" and _mcp is not None
+        if mcp_reader_bound:
+            _mcp.configure_endpoint_observation_reader(endpoint_observations)
         try:
             if role == "control" or _mcp is None:
                 yield
@@ -444,6 +452,9 @@ def _lifespan(api_module, role: AppRole):
                 ads_task.cancel()
             if archive_task is not None:
                 archive_task.cancel()
+            if mcp_reader_bound:
+                _mcp.clear_endpoint_observation_reader(endpoint_observations)
+            await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()
             await archive.drain()
@@ -468,6 +479,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
         openapi_url="/openapi.json" if expose_docs else None,
         docs_url="/docs/api" if expose_docs else None,
         redoc_url=None,
+    )
+    app.state.endpoint_observation_reader = CachedEndpointObservationReader(
+        PostgresEndpointObservationReader(session_maker)
     )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.

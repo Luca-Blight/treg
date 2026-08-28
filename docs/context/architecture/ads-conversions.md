@@ -130,15 +130,14 @@ touches balance.
 
 ## Atomicity: two of three fire sites are atomic with their event, one is not
 
-- **`signup`** — atomic. `adsconv.queue()` runs before `ledger.grant()` in `_grant_signup_promo`, and
-  `grant()`'s own commit lands both rows together.
+- **`signup`** — atomic. `adsconv.queue()` and `ledger.grant()` both stage in `_grant_signup_promo`,
+  and its one commit lands both rows together.
 - **`first_call`** — atomic. `_record_first_call` queues the conversion and commits once, on its own
   session.
-- **`paid`** — **not atomic**. `billing._credit` calls `ledger.topup()`, which commits internally
-  (`ledger.py`'s money-write rule), before it queues the `paid` conversion and commits that
-  separately. A crash between the two commits loses the conversion permanently: a Stripe webhook
-  redelivery finds the payment already credited (`fresh` is `False`), and the fire site that would
-  have queued the conversion never runs again.
+- **`paid`** — **not atomic**. `billing._credit` commits the credit first, then queues the `paid`
+  conversion and commits that separately. A crash between the two commits loses the conversion
+  permanently: a Stripe webhook redelivery finds the payment already credited (`fresh` is `False`),
+  and the fire site that would have queued the conversion never runs again.
 
   This gap was found in review and the decision (2026-08-17) was to **accept it and document it
   honestly** rather than restructure `ledger.py` to make the credit and the conversion one

@@ -17,14 +17,18 @@ when-exactly, never a params_hash. And an endpoint with fewer than `MIN_SAMPLES`
 `samples` and nothing else: with two calls behind it, a "100% success" number is noise dressed as
 evidence, and on a quiet endpoint it could also be one org's activity made visible.
 
-Read-only and query-time, like `reconcile.py` — no scheduler, no cache to invalidate, no second copy
-of the truth. Percentiles are computed in Python because `percentile_cont` is not portable to SQLite
-(the same tradeoff `reconcile.py` documents for its JSON provenance).
+This remains the authoritative read-only calculation. Catalog views reach it through the
+`EndpointObservationReader` port; the hosted adapter keeps a bounded-staleness process cache so a
+search burst cannot multiply this query by request concurrency. Percentiles are computed in Python
+because `percentile_cont` is not portable to SQLite (the same tradeoff `reconcile.py` documents for
+its JSON provenance).
 """
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime, timedelta, timezone
+from typing import Protocol, TypeAlias
 
 from sqlalchemy import case, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +39,19 @@ from ...models import CallRecord
 WINDOW_DAYS = 30
 MIN_SAMPLES = 5          # below this we publish the count and nothing else (see module docstring)
 _MAX_ROWS = 20_000       # bound the latency fetch; percentiles do not get truer past this
+
+EndpointObservation: TypeAlias = dict[str, int | float | None]
+ObservationSnapshot: TypeAlias = dict[str, EndpointObservation]
+
+
+class EndpointObservationReader(Protocol):
+    """Narrow read port used by Catalog views.
+
+    The domain defines the aggregate's shape; bootstrap chooses whether it comes straight from
+    Postgres, a process cache, or a future shared adapter. Callers never learn the storage choice.
+    """
+
+    async def get_many(self, endpoint_ids: Collection[str]) -> ObservationSnapshot: ...
 
 
 def _now() -> datetime:
@@ -53,7 +70,7 @@ def _pct(sorted_values: list[int], q: float) -> int | None:
 
 async def observed(
     db: AsyncSession, endpoint_ids: list[str], *, days: int = WINDOW_DAYS,
-) -> dict[str, dict]:
+) -> ObservationSnapshot:
     """Per endpoint id: `{samples, ok_rate, p50_ms, p95_ms, last_ok_days}`.
 
     Cost drift (what we estimated vs what the provider charged) is deliberately NOT here — it is

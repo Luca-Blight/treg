@@ -496,6 +496,37 @@ def test_every_category_has_a_blurb_and_a_prompt():
 WORKFLOW = "/workflows/find-and-verify-a-lead-list"
 
 
+async def test_the_prose_pages_consult_the_shared_observation_reader(clients: AsyncClient, monkeypatch):
+    """The use-case and workflow pages read observed stats through the process-wide reader, like
+    the catalog routes. Wiring a raw DB session in instead fails silently — the session has no
+    `get_many`, the degrade-to-empty guard eats the AttributeError, and every page quietly loses
+    its reliability numbers while the logs fill with tracebacks."""
+    calls: list[list[str]] = []
+
+    class Reader:
+        async def get_many(self, endpoint_ids):
+            ids = list(endpoint_ids)
+            calls.append(ids)
+            return {i: {"samples": 4321, "ok_rate": 1.0, "p50_ms": 40, "p95_ms": 90,
+                        "last_ok_days": 0} for i in ids}
+
+    monkeypatch.setattr(app.state, "endpoint_observation_reader", Reader())
+
+    html = (await clients.get(USECASE)).text
+    assert calls and calls[0], "the use-case page never consulted the observation reader"
+    assert "4321 calls" in html
+
+    calls.clear()
+    r = await clients.get(WORKFLOW)
+    assert r.status_code == 200, r.text[:300]
+    assert calls, "the workflow page never consulted the observation reader"
+    assert "4321 calls" in r.text
+
+    calls.clear()
+    assert (await clients.get("/workflows")).status_code == 200
+    assert calls, "the workflows hub never consulted the observation reader"
+
+
 async def test_workflow_page_is_served_with_the_crawler_essentials(clients: AsyncClient):
     r = await clients.get(WORKFLOW)
     assert r.status_code == 200, r.text[:300]

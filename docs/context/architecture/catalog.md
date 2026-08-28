@@ -48,6 +48,7 @@ sources:
   - src/treg/domain/catalog/__init__.py
   - src/treg/domain/catalog/store.py
   - src/treg/domain/catalog/stats.py
+  - src/treg/infra/catalog_observations.py
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
@@ -925,6 +926,27 @@ sample size** per endpoint from `CallRecord` — which has recorded `endpoint_id
 `duration_ms` since the marketplace shipped and was never read. It rides on
 `/catalog/endpoints/{id}`, attached to the endpoint **and every sibling**, because the choice is made
 on that page and an agent will not make a second round-trip to compare reliability.
+
+The aggregate is authoritative but no longer request-time. `stats.EndpointObservationReader` is the
+narrow domain port, and bootstrap supplies `CachedEndpointObservationReader` around a
+`PostgresEndpointObservationReader`. Entries are keyed by endpoint id. They are fresh for five
+minutes; from five through thirty minutes HTTP and MCP search serve the old value immediately and
+start a refresh; after thirty minutes they publish no observation until a refresh succeeds. A cold
+process therefore answers the first requests without reliability weighting instead of making either
+Catalog entry point wait for Postgres. The API shape does not change: `observed` is `null` when no
+acceptable entry exists.
+
+Refresh is process-level singleflight. Concurrent misses join one shared Task, duplicate endpoint ids
+already in flight are not queued again, and the Task batches the requested ids. Its
+`PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
+closes it as soon as the two queries finish. HTTP `/catalog/search`, both MCP catalog-search tools,
+and the prose pages that print observed stats (`/use-cases/*`, `/workflows` and `/workflows/*`)
+receive the same reader instance from bootstrap, so their request paths have no observation DB
+dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+entries, backs off before retry, and never changes the Catalog response status; a failure with no
+cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
+counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
+and process restarts begin cold, and no cross-instance correctness depends on the cache.
 
 Five rules worth keeping:
 

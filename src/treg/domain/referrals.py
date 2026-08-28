@@ -29,6 +29,13 @@ It never reverses a grant that has already landed. Referral credit burns before 
 a negative-balance path would mean a second module that can move money. A dispute inside the hold
 cancels the payout; a dispute after it is logged for a human. That boundary is the whole reason
 the hold exists.
+
+WHO OWNS THE TRANSACTIONS
+-------------------------
+This module is the checkpoint owner of a multi-transaction saga on a session the application
+opened (the Stripe webhook's, or the Referrals page's); the money primitives it calls never
+commit - every commit here is a named recovery point (claim, stamp, qualify), and the ORDER of
+those durable checkpoints is the whole safety argument for paying at most once.
 """
 
 from __future__ import annotations
@@ -276,10 +283,16 @@ async def _grant_referee(db: AsyncSession, row: Referral) -> None:
 
     `referred_block_id` is the guard AND the record: set means paid, so a retry cannot double-grant
     and `sweep` knows to skip this side. A failure here is not fatal — the row stays qualified with
-    the field unset, and the sweep pays it as a fallback.
+    the field unset, and the sweep pays it as a fallback. The grant only stages, so the one commit
+    below lands block, balance, entry and the row stamp in ONE transaction - a crash can no longer
+    grant without stamping.
     """
     if row.referred_block_id:
         return
+    # Copied to primitives BEFORE the try: the recovery rollback below expires every object this
+    # session tracks, and reading `row.id` off an expired row afterwards is implicit async I/O
+    # (MissingGreenlet) - the log line itself would break the never-raises contract.
+    row_id = row.id
     try:
         block = await ledger.grant(
             db, row.referred_org_id, amount_micro=int(get_settings().referral_referred_micro),
@@ -292,7 +305,7 @@ async def _grant_referee(db: AsyncSession, row: Referral) -> None:
             await db.commit()
     except Exception as exc:  # noqa: BLE001 — the sweep retries; a bonus must not fail a webhook
         await db.rollback()
-        log.warning("referral %s: instant referee grant failed, sweep will retry: %s", row.id, exc)
+        log.warning("referral %s: instant referee grant failed, sweep will retry: %s", row_id, exc)
 
 
 # ---- clawback ----------------------------------------------------------------------------------
@@ -374,14 +387,20 @@ async def sweep(db: AsyncSession, *, limit: int = 100, referrer_user_id: int | N
         q = q.where(Referral.referrer_user_id == referrer_user_id)
     due = (await db.execute(q)).scalars().all()
 
+    # Ids copied to primitives BEFORE the loop: a recovery rollback below expires EVERY row this
+    # session tracks, so reading `row.id` after one would be implicit async I/O (MissingGreenlet) -
+    # the log line itself would break the never-raises contract, and so would capturing the next
+    # iteration's id inside the loop.
+    due_ids = [row.id for row in due]
+
     paid = 0
-    for row in due:
+    for row, row_id in zip(due, due_ids):
         try:
             if await _pay(db, row):
                 paid += 1
-        except Exception as exc:  # pragma: no cover — defensive; the next sweep retries
+        except Exception as exc:  # noqa: BLE001 - defensive; the next sweep retries
             await db.rollback()
-            log.warning("referral %s payout failed, will retry: %s", row.id, exc)
+            log.warning("referral %s payout failed, will retry: %s", row_id, exc)
     return paid
 
 
@@ -401,7 +420,8 @@ async def _pay(db: AsyncSession, row: Referral) -> bool:
     The cost of that ordering is the opposite failure: a crash between the claim and the grant pays
     nobody and leaves the row saying otherwise. That is the right way round for money — it is
     visible in `/admin/referrals` as a paid row with a null block id, and it errs toward paying
-    once rather than twice.
+    once rather than twice. The grants only stage, so they and the block-id stamp land in ONE
+    commit after the separate claim commit.
     """
     s = get_settings()
     referred_org = await db.get(Org, row.referred_org_id)
@@ -438,7 +458,9 @@ async def _pay(db: AsyncSession, row: Referral) -> bool:
         fresh.referrer_block_id = referrer_block.id if referrer_block else None
         fresh.referrer_reward_micro = referrer_block.amount_micro if referrer_block else 0
         db.add(fresh)
-        await db.commit()
+    # UNCONDITIONAL: the grants above are staged on this session, so skipping the commit when
+    # `fresh` went missing would leave money staged and silently discarded with the session.
+    await db.commit()
     return True
 
 

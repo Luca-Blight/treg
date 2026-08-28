@@ -63,8 +63,8 @@ providers is what the reserve takes, and a test walks the provider asserting the
 | `reconcile.py` | read-only reports that check the ledger against the world | no |
 
 The money seam is one function: `ledger.topup(org, amount_micro, payment_ref)`. Billing orchestration
-asks the Stripe adapter to authorize or verify a payment, then asks the ledger to credit it; neither
-adapter reaches into the ledger.
+asks the Stripe adapter to authorize or verify a payment, then asks the ledger to stage the credit
+and owns the commit that lands it; neither adapter reaches into the ledger.
 
 ## Units: integer micro-USD, everywhere
 
@@ -91,18 +91,20 @@ swallows exceptions, which is right for analytics and fatal for money.
 
 | Op | Effect |
 |---|---|
-| `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) |
-| `topup` | new purchased block, balance up (after Stripe authorized) |
+| `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) - staged; committed by the application (signup, billing) or the referrals saga checkpoint |
+| `topup` | new purchased block, balance up (after Stripe authorized) - staged; committed promptly by the application (billing) |
 | `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
 | `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |
 | `release` / `release_in_transaction` | hold closed, balance refunded in full - committed by the compatibility wrapper or the call application |
 
-The call-only `reserve_in_transaction`, `settle_in_transaction`, and `release_in_transaction`
-primitives may stage work but never commit or roll back. `tests/test_call_architecture.py` enforces
-that boundary and pins reserve's exception: its lazy stale-hold sweep calls the public committing
-`release`, so each old refund remains durable even if the new reservation returns 402. Converting
-`grant` and `topup` callers to application-owned transactions is tracked as
-`money-funding-transactions` and is required before Stage 5.
+All five primitives stage only: `grant`, `topup`, `reserve_in_transaction`, `settle_in_transaction`,
+and `release_in_transaction` never commit or roll back the caller's transaction. Commits are owned by
+the application (signup, billing, the call application) or by the two documented exceptions: the lazy
+stale-hold reap boundary (reserve's sweep calls the public committing `release`, so each old refund
+remains durable even if the new reservation returns 402), and the referrals saga checkpoints
+(`domain/referrals` commits at named recovery points - claim, stamp, qualify - on a session the
+application opened). `tests/test_call_architecture.py` enforces the no-commit boundary over the real
+bodies of all five, with a mutation self-check that proves an injected commit is still detected.
 
 Release metadata distinguishes a failed call from a normal non-billable provider response, and says
 which side failed. A provider that answered 5xx releases as `provider_failed_<status>`; a call treg
@@ -155,11 +157,13 @@ balance to strand. Each stale release commits independently before the new balan
 rolls back only the failed reservation, never a refund the reaper already made durable.
 
 **Idempotency on `topup` is enforced by the database.** `stripe_payment_intent` is UNIQUE, and `topup`
-FLUSHES immediately after adding the block, before the balance moves: the loser of a race rolls back
-and returns the winner's block, giving the same answer as the sequential path. The application-level
-SELECT is an optimisation, not the guarantee — two concurrent deliveries of one PaymentIntent both
-miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy block because that
-block returns early on a fresh database — precisely the one that needs it.)
+FLUSHES its INSERT inside a SAVEPOINT, before the balance moves: the loser of a race rolls back only
+that savepoint - the caller's other staged work survives - and its re-SELECT returns the winner's
+committed block, the same answer as the sequential path. The loser's flush blocks until the winner's
+transaction commits, which is why the caller must commit promptly after `topup` returns. The
+application-level SELECT is an optimisation, not the guarantee — two concurrent deliveries of one
+PaymentIntent both miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy
+block because that block returns early on a fresh database — precisely the one that needs it.)
 
 ## Stripe (`application/billing.py` and `infra/stripe.py`)
 
@@ -195,12 +199,12 @@ retry a payment that already credited. Amounts travel as canonical integer `amou
 `amount_usd` on the event is display-only.
 
 On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion (`adsconv.queue`) when
-the org has a click to attribute to — but this one is **not** atomic with the credit: `ledger.topup()`
-already committed by the time `_credit` gets here, so the conversion is a second, separate commit. A
-crash between the two loses the conversion permanently (the money is still correctly credited). Found
-in review and accepted deliberately (2026-08-17) rather than restructuring `domain/money`'s commit-inside
-convention; full reasoning and the cheap future fix in
-[ads-conversions](ads-conversions.md).
+the org has a click to attribute to — but this one is **not** atomic with the credit: the credit is
+durable before the conversion is queued, and the conversion is a second, separate commit. A crash
+between the two loses the conversion permanently (the money is still correctly credited). Found in
+review and accepted deliberately (2026-08-17): coupling the credit's fate to the conversion commit
+would be backwards, because the credit must stand whatever happens after it; full reasoning and the
+cheap future fix in [ads-conversions](ads-conversions.md).
 
 **Invoices exist on the manual path only.** The top-up Checkout sets `invoice_creation`, so a
 one-off purchase produces a real Stripe Invoice — number, PDF, billing address, tax ID — which is the
@@ -689,7 +693,8 @@ where two paths can read before either writes, the database has to be the one th
 then does credit move. The opposite order would mean the loser of a race had already granted. The
 cost is the mirror failure — a crash between claim and grant pays nobody and says otherwise — which
 is the right way round for money, is visible in `/admin/referrals` as a paid row with a null block
-id, and errs toward paying once rather than twice.
+id, and errs toward paying once rather than twice. The grants and the block-id stamp are then
+committed together, in one transaction after the separate claim commit.
 
 **The two sides are paid at different times, on purpose.** The REFEREE is credited the instant they
 qualify; only the REFERRER waits out `referral_hold_days` (7).
@@ -743,6 +748,15 @@ nothing" is the ticket this program generates, and the answer has to be on the p
 queue) and the referral application journey for `GET /referrals` (someone checking on their reward is
 the one who makes it land), following the same lazy, caller-pays bargain as `reap_stale_holds`. It
 never raises: neither its Stripe webhook caller nor its page-load caller may fail over a bonus.
+
+The recovery paths have to honour that contract *in their own logging*: the rollback that contains a
+failed payout expires every ORM row the session tracks, and reading an expired attribute in an async
+session is implicit async I/O (MissingGreenlet) - so the warning line itself was the raise, exactly
+when it mattered. `_grant_referee` and `sweep` therefore copy the row ids to primitives before the
+try and log those (sweep copies the whole batch before the loop, since one rollback expires every
+due row), and the page journey (`application/referrals.py`) logs the `user_id` it was called with
+and revives the expired user row (`sa_inspect(...).expired` then `refresh`, the signup idiom) before
+rendering the summary.
 
 **The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
 mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
