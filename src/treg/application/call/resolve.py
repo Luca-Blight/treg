@@ -292,7 +292,8 @@ class MarketplaceCall:
 # able to reserve an org's whole balance for a single call — the settle corrects the estimate either way.
 _PLATFORM_PAGE_DEFAULT = 20
 _PLATFORM_PAGE_MAX = 100
-_LIMIT_PARAMS = ("limit", "count", "depth", "page_size", "per_page", "num", "max_results", "size")
+_LIMIT_PARAMS = ("limit", "count", "depth", "page_size", "per_page", "num", "max_results", "size",
+                 "pageSize", "perPage", "numResults", "maxResults")  # camelCase: companyenrich, exa, lusha
 
 
 def _body_limit(body: bytes) -> int | None:
@@ -317,6 +318,12 @@ def _body_limit(body: bytes) -> int | None:
         val = doc.get(name)
         if isinstance(val, int) and not isinstance(val, bool) and val > 0:
             return val
+    pagination = doc.get("pagination")  # icypeas / lusha: {"pagination": {"size": 10}}
+    if isinstance(pagination, dict):
+        for name in _LIMIT_PARAMS:
+            val = pagination.get(name)
+            if isinstance(val, int) and not isinstance(val, bool) and val > 0:
+                return val
     return items
 
 

@@ -285,3 +285,21 @@ contracts:
       linkedin_url: {type: str}
     miss: "name == null"
     idempotent: true
+
+  companies.search:
+    summary: "Find companies by a free-text description, a name, an industry, a technology they use, or a domain — provider-native rows in `companies`"
+    identity:
+      - {q: str}
+      - {name: str}
+      - {industry: str}
+      - {technology: str}
+      - {domain: str}
+    filters:
+      country: {type: str, default: null, note: "ISO country code, where the provider supports it"}
+      limit: {type: int, default: 10, note: "rows to return — THE price dial: most providers bill per row"}
+    output:
+      companies: {type: list, required: true, note: "the provider's own company rows (name, domain, industry, size, location…) — shapes differ per provider; raw is the same body"}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "companies == []"
+    idempotent: true

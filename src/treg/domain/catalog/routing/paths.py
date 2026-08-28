@@ -3,6 +3,8 @@ named transforms. Small on purpose — anything that needs code is a named trans
 
 from __future__ import annotations
 
+import json
+
 import re
 from typing import Any
 
@@ -153,6 +155,13 @@ def obj(*kv: Any) -> dict | None:
     return out or None
 
 
+def tca_filter(attribute: Any, value: Any) -> str | None:
+    """`tca_filter('about.industries', industry)` — The Companies API's JSON-string `query` filter."""
+    if value is None:
+        return None
+    return json.dumps([{"attribute": attribute, "operator": "or", "sign": "equals", "values": [value]}])
+
+
 def as_list(v: Any) -> Any:
     """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
     if v is None:
@@ -163,7 +172,7 @@ def as_list(v: Any) -> Any:
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
               "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
               "list": as_list, "at_least": at_least, "linkedin_handle": linkedin_handle, "linkedin_url": linkedin_url,
-              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj}
+              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj, "tca_filter": tca_filter}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")

@@ -652,3 +652,90 @@ adapters:
   # diffbot.companies.enrich: no adapter — its captured example truncates the entity, so `out`
   # cannot be fixture-verified. akta.companies.enrich: example carries location only (no name).
   # coresignal.companies.enrich: no example (402 at capture, empty account).
+
+  # ---- companies.search (batch 5, 2026-08-28) --------------------------------------------------
+  exa.companies.search:
+    accepts: [[q]]
+    in:  {q: body.query}
+    in_expr: {body.numResults: limit}
+    const: {body.category: company}
+    out: {companies: results, count: "len(results)"}
+    miss: "results == []"
+  hunter.x.discover-companies:
+    accepts: [[q]]
+    in:  {q: body.query}
+    out: {companies: data, count: meta.results}
+    miss: "data == []"
+  aviato.companies.search:
+    accepts: [[name]]
+    in:  {}
+    in_expr: {body.dsl: "obj('filters', list(obj('name', obj('operation', 'fts', 'value', name))), 'limit', limit, 'offset', 0, 'sort', [])"}
+    test_identity: {name: Stripe}
+    out: {companies: items, count: count}
+    miss: "items == []"
+  companyenrich.companies.search:
+    accepts: [[technology]]
+    in:  {technology: body.technologies, country: body.countries}
+    in_expr: {body.technologies: "list(technology)", body.countries: "list(country)", body.pageSize: limit, body.page: "1"}
+    out: {companies: items, count: totalItems}
+    miss: "items == []"
+  icypeas.companies.search:
+    accepts: [[domain]]
+    in:  {domain: body.query.companyId.include}
+    in_expr: {body.query.companyId.include: "list(domain)", body.pagination.size: limit}
+    out: {companies: leads, count: total, next_cursor: pagination.token}
+    miss: "leads == []"
+  crustdata.companies.search:
+    accepts: [[domain]]
+    in:  {domain: body.filters.value}
+    in_expr: {body.filters: "obj('field', 'basic_info.primary_domain', 'type', '=', 'value', domain)", body.limit: limit}
+    const: {body.fields: [basic_info.name, basic_info.primary_domain]}
+    out: {companies: companies, count: total_count, next_cursor: next_cursor}
+    miss: "companies == []"
+  leadmagic.x.companies-search-v3:
+    accepts: [[domain]]
+    in:  {domain: body.company_domain}
+    in_expr: {body.limit: limit}
+    out: {companies: companies, count: count}
+    miss: "companies == []"
+  lusha.companies.search:
+    accepts: [[domain]]
+    in:  {domain: body.filters.companies.include.domains}
+    in_expr: {body.filters.companies.include.domains: "list(domain)", body.pagination.size: "at_least(limit, 10)", body.pagination.page: "0"}
+    out: {companies: results, count: pagination.total}
+    miss: "results == []"
+  fiber-ai.companies.search:
+    accepts: [[domain]]
+    in:  {}
+    in_expr: {body.searchParams: "obj('exactCompanyV2', obj('anyOf', list(obj('identifier', 'domain', 'domain', domain))))", body.pageSize: limit}
+    test_identity: {domain: stripe.com}
+    out: {companies: output.data, next_cursor: output.nextCursor}
+    miss: "output.data == []"
+  akta.companies.search:
+    accepts: [[domain]]
+    in:  {domain: queryParams.query}
+    out: {companies: data, count: count}
+    miss: "data == []"
+  pdl.companies.search:
+    accepts: [[name]]
+    in:  {}
+    in_expr: {queryParams.sql: "fmt(\"SELECT * FROM company WHERE name='{}'\", lower(name))", queryParams.size: limit}
+    test_identity: {name: people data labs}
+    out: {companies: data, count: total, next_cursor: scroll_token}
+    miss: "data == []"
+  tomba.companies.search.reveal:
+    accepts: [[industry]]
+    in:  {industry: body.filters.industry, country: body.filters.country}
+    in_expr: {body.filters: "obj('country', list(country), 'industry', list(industry))", body.page: "1"}
+    out: {companies: data.companies, count: meta.total}
+    miss: "data.companies == []"
+  thecompaniesapi.companies.search:
+    accepts: [[industry]]
+    in:  {}
+    in_expr: {queryParams.query: "tca_filter('about.industries', industry)", queryParams.size: limit}
+    test_identity: {industry: fintech}
+    out: {companies: companies, count: meta.total}
+    miss: "companies == []"
+  # apollo.companies.search: no adapter — its identity param is `q_organization_domains_list[]`, which the
+  # path language reads as an index. diffbot.companies.search (DQL) and coresignal (no example) left out;
+  # predictleads.companies.discover takes no identity.

@@ -401,6 +401,16 @@ async def test_per_result_estimate_reads_a_body_limit(clients: AsyncClient, plat
     assert row["cost_estimated_micro"] == 150 * 3
 
 
+def test_body_limit_reads_camel_case_and_nested_pagination_keys():
+    """companyenrich says `pageSize`, exa `numResults`, icypeas/lusha `pagination.size` — a 2-row page
+    on any of them must not reserve (and settle at) the 20-row default: seen live 2026-08-28,
+    $0.196 charged for 2 companyenrich rows at $0.0098 each."""
+    assert call_resolution._body_limit(json.dumps({"pageSize": 2, "technologies": ["stripe"]}).encode()) == 2
+    assert call_resolution._body_limit(json.dumps({"query": "x", "numResults": 3}).encode()) == 3
+    assert call_resolution._body_limit(json.dumps({"query": {}, "pagination": {"size": 4}}).encode()) == 4
+    assert call_resolution._body_limit(json.dumps({"query": {}, "pagination": {"page": 0}}).encode()) is None
+
+
 async def test_provider_5xx_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
     """An upstream failure is not billable: the balance ends exactly where it started."""
     monkeypatch.setattr(call_service, "relay", _fake_relay(503, b'{"error":"upstream is down"}'))
