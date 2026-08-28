@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
@@ -10,6 +11,7 @@ from httpx import AsyncClient
 from sqlmodel import select
 
 from treg import audit
+from treg.application.call import route as call_route
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
 from treg.config import get_settings
@@ -18,7 +20,8 @@ from treg.domain.catalog import store as catalog_store
 from treg.domain.catalog.routing import paths as P
 from treg.domain.catalog.routing.contracts import canonical_identity
 from treg.domain.catalog.routing.plan import Candidate, cost_at, rank
-from treg.models import Hold, LedgerEntry
+from treg.infra.catalog_observations import CachedEndpointObservationReader
+from treg.models import CallRecord, Hold, LedgerEntry
 
 from test_marketplace_call import _balance, platform_on  # noqa: F401
 
@@ -115,6 +118,99 @@ def test_cost_at_and_ranking_math():
     assert [c.endpoint["id"] for c in rank([a, b], exclude=["a"])] == ["b.x"]
     a.exhausted = True
     assert [c.endpoint["id"] for c in rank([a, b])] == ["b.x"]
+
+
+async def test_concurrent_routed_plans_share_one_cached_observation_refresh(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    from treg.domain.catalog import stats
+
+    class Source:
+        calls = 0
+
+        async def get_many(self, endpoint_ids):
+            self.calls += 1
+            return {
+                endpoint_id: {
+                    "samples": 20, "ok_rate": 1.0, "p50_ms": 20, "p95_ms": 40,
+                    "last_ok_days": 0, "hit_rate": 0.5, "hit_samples": 20,
+                }
+                for endpoint_id in endpoint_ids
+            }
+
+    async def request_time_aggregate(*args, **kwargs):
+        raise AssertionError("routed planning must not aggregate CallRecord on the request path")
+
+    source = Source()
+    reader = CachedEndpointObservationReader(source)
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", reader, raising=False)
+    monkeypatch.setattr(stats, "observed", request_time_aggregate)
+    ep = catalog_store.load().by_id[ROUTED]
+
+    class _Org:
+        id = 1
+
+    class _Caller:
+        org_id = 1
+        org = _Org()
+
+    try:
+        plans = await asyncio.gather(*(
+            call_route.build_plan(
+                ep, {"full_name": "Patrick Collison", "domain": "stripe.com"},
+                _Caller(), call_route.RouteOptions.from_headers(lambda key: None),
+            )
+            for _ in range(20)
+        ))
+        await reader.wait_for_idle()
+    finally:
+        await reader.aclose()
+
+    assert all(plan.candidates for plan in plans)
+    assert source.calls == 1
+
+
+async def test_routed_plan_keeps_per_success_hit_fallback_from_the_cache(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    from treg import api as A
+    from treg.domain.catalog import stats
+
+    endpoint_id = "tomba.people.email.find"
+    async with session_maker() as db:
+        for cost_micro in (8_900, 8_900, 0):
+            db.add(CallRecord(
+                org_id=1, user_email="a@b.c", tool_name=endpoint_id, method="GET", path="/x",
+                status_code=200, endpoint_id=endpoint_id, cost_observed_micro=cost_micro, hit=None,
+            ))
+        await db.commit()
+    monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
+    reader = A.app.state.endpoint_observation_reader
+    assert await reader.get_many([endpoint_id]) == {}
+    await reader.wait_for_idle()
+    warm = await reader.get_many([endpoint_id])
+    assert warm[endpoint_id]["hit_rate"] == pytest.approx(2 / 3, abs=1e-3)
+
+    async def request_time_aggregate(*args, **kwargs):
+        raise AssertionError("the routed plan must use the warm observation cache")
+
+    monkeypatch.setattr(stats, "observed", request_time_aggregate)
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", reader, raising=False)
+    ep = catalog_store.load().by_id[ROUTED]
+
+    class _Org:
+        id = 1
+
+    class _Caller:
+        org_id = 1
+        org = _Org()
+
+    plan = await call_route.build_plan(
+        ep, {"full_name": "Patrick Collison", "domain": "stripe.com"},
+        _Caller(), call_route.RouteOptions.from_headers(lambda key: None),
+    )
+    tomba = next(candidate for candidate in plan.candidates if candidate.endpoint["id"] == endpoint_id)
+    assert tomba.hit_rate == pytest.approx(2 / 3, abs=1e-3)
 
 
 # ---- the call path ---------------------------------------------------------------------------
@@ -376,6 +472,7 @@ async def test_hit_verdict_is_recorded_and_becomes_a_hit_rate(clients: AsyncClie
     # the catalog reads observations through the process cache: a cold entry answers nothing and
     # refreshes in the background, so warm it the way test_endpoint_stats does
     from treg import api as A
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", A.app.state.endpoint_observation_reader)
     await clients.get(f"/catalog/endpoints/{ROUTED}")
     await A.app.state.endpoint_observation_reader.wait_for_idle()
     r = await clients.get(f"/catalog/endpoints/{ROUTED}")

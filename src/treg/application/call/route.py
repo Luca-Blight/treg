@@ -36,6 +36,32 @@ from .resolve import _host_of, _marketplace_secret
 from .types import CallContext, CallFailure, GatewayFailed, ResolutionFailed, UpstreamResponse
 
 log = logging.getLogger("treg.route")
+_endpoint_observation_reader: endpoint_stats.EndpointObservationReader | None = None
+
+
+def configure_endpoint_observation_reader(reader: endpoint_stats.EndpointObservationReader) -> None:
+    """Bind bootstrap's shared process cache to routed planning."""
+    global _endpoint_observation_reader
+    _endpoint_observation_reader = reader
+
+
+def clear_endpoint_observation_reader(reader: endpoint_stats.EndpointObservationReader) -> None:
+    """Unbind only the reader owned by the lifespan that is stopping."""
+    global _endpoint_observation_reader
+    if _endpoint_observation_reader is reader:
+        _endpoint_observation_reader = None
+
+
+async def _observed_stats(endpoint_ids: list[str]) -> endpoint_stats.ObservationSnapshot:
+    """Read advisory routing evidence without making the request wait for its DB aggregate."""
+    reader = _endpoint_observation_reader
+    if reader is None:
+        return {}
+    try:
+        return await reader.get_many(endpoint_ids)
+    except Exception:  # noqa: BLE001 - routing evidence always degrades to deterministic ranking
+        log.warning("endpoint stats unavailable for routed plan", exc_info=True)
+        return {}
 
 WATERFALL_HEADER = "x-treg-route-waterfall"
 MAX_COST_HEADER = "x-treg-route-max-cost"
@@ -128,7 +154,7 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
             "variants": [list(v) for v in contract.identity]})
     raw, dropped = candidates_for(contract, cat.for_capability(ep["capability"]), cat.adapters, identity)
     ids = [e["id"] for e, _, _ in raw]
-    stats: dict[str, dict] = {}
+    stats = await _observed_stats(ids)
     own: set[str] = set()
     own_tools: set[str] = set()
     if ids:
@@ -136,11 +162,6 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         from ... import oauth_providers
         from ...models import Tool
         async with session_maker() as db:
-            try:
-                stats = await endpoint_stats.observed(
-                    db, ids, per_success={e["id"] for e, _, _ in raw if (e.get("cost") or {}).get("type") == "per_success"})
-            except Exception:  # noqa: BLE001 — stats are advisory
-                stats = {}
             services = {e["provider"] for e, _, _ in raw}
             if caller.org_id is not None:
                 # tier 1: a tool the team REGISTERED for the provider's host (their credential,

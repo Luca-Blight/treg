@@ -17,6 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
 from . import adsconv, analytics, archive, audit
+from .application.call import route as routed_call
 from . import bootstrap_handlers
 from .bootstrap_http import (
     _BodyDecodeMiddleware,
@@ -435,6 +436,7 @@ def _lifespan(api_module, role: AppRole):
             else None
         )
         endpoint_observations = app.state.endpoint_observation_reader
+        routed_call.configure_endpoint_observation_reader(endpoint_observations)
         mcp_reader_bound = role != "control" and _mcp is not None
         if mcp_reader_bound:
             _mcp.configure_endpoint_observation_reader(endpoint_observations)
@@ -454,6 +456,7 @@ def _lifespan(api_module, role: AppRole):
                 archive_task.cancel()
             if mcp_reader_bound:
                 _mcp.clear_endpoint_observation_reader(endpoint_observations)
+            routed_call.clear_endpoint_observation_reader(endpoint_observations)
             await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()

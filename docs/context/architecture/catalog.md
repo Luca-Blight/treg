@@ -950,9 +950,10 @@ Refresh is process-level singleflight. Concurrent misses join one shared Task, d
 already in flight are not queued again, and the Task batches the requested ids. Its
 `PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
 closes it as soon as the two queries finish. HTTP `/catalog/search`, both MCP catalog-search tools,
-and the prose pages that print observed stats (`/use-cases/*`, `/workflows` and `/workflows/*`)
-receive the same reader instance from bootstrap, so their request paths have no observation DB
-dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+routed planning in `application.call.route.build_plan`, and the prose pages that print observed stats
+(`/use-cases/*`, `/workflows` and `/workflows/*`) receive the same reader instance from bootstrap, so
+their request paths have no observation DB dependency, check out zero connections, and join the same
+refresh Task. A refresh failure keeps stale
 entries, backs off before retry, and never changes the Catalog response status; a failure with no
 cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
 counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
@@ -1128,7 +1129,9 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
   request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
   is the measured hit rate when ≥ 20 decided samples exist, else `ok_rate`, else 1.0 (flagged
-  `unmeasured`). `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
+  `unmeasured`). `build_plan` reads that evidence through bootstrap's shared process cache; cold or
+  unavailable observations degrade to unmeasured ranking while the cache refreshes off the request
+  path. `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
   and providers with no key on the deployment are dropped and named in `dropped` (`needs {…}`
   says which identity variant a dropped child wanted).
 - **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
