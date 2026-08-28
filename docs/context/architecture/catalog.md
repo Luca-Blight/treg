@@ -1107,8 +1107,13 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
 - **Adapters** — `adapters.yaml`, one per endpoint: `accepts` (identity variants), `in` (contract
   field → `queryParams.x` / `body.x`), `const` (fixed provider params), `out` (core field →
   expression over the body), `miss`. The expression language (`domain/catalog/routing/paths.py`)
-  is deliberately tiny: dotted paths with `[i]`, `coalesce`, `/ N`, `==`/`!=` against literals,
-  and named transforms (`split_first`, `split_last`, `join`, `has_type`).
+  is deliberately tiny: dotted paths with `[i]` (root `[0]`, `.` = the whole body), `coalesce`,
+  `/ N`, `==`/`!=` against literals, and named transforms (`split_first`, `split_last`, `join`,
+  `has_type`, `len`, `list`, `obj`, `fmt`, `csv`, `lower`/`upper`, `at_least`, `linkedin_handle`/
+  `linkedin_url`, `email_domain`, `host`, `dfs_location`, `seranking_source`, `tca_filter`).
+  `in_expr` builds provider params from expressions (URL-array bodies, DSL objects); `test_identity`
+  states the fixture's identity when `in` builds a value rather than copying one; `filters` carry
+  defaults and are always sent.
 - **Verified at load, or absent** — `routing/contracts.py::verify`: `in` must reproduce the
   endpoint's own `test_request` and `out` must fill every required core field from its
   `example_response` (an example that is itself a miss passes with the hit half unverified).
@@ -1122,17 +1127,22 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
 - **Ranking** — `routing/plan.py`: own keys (tier 2) first at cost 0; then
   `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
   request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
-  is the measured hit rate when ≥ 50 samples exist, else `ok_rate`, else 1.0 (flagged
+  is the measured hit rate when ≥ 20 decided samples exist, else `ok_rate`, else 1.0 (flagged
   `unmeasured`). `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
-  are dropped and named in `dropped`. No hit-rate counter exists yet — it needs an audit column
-  (a hot-table migration), so today the formula collapses to price order with confidence flags.
+  and providers with no key on the deployment are dropped and named in `dropped` (`needs {…}`
+  says which identity variant a dropped child wanted).
 - **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
   resolved catalog row is `kind: routed`. Each attempt is a **full child `execute_call`** on a
   `CallContext` whose `call_ref` is `{parent}:r{n}` — its hold id, ladder (tiers 1/2/4/overflow),
   reserve, relay, settle, audit row and cancellation compensation are the ordinary ones. Vendor
-  4xx (not 402/408/429) = caller fault → stop (`route_caller_fault`, the vendor's status). Our
-  5xx/503/429 or a vendor 5xx/429/402 = error → next candidate, at most two extra, only for
-  idempotent contracts. A MISS tries the next candidate — the waterfall is ON by default (decided
+  4xx (not 402/408/429) = usually the caller's fault, but scrapers answer 400 for their own outages
+  (tikhub, live 2026-08-28), so the waterfall goes on ONLY to candidates that bill nothing for a
+  rejected request — per_success, free, the org's own key, or per_call ≤ 1¢ (`CHEAP_RETRY_MICRO`)
+  — never the same provider again, within the error bound; if every one rejects it, the caller
+  gets `route_caller_fault` naming each attempt. Our 5xx/503/429 or a vendor 5xx/429/402 = error →
+  next candidate, at most two extra, only for idempotent contracts. A 2xx whose body lacks a
+  REQUIRED core field is a MISS, not a hit (dataforseo's `result: null` under a 20000 envelope). A
+  MISS tries the next candidate — the waterfall is ON by default (decided
   2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
   free); `X-Treg-Route-Waterfall: 0` stops at the first miss. Every attempt is settled at its real
   price and `X-Treg-Route-Max-Cost` (default $1) bounds the sum before each reserve (a candidate
@@ -1141,7 +1151,7 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns
   the idempotency label (a replay never touches a provider) and writes one audit row
   (`credential_tier: routed`) beside the children's.
-- **Hit rate** — `CallRecord.hit` (nullable, alembic `0006`, last column) is the adapter's verdict
+- **Hit rate** — `CallRecord.hit` (nullable, alembic `0009`, last column) is the adapter's verdict
   written at settle; `stats.observed` publishes `hit_rate`/`hit_samples` (floor 20) and, for
   per-success endpoints, reads historical rows too (a 2xx with `cost_observed_micro == 0` is a miss).
   The plan, `catalog_get` and the CLI's HIT column read it; a registered tool (tier 1) or stored key
@@ -1151,9 +1161,13 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   plus `companies.jobs.search`, `companies.domain.find`, `amazon.product.sellers/variants`,
   `tiktok.video.captions`); untagged platform traffic fell from 12% to 1.4%, and 202 capabilities
   with 2+ eligible providers cover 88% of calls.
-- **Not built** (plan R4): "prefer routed" in the agent files after a shadow week; contracts beyond
-  `people.email.find` (next: `people.phone.find`, `people.enrich`); `people.search` (`kind:
-  filters`) and the shared `Location` table.
+- **Coverage (2026-08-28)**: 74 routed capabilities = 80.9% of 30-day platform calls (88% was the
+  routable ceiling). The per-capability ledger — what shipped with which children, what is 🚫 and
+  why (one usable vendor, async task-post engines, identity-less feeds), and the 49 zero-traffic
+  rows still open — is `docs/CAPABILITY-EXPANSION.md` (git-excluded, Jason's working doc).
+- **Not built** (plan R4): "prefer routed" in the agent files after a shadow week; a proper
+  `kind: filters` / `Location` layer for the DSL/SQL providers (aviato dsl and pdl sql ride `obj`/
+  `fmt` today; crustdata/diffbot/coresignal/apollo do not); own-key-dry → treg-key fallback.
 
 ## Security
 

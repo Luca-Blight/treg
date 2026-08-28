@@ -363,6 +363,15 @@ search the 20-row default page — $0.0490 for results nobody got, 20x the publi
 while `limit=1` on a domain that did answer settled at a tenth of the credit Hunter actually took.
 Where a provider's real rule is "whole units, rounded up, free on a miss", only the body knows.
 
+The row-count signal for that estimate (`resolve._LIMIT_PARAMS` / `_body_limit`) reads the caller's
+`limit`/`count`/`size`/`per_page`… in the query or body, the camelCase spellings (`pageSize`,
+`numResults`, `perPage`, `maxResults`), a nested `pagination.{size,…}`, and — for providers that
+bill one row per listed item — the length of `targets`/`keywords`/`domains`/`urls`/`lookups`/
+`emails`. Each of those was a live overcharge first (2026-08-28: companyenrich `pageSize: 2`
+settled 20 rows, moz's one `targets` entry settled 20 quota rows). Without any signal it is the
+20-row page, and a settle-at-estimate provider then charges that page (seranking url.metrics on a
+single `target` still does).
+
 The same family carries two more derived rules. **Hunter's email finder** is the flat case: one whole
 search credit when an email comes back, nothing on a miss — Hunter documents a miss as free, but a
 miss still answers HTTP 200 with `email: null`, so the estimate billed the full $0.0245 for a name
