@@ -15,6 +15,7 @@ from sqlmodel import select
 from ... import catalog_store, oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
+from ...domain.capacity.view import view as capacity_view
 from ...db import session_maker
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
@@ -822,6 +823,11 @@ async def _resolve_marketplace_call(
     # an org that brought its own credential is billed by the provider, not by us, and must never be
     # silently switched onto our key (their quota, their rate limits, their data agreements).
     cost = _platform_offer(ep, provider, caller.org)
+    if cost is not None and capacity_view.is_exhausted(service):
+        # Refuse BEFORE reserve (plan §4.2): treg's own account for this provider is known to be
+        # out (a confirmed balance/quota signature, or the sweep). No hold is ever placed for a
+        # call we know will 402; the caller gets a typed 503 naming when and what else.
+        raise _provider_capacity_unavailable(ep, service, capacity_view.get(service))
     if cost is not None:
         virtual = Tool(
             org_id=caller.org_id, name=ep["id"], owner=caller.email,
@@ -834,6 +840,23 @@ async def _resolve_marketplace_call(
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
 
 
+def _provider_capacity_unavailable(ep: dict, service: str, state) -> ResolutionFailed:
+    """The typed floor (plan §4.5): no charge, `resets_at` when known, and the same-capability
+    alternatives — treg names them and leaves the choice to the caller (charter: no failover)."""
+    resets = getattr(state, "exhausted_until", None)
+    lines = [f"treg's own {service} account is out of capacity right now — {ep['id']} can't be "
+             f"served on treg's key" + (f" until about {resets:%Y-%m-%d %H:%M} UTC" if resets else "")]
+    lines.append(f"  use your own key: treg secret add {service} --env-var "
+                 f"{service.upper().replace('-', '_')}_API_KEY  (own keys are never affected)")
+    lines.extend(_capability_alternatives(ep))
+    return ResolutionFailed("provider_capacity", status_code=503, detail={
+        "error": "provider_capacity_unavailable", "provider": service, "endpoint_id": ep["id"],
+        "resets_at": resets.isoformat() + "Z" if resets else None,
+        "alternatives": [ln.strip() for ln in _capability_alternatives(ep)[1:]],
+        "message": "\n".join(lines),
+    })
+
+
 async def resolve_marketplace_target(
     ep: dict,
     *,
@@ -844,6 +867,10 @@ async def resolve_marketplace_target(
     caller: Caller,
     resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
 ) -> MarketplaceCall:
+    # The exhausted view is refreshed here — before the resolution session opens, so at most one
+    # connection is held at a time, and before any hold exists. Cached 60 s; a stale or empty view
+    # never refuses (plan §4.1: blocking fires on confirmed signals only).
+    await capacity_view.load()
     async with session_maker() as db:
         return await _resolve_marketplace_call(
             ep,

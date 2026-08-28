@@ -13,6 +13,7 @@ from treg import bootstrap
 from treg.application import billing
 from treg.application.call import authorize, reserve, settle
 from treg.domain import money
+from treg.domain.capacity import marks as capacity_marks
 
 
 _SRC = Path(__file__).parents[1] / "src" / "treg"
@@ -35,6 +36,13 @@ _DATAPLANE_DERIVED_WRITES = {
         (money.reserve_in_transaction, "reap_stale_holds"),
         (money.reap_stale_holds, "release"),
     ),
+    # Plan §4.1 / refactor plan §1.6 "platform-account capacity marks": a confirmed balance/quota
+    # signature on treg's own key marks the provider exhausted in ratestore (the shared Ephemeral
+    # table) AFTER the settle, so the next call is refused before a hold exists.
+    "capacity_exhausted_mark": (
+        (settle._note_capacity_signal, "capacity_marks.mark_exhausted"),
+        (capacity_marks.mark_exhausted, "ratestore.kv_put"),
+    ),
 }
 _EXPECTED_DATAPLANE_WRITES = frozenset({
     "auto_topup_task",
@@ -42,6 +50,7 @@ _EXPECTED_DATAPLANE_WRITES = frozenset({
     "sandbox_ratestore_hit",
     "first_call_adconversion_outbox",
     "lazy_stale_hold_reap",
+    "capacity_exhausted_mark",
 })
 _DERIVED_WRITE_FILES = {
     _SRC / "application" / "billing.py": {"loop.create_task"},
@@ -49,7 +58,8 @@ _DERIVED_WRITE_FILES = {
         "publicdemo_policy.enforce_public_demo_ip_cap",
     },
     _SRC / "application" / "call" / "reserve.py": {"billing.maybe_schedule_autotopup"},
-    _SRC / "application" / "call" / "settle.py": {"adsconv.queue"},
+    _SRC / "application" / "call" / "settle.py": {"adsconv.queue", "capacity_marks.mark_exhausted"},
+    _SRC / "domain" / "capacity" / "marks.py": {"ratestore.kv_put"},
     _SRC / "domain" / "governance" / "publicdemo.py": {
         "ratestore.sweep", "ratestore.rate_check",
     },
@@ -64,6 +74,8 @@ _EXPECTED_DERIVED_WRITE_SITES = {
     ("application/call/reserve.py", "_platform_reserve",
      "billing.maybe_schedule_autotopup"),
     ("application/call/settle.py", "_record_first_call", "adsconv.queue"),
+    ("application/call/settle.py", "_note_capacity_signal", "capacity_marks.mark_exhausted"),
+    ("domain/capacity/marks.py", "mark_exhausted", "ratestore.kv_put"),
     ("domain/governance/publicdemo.py", "enforce_public_demo_ip_cap", "ratestore.rate_check"),
     ("domain/governance/publicdemo.py", "enforce_public_demo_ip_cap", "ratestore.sweep"),
     ("domain/money/__init__.py", "reap_stale_holds", "release"),

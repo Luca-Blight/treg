@@ -294,6 +294,29 @@ also rejects numeric IP encodings — decimal/hex/octal/short forms like `213070
 
 > Why relay instead of modeling the upstream: [foundation/charter.md](../foundation/charter.md).
 
+## Platform capacity: refuse before reserve (plan step D)
+
+Tier 4 spends treg's own vendor account, and that account can be empty. `_resolve_marketplace_call`
+asks two questions after `_platform_offer` says yes: is the provider marked **exhausted** in the
+in-process capacity view (`domain.capacity.view`, loaded from ratestore `capacity:state:<provider>` on a
+60 s TTL by `resolve_marketplace_target` before its session opens)? If so it raises
+`CallFailure("provider_capacity", 503, blame="treg")` — **before any hold exists** — whose body carries
+`resets_at` when known and the same-capability alternatives from `_capability_alternatives`. treg still
+does not choose for the caller (charter): it names the options. The audit row is `refused_by="capacity"`,
+`X-Treg-Error: 1`, cost 0. A stale, empty or "ok" view never refuses; only a confirmed signal does.
+
+The signal comes from the call path itself as well as from the worker's sweep: after a tier-4 answer
+≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the vendor's
+status/headers/body. A `balance` or `quota` signature (findymail "Not enough credits", lusha's "Daily"
+429, hunter's "per billing period" 429, any bare 402, …) writes the exhausted mark through
+`domain.capacity.marks.mark_exhausted` — its own short session, **after** the settle closed the hold,
+never during flight — and the next call is refused without waiting for a sweep. A burst 429
+(`retry-after ≤ 60 s`) or an unknown one only logs; step D′ smooths those. That mark is the single
+dataplane write this feature adds (`capacity_exhausted_mark` in `tests/test_call_architecture.py`).
+Tiers 1/2 resolve earlier and never consult the view: an org's own key running dry is the org's own
+answer, relayed unchanged. The vendor's 402 on THIS call is also relayed unchanged — the protection is
+for the next caller.
+
 ## treg's own headers never reach the upstream — by PREFIX, not by name
 
 `proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:

@@ -174,6 +174,11 @@ Out of balance is an HTTP **402** carrying `balance_micro`, `estimated_cost_micr
 so an agent can act on it without reading prose. There is also a per-day ceiling on spend against
 treg's keys, so a runaway agent has a bounded blast radius.
 
+If treg's **own** account for a provider is out, a metered call is refused with HTTP **503**
+`provider_capacity_unavailable` before anything is reserved — nothing is charged, the body names
+`resets_at` when known and `alternatives` (other providers for the same capability). Your own key
+for the provider is never affected, and treg does not switch providers on your behalf.
+
 ## Calling
 
 | Command | Options | What it does |

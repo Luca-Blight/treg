@@ -37,6 +37,9 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "tag_call_cap_reached": "caller",
     "tag_spend_cap_reached": "caller",
     "insufficient_balance": "caller",
+    # treg's OWN vendor account for the provider is out (balance/quota) — a 503 the caller cannot
+    # fix, answered before any hold exists, with the same-capability alternatives named.
+    "provider_capacity": "treg",
     "injection_failed": "treg",
     "ssrf_refused": "treg",
     "connect_failed": "upstream",

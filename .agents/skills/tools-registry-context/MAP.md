@@ -124,6 +124,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/domain/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/domain/capacity/__init__.py` | architecture/import-boundaries.md, ops/capacity.md |
 | `src/treg/domain/capacity/collectors.py` | ops/capacity.md |
+| `src/treg/domain/capacity/marks.py` | ops/capacity.md |
 | `src/treg/domain/capacity/overflow_seed.json` | ops/capacity.md |
 | `src/treg/domain/capacity/policy.py` | ops/capacity.md |
 | `src/treg/domain/capacity/routes.py` | ops/capacity.md |
@@ -230,6 +231,7 @@ Regenerate via `scripts/build-map.py`.
 | `tests/test_call_cancellation.py` | architecture/proxy-model.md |
 | `tests/test_capacity_know.py` | ops/capacity.md |
 | `tests/test_capacity_overflow_routes.py` | ops/capacity.md |
+| `tests/test_capacity_protect.py` | ops/capacity.md |
 | `tests/test_error_capture.py` | architecture/proxy-model.md |
 | `tests/test_import_lightness.py` | architecture/import-boundaries.md |
 | `tests/test_marketplace_call.py` | architecture/mcp-oauth.md, architecture/proxy-model.md |
@@ -272,6 +274,6 @@ Regenerate via `scripts/build-map.py`.
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
-| `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0003_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0002_capacity_policy_snapshot.py`, `test_capacity_know.py` |
+| `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `marks.py`, `test_capacity_protect.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0003_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0002_capacity_policy_snapshot.py`, `test_capacity_know.py` |
 | `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `worker.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `dev-local.sh`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

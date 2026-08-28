@@ -769,3 +769,10 @@ that this protects the person who opted into the program and exposes the person 
 the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it
 reads `/admin/referrals` — the same table, filtered — and the payout rail (and its W-9/1099
 obligations) is what gets bought rather than built.
+
+## Not money: the capacity mark
+
+`application.call.settle._note_capacity_signal` writes a ratestore row (`capacity:state:<provider>`)
+after a tier-4 balance/quota signature. It touches no balance, hold or ledger row — it is a hint for the
+NEXT caller's resolution — and is listed in the dataplane write allowlist on its own
+(`capacity_exhausted_mark`), not under the money entries. See `ops/capacity.md`.

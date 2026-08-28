@@ -49,7 +49,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Provider capacity — knowing what treg's own vendor accounts have left](ops/capacity.md) | shipped (steps B + B′; observe-only, nothing on the call path) | __init__.py, collectors.py, policy.py, sweep.py, … |
+| [Provider capacity — knowing what treg's own vendor accounts have left](ops/capacity.md) | shipped (steps B, B′, D) | __init__.py, collectors.py, policy.py, sweep.py, … |
 | [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, worker.py, selfhost.sh, … |
 
 ## Reference

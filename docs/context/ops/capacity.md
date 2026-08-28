@@ -1,6 +1,6 @@
 ---
 title: Provider capacity — knowing what treg's own vendor accounts have left
-status: shipped (steps B + B′; observe-only, nothing on the call path)
+status: shipped (steps B, B′, D)
 sources:
   - src/treg/domain/capacity/__init__.py
   - src/treg/domain/capacity/collectors.py
@@ -10,6 +10,8 @@ sources:
   - src/treg/domain/capacity/routes.py
   - src/treg/domain/capacity/signatures.py
   - src/treg/domain/capacity/verify.py
+  - src/treg/domain/capacity/marks.py
+  - tests/test_capacity_protect.py
   - src/treg/domain/capacity/overflow_seed.json
   - src/treg/infra/upstream/aggregators/__init__.py
   - src/treg/infra/upstream/aggregators/orthogonal.py
@@ -137,9 +139,16 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   with the reason. Spends real money (bounded by `--max-usd`, default 2¢); needs the aggregator
   keys in the env — a Render cron, never the dataplane.
 
+## Protect, part one (step D) — refuse before reserve
+
+The call path now reads the view and writes one mark (`marks.py`); the mechanics and the
+typed `provider_capacity` 503 are documented in `architecture/proxy-model.md` § Platform capacity
+and `interface/api.md`. In one line: exhausted provider → 503 before any hold, with alternatives
+named; a balance/quota signature on treg's key → exhausted mark in ratestore for the next caller;
+burst 429s only logged until D′. Tiers 1/2 untouched.
+
 ## Not built yet (plan steps C–F)
 
-Forecasts and alerts (C, gated on the `money-funding-transactions` debt); the exhausted view read
-in `_platform_offer` and the typed `provider_capacity` 503 (D); burst smoothing (D′); the
+Forecasts and alerts (C, gated on the `money-funding-transactions` debt); burst smoothing (D′); the
 overflow child cycle through Orthogonal/Monid (E); enabling routes (F). Until F ships, the charter
 row "not built yet: routing/failover" stands and treg still relays a vendor's 402 unchanged.

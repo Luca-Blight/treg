@@ -85,6 +85,16 @@ only a real `http.disconnect`. If the client disconnects before the encoded body
 middleware skips decoding and replays each consumed partial-body message followed by that real
 disconnect.
 
+## `503 provider_capacity_unavailable` — treg's own account is out
+
+A metered (tier-4) call whose provider treg's own account cannot serve right now (a confirmed
+balance/quota signal, or the capacity sweep) is refused **before any hold** with a typed 503:
+`{"detail": {"error": "provider_capacity_unavailable", "provider", "endpoint_id", "resets_at" | null,
+"alternatives": [...], "message"}}`, `X-Treg-Error: 1`, no `X-Treg-Cost-Micro`, `refused_by="capacity"`
+on the audit row. The caller's own key for the provider is never affected (tiers 1/2 win first), and
+treg does not call an alternative on the caller's behalf — it names them. Not the pool-saturation 503
+(`treg_saturated`), which is a different exit. See `architecture/proxy-model.md` § Platform capacity.
+
 ## `X-Treg-Error` — whose refusal is this?
 `bootstrap_handlers._mark_treg_own_errors` tags treg's **own**
 refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as before — the status and body

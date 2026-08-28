@@ -46,6 +46,7 @@ from .resolve import (
 from .settle import (
     _buffer_response,
     _finish_cancelled_call as finish_cancelled_call,
+    _note_capacity_signal,
     _peek_stream_head,
     _platform_settle,
     _record_first_call,
@@ -321,7 +322,9 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             audit.record_call(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
-                client=_client_name(request), refused_by=_refusal_kind(mkexc.status_code),
+                client=_client_name(request),
+                refused_by=("capacity" if mkexc.kind == "provider_capacity"
+                            else _refusal_kind(mkexc.status_code)),
                 telemetry={"call_ref": call_ref,
                            "endpoint_id": ep["id"], "provider": ep.get("provider"),
                            **_tag_telemetry(meta)})
@@ -666,6 +669,14 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         except asyncio.CancelledError:
             await _finish_cancelled_call(request, mk, call_ref, response)
             raise
+        if response.status >= 400:
+            # Did the provider just say OUR account is out? Mark it for the next caller (plan
+            # §4.1). After the settle on purpose: the hold is closed, no connection is held.
+            try:
+                await _note_capacity_signal(mk, response.status, httpx.Headers(response.raw_headers), body)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.

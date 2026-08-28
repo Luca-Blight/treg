@@ -77,6 +77,9 @@ Notes:
   `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
   (Team → Billing) → or store the org's own key for that provider (own keys are never billed
   to the balance — they take priority automatically).
+- HTTP **503** `provider_capacity_unavailable` = treg's own account for that provider is out
+  (not your balance; nothing charged). Body has `resets_at` and `alternatives` (same capability,
+  other providers) — choose one, or use your own key. treg never switches providers for you.
 - An org tool or secret for the provider always wins over treg's key, automatically — the catalog
   is the fallback, not a replacement for keys the team already has.
 - **Choosing between providers of one capability — the procedure.** `treg catalog get <id>` lists

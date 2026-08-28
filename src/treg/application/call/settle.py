@@ -11,6 +11,8 @@ from sqlalchemy import update
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from ... import adsconv, catalog_store, ledger
+from ...domain.capacity import marks as capacity_marks
+from ...domain.capacity import signatures as capacity_signatures
 from ...db import session_maker
 from ...models import Org
 from ...timeutil import utcnow_naive as _utcnow_naive
@@ -436,6 +438,33 @@ async def _finish_cancelled_call(
             # same cleanup task so compensation completes before the original cancellation escapes.
             continue
     await cleanup
+async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> None:
+    """After a tier-4 answer: did the provider just tell us OUR account is out? A confirmed balance/
+    quota signature (domain.capacity.signatures) marks the provider exhausted in ratestore so the next
+    call is refused before a hold exists. Burst/unknown 429s only log (D′ smooths them). Runs after
+    the settle, on its own short session, and never raises. Platform tier only: an org's own key
+    running dry is the org's business, and an oauth-billed connect has no shared account to mark."""
+    if mk.tier != "platform" or status_code < 400:
+        return
+    try:
+        signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
+        if signal is None:
+            return
+        if capacity_signatures.is_exhausting(signal):
+            await capacity_marks.mark_exhausted(
+                mk.provider, until=signal.resets_at,
+                note=f"{signal.kind} signature on {mk.endpoint_id}: {signal.detail[:80]}")
+            logging.getLogger("treg.capacity").warning(
+                "platform account exhausted: %s (%s on %s)", mk.provider, signal.kind, mk.endpoint_id)
+        else:
+            logging.getLogger("treg.capacity").info(
+                "rate signal on %s: %s retry_after=%s", mk.provider, signal.kind, signal.retry_after_s)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001 — the caller already has the provider's answer; a mark is a hint
+        logging.getLogger("treg.capacity").warning("capacity signal handling failed", exc_info=True)
+
+
 async def _record_first_call(org_id: int) -> None:
     """Set Org.first_call_at once — the metric that decides whether a marketing channel is real (see
     marketing/landing/_measurement.md). A CONDITIONAL UPDATE, not read-then-write: concurrent first
