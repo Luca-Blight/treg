@@ -5,6 +5,9 @@ from __future__ import annotations
 from .contracts import Adapter, Contract
 
 ROUTED_KIND = "routed"
+# Example values for the generated row's `test_request`, by identity key (the call template reads it).
+_EXAMPLE_VALUES = {"full_name": "Patrick Collison", "first_name": "Patrick", "last_name": "Collison",
+                   "domain": "stripe.com", "linkedin_url": "https://www.linkedin.com/in/patrickcollison"}
 ROUTED_PROVIDER = "treg"
 
 
@@ -38,8 +41,7 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
                            "(keep trying providers on a miss), X-Treg-Route-Max-Cost: 0.10 (USD ceiling for "
                            "the whole call), X-Treg-Route-Prefer / X-Treg-Route-Exclude: <provider>. The "
                            "response is {output, raw, _treg: {served_by, tried}}; X-Treg-Served-By names the child.")},
-        "test_request": {"body": {k: v for k, v in zip(contract.identity[0], ("Patrick Collison", "stripe.com", "https://www.linkedin.com/in/patrickcollison"))}}
-                        if contract.identity else {},
+        "test_request": {"body": {k: _EXAMPLE_VALUES.get(k, "…") for k in contract.identity[0]}} if contract.identity else {},
         "cost": {"type": "per_success", "value": lo, "currency": "USD", "per": 1, "unit": "call",
                  "source": "inferred", "confidence": "documented", "checked": None,
                  "note": (f"the children's range ${lo:g}–${hi:g} per hit; you pay exactly the child that served, 0% markup"
