@@ -34,6 +34,12 @@ regexes = [
 id = "generic-api-key"
 [rules.allowlist]
 paths = ['''src/treg/catalog/examples/.*\.json''']
+# The IndexNow key (scripts/indexnow_submit.py, routers/web.py) is PUBLIC by design: the protocol
+# proves domain ownership by serving the key at https://<host>/<key>.txt, so anyone can read it and
+# it authorises nothing but "submit URLs for this host". Matched by the line, not the value, so a
+# real credential on the same line shape elsewhere still fires.
+regexTarget = "line"
+regexes = ['''INDEXNOW_KEY\s*=|#\s*must match INDEX''']
 # (An allowlist entry for a real dev/e2e Fernet key lived here as a stopgap while
 # `feat/error-capture` carried it in `e2e-server.sh`. That branch now generates a fresh key per run
 # — the harness deletes its database between runs, so it never needed a constant — and the value has
