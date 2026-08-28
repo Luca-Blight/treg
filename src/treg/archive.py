@@ -71,11 +71,11 @@ _STORABLE = (CACHE_TRANSIENT, CACHE_ARCHIVE)
 def policy(entry: dict[str, Any] | None) -> str:
     """Gates 1+2 for one catalog entry, returning the effective cache policy.
 
-    `entry` is the endpoint's catalog mapping (the same dict the resolver already holds). The
-    default is FORBIDDEN on every uncertain branch — an entry that is missing, an action, or an
-    unjudged license must never be stored. This is the same posture as the platform offer's
-    free-only guard: the safe answer is the silent one.
-    """
+    `entry` is the endpoint's catalog mapping (the same dict the resolver already holds). Two
+    branches are non-negotiable whatever the default says: a missing entry or an ACTION is never
+    stored, and a JUDGED forbidden (a licence that was read and says no) is always respected.
+    An UNJUDGED entry takes `archive_default_policy` — "transient" since the founder's 2026-08-29
+    keep-all decision, flippable back to "forbidden" by env without a deploy."""
     if not entry:
         return CACHE_FORBIDDEN
     if entry.get("kind") == "action":  # gate 1 — never store an action's answer
@@ -85,7 +85,10 @@ def policy(entry: dict[str, Any] | None) -> str:
         declared = declared.get("mode")
     if declared in _STORABLE:  # gate 2 — an explicit, judged license decision
         return str(declared)
-    return CACHE_FORBIDDEN
+    if declared == CACHE_FORBIDDEN:  # judged and refused — always respected
+        return CACHE_FORBIDDEN
+    default = (get_settings().archive_default_policy or "").strip().lower()
+    return CACHE_TRANSIENT if default == CACHE_TRANSIENT else CACHE_FORBIDDEN
 
 
 def storable(entry: dict[str, Any] | None) -> bool:

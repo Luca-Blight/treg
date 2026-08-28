@@ -137,8 +137,10 @@ enable. Rollback in production is a dashboard env edit, no deploy.
 1. **Kind.** `kind: action` entries are never stored; only data reads pass.
 2. **License.** Per catalog entry: `cache: forbidden | transient | archive` — either a bare
    string or a provenance dict `{mode, license_quote, source_url, checked}`, exactly like `cost`
-   provenance. **Absent ⇒ forbidden**: an unjudged provider is never stored (the same posture as
-   the platform offer's free-only guard — the safe answer is the silent one).
+   provenance. **Absent ⇒ `archive_default_policy`**, which is `transient` since the founder's
+   keep-all decision (2026-08-29): unjudged providers' bodies ARE kept as short-lived cache, and
+   the env flips it back to `forbidden` without a deploy. A JUDGED forbidden (a licence that was
+   read and says no — Finnhub) is always respected, and a missing entry is never stored.
 3. **Tier.** Only METERED PLATFORM calls are recorded. Those responses are already fully buffered
    for the settle (`_buffer_response` needs the provider's reported cost), so recording adds no
    latency and no new data path. Own-key and own-tool calls stream and are never touched — that
