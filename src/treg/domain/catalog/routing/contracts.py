@@ -21,6 +21,7 @@ class Contract:
     output: dict[str, dict]                    # core field → {type, required?, note?}
     miss: str
     idempotent: bool = True
+    default_max_cost_usd: float | None = None  # the per-call ceiling when the caller sends none
 
     @property
     def required_output(self) -> tuple[str, ...]:
@@ -95,7 +96,8 @@ def parse_contracts(doc: dict) -> dict[str, Contract]:
             identity_types=types, derive=dict(c.get("derive") or {}),
             filters={k: (v if isinstance(v, dict) else {"type": str(v)}) for k, v in (c.get("filters") or {}).items()},
             output={k: (v if isinstance(v, dict) else {"type": str(v)}) for k, v in (c.get("output") or {}).items()},
-            miss=str(c.get("miss") or ""), idempotent=bool(c.get("idempotent", True)))
+            miss=str(c.get("miss") or ""), idempotent=bool(c.get("idempotent", True)),
+            default_max_cost_usd=(float(c["default_max_cost_usd"]) if c.get("default_max_cost_usd") is not None else None))
     return out
 
 

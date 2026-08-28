@@ -358,3 +358,27 @@ def test_filters_reach_adapters_through_in_expr_and_array_bodies():
     assert cost_at({"usd": 0.00179, "type": "per_result", "per": 1}, req) == 8_950, "priced at the requested limit"
     ep = cat.by_id["treg.google.keywords.ideas"]
     assert ep["input"]["body"]["country"]["note"].startswith("filter — default 'us'")
+
+
+async def test_a_keyless_provider_is_dropped_at_planning_not_failed_at_call_time(clients: AsyncClient, enrichment_on, monkeypatch):
+    """Live 2026-08-28: exa is platform-eligible but this deployment held no exa key; the child's
+    'no credential' 404 aborted the routed call. Planning must drop it and name why."""
+    from treg.application.call.route import RouteOptions, build_plan
+    cat = catalog_store.load()
+    ep = cat.by_id["treg.people.email.find"]
+    monkeypatch.setenv("TREG_PLATFORM_KEY_AVIATO", "")  # aviato stays eligible, but keyless
+    get_settings.cache_clear()
+    class _Org: id = 1
+    class _Caller: org_id = 1; org = _Org()
+    plan = await build_plan(ep, {"linkedin_url": "https://www.linkedin.com/in/x"}, _Caller(), RouteOptions.from_headers(lambda k: None))
+    assert "aviato.people.email.find" not in [c.endpoint["id"] for c in plan.candidates]
+    assert any(d["endpoint_id"] == "aviato.people.email.find" and "no aviato key" in d["why"] for d in plan.dropped)
+
+
+def test_a_contract_may_set_its_own_default_ceiling():
+    from treg.application.call.route import RouteOptions, DEFAULT_MAX_COST_MICRO
+    cat = catalog_store.load()
+    assert cat.contracts["people.search"].default_max_cost_usd == 0.5
+    assert RouteOptions.from_headers(lambda k: None, 500_000).max_cost_micro == 500_000
+    assert RouteOptions.from_headers(lambda k: None).max_cost_micro == DEFAULT_MAX_COST_MICRO
+    assert RouteOptions.from_headers(lambda k: "0.02" if k == "x-treg-route-max-cost" else None, 500_000).max_cost_micro == 20_000

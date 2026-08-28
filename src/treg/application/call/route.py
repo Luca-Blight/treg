@@ -23,6 +23,7 @@ from urllib.parse import urlencode
 import httpx
 
 from ... import audit
+from ...config import get_settings
 from ...db import session_maker
 from ...domain.capacity.view import view as capacity_view
 from ...domain.catalog import stats as endpoint_stats
@@ -57,12 +58,13 @@ class RouteOptions:
     exclude: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_headers(cls, get) -> "RouteOptions":
+    def from_headers(cls, get, default_max_cost_micro: int | None = None) -> "RouteOptions":
         def _list(v):
             return [p.strip() for p in (v or "").split(",") if p.strip()]
         mc = get(MAX_COST_HEADER)
         try:
-            max_cost = int(round(float(mc) * 1_000_000)) if mc else DEFAULT_MAX_COST_MICRO
+            max_cost = int(round(float(mc) * 1_000_000)) if mc else (
+                default_max_cost_micro if default_max_cost_micro is not None else DEFAULT_MAX_COST_MICRO)
         except ValueError:
             raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
                                    detail=f"{MAX_COST_HEADER} must be a USD number, got {mc!r}")
@@ -154,6 +156,11 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         if tier == "platform" and not cat.platform_eligible(e):
             dropped.append({"endpoint_id": e["id"], "why": "not platform-eligible and no own key"})
             continue
+        if tier == "platform" and not get_settings().platform_key_for(e["provider"]):
+            # priceable, but this deployment holds no key for the provider: the child would answer
+            # "no credential" (a 404 the router must not treat as the caller's fault). Live 2026-08-28.
+            dropped.append({"endpoint_id": e["id"], "why": f"no {e['provider']} key on this deployment and no own key"})
+            continue
         if c.exhausted:
             dropped.append({"endpoint_id": e["id"], "why": "treg's account for this provider is exhausted right now"})
         cands.append(c)
@@ -199,7 +206,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         raise ResolutionFailed("catalog_parameter_invalid", status_code=400, detail=f"{ep['id']} expects a JSON object body")
     if not isinstance(given, dict):
         raise ResolutionFailed("catalog_parameter_invalid", status_code=400, detail=f"{ep['id']} expects a JSON object body")
-    options = RouteOptions.from_headers(get_header)
+    contract = catalog_store.load().contracts.get(ep["capability"])
+    options = RouteOptions.from_headers(
+        get_header, int(round(contract.default_max_cost_usd * 1_000_000)) if contract and contract.default_max_cost_usd else None)
     plan = await build_plan(ep, given, parent.input.caller, options)
     if not plan.candidates:
         raise ResolutionFailed("route_no_candidate", status_code=422 if not plan.dropped else 503, detail={

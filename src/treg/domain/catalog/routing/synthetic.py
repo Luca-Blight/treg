@@ -43,7 +43,7 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
         "input": {"bodyType": "json", "body": body,
                   "note": (f"Send exactly ONE identity variant: {variants}. "
                            "On a miss treg keeps trying providers, cheapest first, within X-Treg-Route-Max-Cost "
-                           "(default $0.10 per call; misses on per-success providers are free). Options ride as "
+                           f"(default ${contract.default_max_cost_usd or 0.10:g} per call; misses on per-success providers are free). Options ride as "
                            "headers, never in the body: X-Treg-Route-Waterfall: 0 (stop at the first miss), "
                            "X-Treg-Route-Max-Cost: <usd>, X-Treg-Route-Prefer / X-Treg-Route-Exclude: <provider>. The "
                            "response is {output, raw, _treg: {served_by, tried}}; X-Treg-Served-By names the child.")},

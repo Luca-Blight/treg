@@ -247,3 +247,4 @@ contracts:
       next_cursor: {type: str}
     miss: "people == []"
     idempotent: true
+    default_max_cost_usd: 0.50   # one search call is the unit here (lusha 12.5¢ at size 3); the $0.10 lookup default would refuse it
