@@ -1,6 +1,6 @@
 ---
 title: Provider capacity — knowing what treg's own vendor accounts have left
-status: shipped (steps B, B′, D)
+status: shipped (steps B, B′, D, D′)
 sources:
   - src/treg/domain/capacity/__init__.py
   - src/treg/domain/capacity/collectors.py
@@ -12,6 +12,8 @@ sources:
   - src/treg/domain/capacity/verify.py
   - src/treg/domain/capacity/marks.py
   - tests/test_capacity_protect.py
+  - src/treg/infra/upstream/limiter.py
+  - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
   - src/treg/infra/upstream/aggregators/__init__.py
   - src/treg/infra/upstream/aggregators/orthogonal.py
@@ -147,8 +149,16 @@ and `interface/api.md`. In one line: exhausted provider → 503 before any hold,
 named; a balance/quota signature on treg's key → exhausted mark in ratestore for the next caller;
 burst 429s only logged until D′. Tiers 1/2 untouched.
 
+## Protect, part two (step D′) — burst smoothing
+
+`infra/upstream/limiter.py` (per-provider spacer, ≤ 2 s wait, in-process, no DB) and one bounded
+`retry-after` re-send for body-less GET/HEAD, documented in `architecture/proxy-model.md` § Burst
+smoothing. The provider's rate limit travels in the published latest state (`LatestState.rate_limit`,
+from `CapacityPolicy.rate_limit`; a call-path mark carries it forward), so the request path never reads
+the policy table. `rate_pressure` alerting is step C.
+
 ## Not built yet (plan steps C–F)
 
-Forecasts and alerts (C, gated on the `money-funding-transactions` debt); burst smoothing (D′); the
+Forecasts and alerts (C, gated on the `money-funding-transactions` debt); the
 overflow child cycle through Orthogonal/Monid (E); enabling routes (F). Until F ships, the charter
 row "not built yet: routing/failover" stands and treg still relays a vendor's 402 unchanged.

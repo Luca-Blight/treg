@@ -117,6 +117,7 @@ class LatestState:
     runway_days: float | None = None  # filled by step C's forecast; None until then
     health: str = "unknown"          # ok | low | exhausted | stale | unknown
     note: str = ""
+    rate_limit: dict | None = None   # {"limit", "window_s", "source"} from the policy, for smoothing
 
     def to_json(self) -> dict:
         return {
@@ -125,6 +126,7 @@ class LatestState:
             "confidence": self.confidence,
             "exhausted_until": self.exhausted_until.isoformat() if self.exhausted_until else None,
             "runway_days": self.runway_days, "health": self.health, "note": self.note,
+            "rate_limit": self.rate_limit,
         }
 
     @classmethod
@@ -134,7 +136,8 @@ class LatestState:
         return cls(provider=d["provider"], remaining=d.get("remaining"), unit=d.get("unit", ""),
                    observed_at=_dt(d.get("observed_at")), confidence=d.get("confidence", "stale"),
                    exhausted_until=_dt(d.get("exhausted_until")), runway_days=d.get("runway_days"),
-                   health=d.get("health", "unknown"), note=d.get("note", ""))
+                   health=d.get("health", "unknown"), note=d.get("note", ""),
+                   rate_limit=d.get("rate_limit"))
 
     def is_exhausted(self, now: datetime | None = None) -> bool:
         if self.exhausted_until is None:
@@ -152,19 +155,20 @@ def latest_state(policy: CapacityPolicy, snap: CapacitySnapshot | None,
     `remaining <= 0` on an exact observation IS a confirmed signal: exhausted until `resets_at`
     when the meter resets, else until the next sweep can prove otherwise (STALE_AFTER)."""
     now = now or utcnow_naive()
+    rl = policy.rate_limit
     if snap is None:
         return LatestState(policy.provider, None, "", None, "stale", health="unknown",
-                           note="no observation yet")
+                           note="no observation yet", rate_limit=rl)
     if snap.error or snap.remaining is None:
         return LatestState(policy.provider, None, snap.unit, snap.observed_at, "stale",
-                           health="stale", note=snap.error or snap.note)
+                           health="stale", note=snap.error or snap.note, rate_limit=rl)
     if now - snap.observed_at > STALE_AFTER:
         return LatestState(policy.provider, snap.remaining, snap.unit, snap.observed_at, "stale",
-                           health="stale", note="last observation older than 6h")
+                           health="stale", note="last observation older than 6h", rate_limit=rl)
     if snap.remaining <= 0:
         until = snap.resets_at or (snap.observed_at + STALE_AFTER)
         return LatestState(policy.provider, snap.remaining, snap.unit, snap.observed_at,
                            snap.confidence, exhausted_until=until, health="exhausted",
-                           note=snap.note)
+                           note=snap.note, rate_limit=rl)
     return LatestState(policy.provider, snap.remaining, snap.unit, snap.observed_at,
-                       snap.confidence, health="ok", note=snap.note)
+                       snap.confidence, health="ok", note=snap.note, rate_limit=rl)

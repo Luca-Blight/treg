@@ -35,6 +35,9 @@ async def mark_exhausted(provider: str, *, until: datetime | None, note: str = "
                         note=(note or "signature on the call path")[:200])
     try:
         async with session_maker() as db:
+            prev = await ratestore.kv_get(db, STATE_NS, provider)
+            if prev:  # the sweep's rate limit must survive a mark
+                state.rate_limit = prev.get("rate_limit")
             await ratestore.kv_put(db, STATE_NS, provider, state.to_json(), ttl_s=STATE_TTL_S)
             await db.commit()
     except Exception:  # noqa: BLE001 — a mark is a hint for the next call, never this call's fate

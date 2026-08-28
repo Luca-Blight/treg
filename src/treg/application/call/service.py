@@ -18,6 +18,9 @@ from ...config import get_settings
 from ...db import session_maker
 from ...models import Secret
 from ...sandbox_identity import visitor_name
+from ...domain.capacity import signatures as capacity_signatures
+from ...domain.capacity.view import view as capacity_view
+from ...infra.upstream.limiter import limiter as provider_limiter
 from ...infra.upstream.relay import relay
 from .authorize import authorize_call, enforce_public_demo_limit
 from .evidence import (
@@ -161,6 +164,26 @@ def _has_body(raw_headers: tuple[tuple[bytes, bytes], ...]) -> bool:
     content_length = headers.get("content-length")
     return bool(content_length is not None and content_length != "0") or (
         "chunked" in headers.get("transfer-encoding", "").lower())
+
+
+SMOOTHING_RETRY_MAX_S = 5
+"""The longest `retry-after` treg will honour with one re-send (plan §4.4, decided 2026-08-28)."""
+
+
+def _idempotent_read(request: _ApplicationRequest) -> bool:
+    """Only a body-less GET/HEAD is re-sent: the same bytes, provably, with nothing to replay."""
+    return request.method.upper() in ("GET", "HEAD") and not request.has_body
+
+
+def _burst_retry_after(provider: str, response: UpstreamResponse, body: bytes) -> float | None:
+    """Seconds to wait before ONE re-send, or None when this 429 must be relayed as is: a quota
+    429 (exhausted — marked after the settle), an unknown one, or a burst longer than the cap."""
+    signal = capacity_signatures.classify(provider, 429, httpx.Headers(response.raw_headers), body[:4096])
+    if signal is None or signal.kind != "burst" or signal.retry_after_s is None:
+        return None
+    if signal.retry_after_s > SMOOTHING_RETRY_MAX_S:
+        return None
+    return float(signal.retry_after_s)
 
 
 def _refusal_kind(status_code: int) -> str | None:
@@ -567,15 +590,28 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # (settle, first-call and the idempotent store all run on their own sessions), and the session
         # is `expire_on_commit=False`, so `tool`/`secrets`/`caller.org` stay usable without a reload.
         await db.commit()
+        smoothed: list[str] = []
         try:
+            upstream_request = UpstreamRequest(
+                method=request.method,
+                raw_headers=tuple(request.headers.raw),
+                query_items=tuple(request.query_params.multi_items()),
+                body_stream=request.stream,
+                has_body=request.has_body,
+            )
+            platform_tier = mk is not None and mk.tier == "platform"
+            if platform_tier:
+                # Burst smoothing, half one (plan §4.4): many callers share treg's key, so a call that
+                # would exceed the provider's published rate waits briefly (≤ 2 s, in-process, no DB —
+                # the DB phase ended above) instead of being relayed into a 429 nobody can fix. Beyond
+                # the cap it proceeds as before; nothing is ever refused here.
+                rl = capacity_view.rate_limit(mk.provider)
+                if rl is not None:
+                    waited = await provider_limiter.acquire(mk.provider, *rl)
+                    if waited:
+                        smoothed.append(f"wait={waited}")
             response = await relay(
-                UpstreamRequest(
-                    method=request.method,
-                    raw_headers=tuple(request.headers.raw),
-                    query_items=tuple(request.query_params.multi_items()),
-                    body_stream=request.stream,
-                    has_body=request.has_body,
-                ),
+                upstream_request,
                 upstream_url, tool, secrets, upstream_client,
                 drop_params=drop_params or None,
                 force_identity=mk is not None and mk.metered,
@@ -585,6 +621,18 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.
                 response, body = await _buffer_response(response)
+                if (platform_tier and response.status == 429 and _idempotent_read(request)
+                        and (retry_s := _burst_retry_after(mk.provider, response, body)) is not None):
+                    # Half two: ONE bounded wait on the provider's own `retry-after`, then the identical
+                    # request again on the same hold — idempotent reads only, only when the provider
+                    # said when, never on 401/402/5xx (the "no retries" rule stands for those).
+                    await response.close()
+                    await asyncio.sleep(retry_s)
+                    response = await relay(
+                        upstream_request, upstream_url, tool, secrets, upstream_client,
+                        drop_params=drop_params or None, force_identity=True)
+                    response, body = await _buffer_response(response)
+                    smoothed.append("retry=1")
             elif response.status >= 400:
                 # Preserve streaming for own-key and own-tool calls while retaining only the small
                 # diagnostic head. The replacement response replays every consumed byte verbatim.
@@ -714,6 +762,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # `0` there would read as "free" rather than "not applicable".
         _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
         _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        if smoothed:
+            _set_response_header(response, "X-Treg-Smoothed", " ".join(smoothed))
         return response
     # Fire-and-forget audit — does not block the streaming response (rule #2). A failed unmetered
     # call has already yielded just enough response bytes to retain redacted evidence; successes

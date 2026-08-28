@@ -317,6 +317,33 @@ Tiers 1/2 resolve earlier and never consult the view: an org's own key running d
 answer, relayed unchanged. The vendor's 402 on THIS call is also relayed unchanged — the protection is
 for the next caller.
 
+## Burst smoothing on treg's own keys (plan step D′)
+
+Many callers share one platform key, so tier 4 makes its own bursts: leadsforge 429'd 27% of its
+calls, crustdata 34%, with `retry-after` headers nobody downstream could act on. Two bounded
+mechanisms in `service._execute_call`, both **after the DB phase ended and before the relay** (the
+pool-discipline rule holds through the wait; proven by test), both platform-tier only, neither ever a
+refusal:
+
+1. **Spacer** — `infra/upstream/limiter.py`: one call per `window_s / limit` per provider (a token
+   bucket of capacity one — a burst of `limit` at t=0 is legal for a classic bucket and exactly what a
+   sliding-window provider 429s). A call that would exceed the rate waits ≤ 2 s (`DEFAULT_MAX_WAIT_MS`),
+   then proceeds regardless; the hold is already placed, so the org pays latency, never money. The
+   limit comes from the capacity view (`view.rate_limit`: published by the sweep from
+   `CapacityPolicy.rate_limit`, with the verified defaults — leadsforge 120/min, leadmagic 300/min,
+   crustdata 30/min, tikhub 30/s — before the first sweep). In-process on purpose: a second replica
+   doubles the effective rate, and the `rate_pressure` alert (step C) is the answer to that, not a
+   shared counter on the request path.
+2. **One bounded `retry-after` re-send** — on a tier-4 **429** classified `burst` with
+   `retry-after ≤ 5 s` (`SMOOTHING_RETRY_MAX_S`), for a **body-less GET/HEAD only**: close the first
+   response, sleep, send the identical `UpstreamRequest` once more on the same hold, settle on the
+   second answer. A quota-429 (lusha "Daily", hunter "per billing period", any `retry-after` > 60 s), an
+   unknown 429, a POST, or a second 429 are relayed as is. The "no retries" rule for 401/402/5xx stands.
+
+Both are visible: `X-Treg-Smoothed: wait=<ms>` and/or `retry=1` on the response (metered exit only).
+No audit column yet — `smoothed_ms` would be an ALTER on the hot `callrecord` table, a migration-class
+change kept out of this behaviour PR.
+
 ## treg's own headers never reach the upstream — by PREFIX, not by name
 
 `proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:

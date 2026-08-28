@@ -30,6 +30,7 @@ sources:
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/relay.py
   - src/treg/infra/upstream/aggregators/__init__.py
+  - src/treg/infra/upstream/limiter.py
   - tests/test_call_architecture.py
   - tests/test_import_lightness.py
 related:

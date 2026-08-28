@@ -95,6 +95,13 @@ on the audit row. The caller's own key for the provider is never affected (tiers
 treg does not call an alternative on the caller's behalf — it names them. Not the pool-saturation 503
 (`treg_saturated`), which is a different exit. See `architecture/proxy-model.md` § Platform capacity.
 
+## `X-Treg-Smoothed` — the call waited for treg's own rate limit
+
+On a metered (tier-4) call only: `wait=<ms>` when the call was spaced behind other callers on the
+same platform key, `retry=1` when a burst-429 with a short `retry-after` was re-sent once on the same
+hold (body-less GET/HEAD only). Informational; the status and body are the provider's. See
+`architecture/proxy-model.md` § Burst smoothing.
+
 ## `X-Treg-Error` — whose refusal is this?
 `bootstrap_handlers._mark_treg_own_errors` tags treg's **own**
 refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as before — the status and body

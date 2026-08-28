@@ -15,7 +15,7 @@ from sqlalchemy import select
 from ...db import session_maker
 from ...models import Ephemeral
 from ...timeutil import utcnow_naive
-from .policy import LatestState
+from .policy import _RATE_LIMITS, LatestState
 from .sweep import STATE_NS
 
 TTL_S = 60.0
@@ -45,6 +45,15 @@ class LatestStateView:
     def is_exhausted(self, provider: str) -> bool:
         state = self._states.get(provider)
         return bool(state and state.is_exhausted())
+
+    def rate_limit(self, provider: str) -> tuple[int, float] | None:
+        """(limit, window_s) for the provider's platform key, or None when unknown. Published by the
+        sweep from the policy; the verified defaults apply before a sweep has run. Sync, I/O-free."""
+        state = self._states.get(provider)
+        rl = (state.rate_limit if state and state.rate_limit else None) or _RATE_LIMITS.get(provider)
+        if not rl or not rl.get("limit") or not rl.get("window_s"):
+            return None
+        return int(rl["limit"]), float(rl["window_s"])
 
     def invalidate(self) -> None:
         self._loaded_at = -1.0
