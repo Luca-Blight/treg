@@ -26,13 +26,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from treg import api as A
+from treg.domain.catalog import stats as catalog_stats
 from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import audit, ledger
 from treg.config import get_settings
 from treg.db import _engine, session_maker
 from treg.infra.upstream.relay import relay as upstream_relay
-from treg.models import Hold
+from treg.models import CallRecord, Hold
 
 from test_marketplace_call import EP, EP_MICRO, platform_on  # noqa: F401 — fixture reuse
 
@@ -134,6 +135,57 @@ async def test_a_saturated_pool_answers_a_typed_503_not_an_anonymous_500(
     assert r.status_code == 503, r.text
     assert r.json()["treg_saturated"] is True
     assert r.headers.get("Retry-After") == "2"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TREG_TEST_DB_URL"), reason="requires the Postgres test database"
+)
+async def test_a_catalog_search_storm_cannot_starve_calls_of_the_pool(
+    clients: AsyncClient, platform_on, monkeypatch,
+    dispose_exhausted_pool_on_its_own_loop,
+):
+    """The public search path must not multiply one slow observation query by request concurrency.
+
+    This recreates the production failure at the HTTP boundary: 100 identical searches arrive while
+    the observation query is slow, then ordinary Marketplace calls need the same 15-slot pool. The
+    old request-owned query filled every slot and the calls timed out with pool 503s. Search now
+    returns from an empty/stale process cache while one task owns the only refresh connection.
+    """
+    original = catalog_stats.observed
+    refresh_started = asyncio.Event()
+    release_refresh = asyncio.Event()
+    refresh_calls = 0
+
+    async def _slow_observed(db, endpoint_ids, **kwargs):
+        nonlocal refresh_calls
+        refresh_calls += 1
+        # Force a real checkout before holding the refresh open. One connection is expected; one
+        # per search request is the production defect this test reproduces.
+        await db.execute(select(CallRecord.id).limit(1))
+        refresh_started.set()
+        await asyncio.wait_for(release_refresh.wait(), timeout=15)
+        return await original(db, endpoint_ids, **kwargs)
+
+    monkeypatch.setattr(catalog_stats, "observed", _slow_observed)
+    searches = [asyncio.create_task(clients.get("/catalog/search?q=tiktok&limit=25"))
+                for _ in range(100)]
+    await asyncio.wait_for(refresh_started.wait(), timeout=5)
+    await asyncio.sleep(0.25)  # let the old path fill all 15 pool slots before calls arrive
+
+    try:
+        calls = await asyncio.gather(*(
+            clients.get(f"/call/{EP}?aweme_id=catalog-mix-{i}") for i in range(20)
+        ))
+    finally:
+        release_refresh.set()
+
+    search_responses = await asyncio.gather(*searches)
+    await A.app.state.endpoint_observation_reader.wait_for_idle()
+    assert [r.status_code for r in search_responses] == [200] * 100
+    assert [r.status_code for r in calls] == [200] * 20, [
+        (r.status_code, r.text) for r in calls
+    ]
+    assert refresh_calls == 1, "100 identical searches must share one refresh task"
 
 
 async def test_a_settle_that_loses_the_pool_once_retries_and_still_charges(

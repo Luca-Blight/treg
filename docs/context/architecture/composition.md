@@ -39,6 +39,13 @@ implied HEAD operations, shared HTTP client creation, startup work, shutdown dra
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
 
+For `all` and `control`, the factory also wires the Catalog observation port to one process-local
+`CachedEndpointObservationReader` backed by short `session_maker` reads. Its refresh Task starts
+lazily on a miss rather than appearing in the role's always-running background-task manifest. The
+lifespan still owns it: shutdown calls `aclose()`, which refuses new refreshes and cancels the shared
+Task before database and HTTP resources disappear. `dataplane` mounts no Catalog discovery routes
+and does not construct this reader.
+
 `bootstrap_handlers.py` owns the app-wide pool-saturation and HTTP-exception adapters. The composition
 root supplies the call-specific `_stamp_call_exit` callback from `routers/call.py` before registration;
 the callback owns call ids, refusal classification, audit fallback, and idempotency-label release.

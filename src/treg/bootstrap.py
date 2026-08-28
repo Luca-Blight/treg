@@ -25,6 +25,10 @@ from .bootstrap_http import (
 )
 from .config import get_settings
 from .db import init_db, session_maker
+from .infra.catalog_observations import (
+    CachedEndpointObservationReader,
+    PostgresEndpointObservationReader,
+)
 from .routers import call as call_routes
 
 
@@ -430,6 +434,9 @@ def _lifespan(api_module, role: AppRole):
         finally:
             if ads_task is not None:
                 ads_task.cancel()
+            endpoint_observations = getattr(app.state, "endpoint_observation_reader", None)
+            if endpoint_observations is not None:
+                await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()
             await app.state.http.aclose()
@@ -454,6 +461,10 @@ def create_app(role: AppRole = "all") -> FastAPI:
         docs_url="/docs/api" if expose_docs else None,
         redoc_url=None,
     )
+    if role != "dataplane":
+        app.state.endpoint_observation_reader = CachedEndpointObservationReader(
+            PostgresEndpointObservationReader(session_maker)
+        )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
     app.add_middleware(_LegacyHostRedirectMiddleware)
