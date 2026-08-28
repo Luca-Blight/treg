@@ -294,14 +294,20 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
             doc = json.loads(raw)
         except ValueError:
             doc = None
-        if doc is None or cand.adapter.is_miss(doc):
+        core = cand.adapter.from_upstream(doc) if doc is not None else {}
+        # A miss is what the adapter's predicate says — OR a 2xx whose body does not carry the
+        # contract's required core (a null `result` under a 200, an error task inside a 20000
+        # envelope): the caller asked for the field and did not get it (live 2026-08-28: dataforseo's
+        # yahoo task returned `result: null` and was counted a hit).
+        empty_core = any(core.get(k) in (None, "", [], {}) for k in plan.contract.required_output)
+        if doc is None or cand.adapter.is_miss(doc) or empty_core:
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "miss", response.status, charged))
             if options.waterfall:
                 continue
             winner = (cand, doc if doc is not None else {}, {}, raw)
             break
         tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "hit", response.status, charged))
-        winner = (cand, doc, cand.adapter.from_upstream(doc), raw)
+        winner = (cand, doc, core, raw)
         break
     if winner is None:
         outcome = "miss" if tried and all(t.outcome in ("miss", "skipped") for t in tried) else "error"

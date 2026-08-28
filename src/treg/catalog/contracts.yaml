@@ -893,3 +893,164 @@ contracts:
       post: {type: object, required: true}
     miss: "post == null"
     idempotent: true
+
+  # ---- batch 10 (2026-08-28) --------------------------------------------------------------------
+  douyin.video.detail:
+    summary: "One Douyin video by aweme id or share URL — the provider's own `aweme_detail` in `video`"
+    identity:
+      - {video_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      video: {type: object, required: true}
+    miss: "video == null"
+    idempotent: true
+
+  douyin.video.comments:
+    summary: "Comments on a Douyin video by aweme id — provider-native rows in `comments`"
+    identity:
+      - {video_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      comments: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "comments == []"
+    idempotent: true
+
+  douyin.user.videos:
+    summary: "A Douyin account's videos by sec_uid — provider-native rows in `videos`"
+    identity:
+      - {sec_uid: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      videos: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "videos == []"
+    idempotent: true
+
+  xiaohongshu.note.comments:
+    summary: "Comments on a Xiaohongshu note by note id — provider-native rows in `comments`"
+    identity:
+      - {note_id: str}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      count: {type: int}
+      has_more: {type: bool}
+    miss: "comments == []"
+    idempotent: true
+
+  xiaohongshu.user.notes:
+    summary: "A Xiaohongshu account's posted notes by user id — provider-native rows in `notes`"
+    identity:
+      - {user_id: str}
+    filters: {}
+    output:
+      notes: {type: list, required: true}
+      has_more: {type: bool}
+    miss: "notes == []"
+    idempotent: true
+
+  linkedin.post.reactions:
+    summary: "Who reacted to a LinkedIn post, by post URN or numeric post id — provider-native rows in `reactions`"
+    identity:
+      - {post_urn: str}
+      - {post_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      reactions: {type: list, required: true}
+      count: {type: int}
+    miss: "reactions == []"
+    idempotent: true
+
+  linkedin.post.comments:
+    summary: "Comments on a LinkedIn post, by post URN or numeric post id — provider-native rows in `comments`"
+    identity:
+      - {post_urn: str}
+      - {post_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      comments: {type: list, required: true}
+      count: {type: int}
+    miss: "comments == []"
+    idempotent: true
+
+  web.anchors.list:
+    summary: "Anchor texts of backlinks pointing at a domain — provider-native rows in `anchors`; `limit` is the price dial"
+    identity:
+      - {target: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      anchors: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "anchors == []"
+    idempotent: true
+
+  stocks.eod.history:
+    summary: "Daily OHLCV history for a stock ticker — provider-native bar rows in `bars`"
+    identity:
+      - {symbol: str}
+    filters:
+      from: {type: str, default: null, note: "YYYY-MM-DD start date, where the provider takes one"}
+      limit: {type: int, default: 5, note: "bars to return, where the provider takes a count"}
+    output:
+      bars: {type: list, required: true}
+    miss: "bars == []"
+    idempotent: true
+
+  yahoo.serp.organic:
+    summary: "Yahoo organic results for a keyword — provider-native result rows in `results`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us}
+      language: {type: str, default: en}
+    output:
+      results: {type: list, required: true}
+      count: {type: int}
+    miss: "results == []"
+    idempotent: true
+
+  people.identity.resolve:
+    summary: "Resolve a work email to the person's LinkedIn profile — treg picks the provider and names the one that served"
+    identity:
+      - {email: str}
+    filters: {}
+    output:
+      linkedin_url: {type: str, required: true}
+      full_name: {type: str}
+    miss: "linkedin_url == null"
+    idempotent: true
+
+  bilibili.video.comments:
+    summary: "Comments on a Bilibili video by aid (and bvid) — provider-native rows in `comments`"
+    identity:
+      - {aid: str}
+      - {aid: str, bvid: str}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "comments == []"
+    idempotent: true
+
+  bilibili.search.videos:
+    summary: "Search Bilibili videos by keyword — provider-native rows in `videos`"
+    identity:
+      - {q: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      videos: {type: list, required: true}
+      count: {type: int}
+    miss: "videos == []"
+    idempotent: true

@@ -1576,3 +1576,258 @@ adapters:
   # threads.user.profile / post.detail, tiktok.music.videos, x.trending.topics, weibo.search.posts (tikhub alone;
   # justoneapi needs a date window), kuaishou.search.users (truncated), instagram.reels.recommended (no identity),
   # companies/people.search.count (filter DSLs), crypto.price.history (coin naming differs per vendor): not routed.
+
+  # ---- batch 10 (2026-08-28) --------------------------------------------------------------------
+  justoneapi.x.douyin-get-video-detail-v2:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.videoId}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-app-v3-fetch-one-video:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-app-v3-fetch-one-video-v2:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-app-v3-fetch-one-video-v3:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-web-fetch-one-video:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-web-fetch-one-video-v2:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-app-v3-fetch-one-video-by-share-url:
+    accepts: [[url]]
+    in:  {url: queryParams.share_url}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.douyin-web-fetch-one-video-by-share-url:
+    accepts: [[url]]
+    in:  {url: queryParams.share_url}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+
+  justoneapi.x.douyin-get-video-comment-v1:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.awemeId}
+    const: {queryParams.page: "1"}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  tikhub.x.douyin-app-v3-fetch-video-comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    in_expr: {queryParams.count: limit}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  tikhub.x.douyin-web-fetch-video-comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    in_expr: {queryParams.count: limit}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+
+  justoneapi.x.douyin-get-user-video-list-v1:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.secUid}
+    const: {queryParams.maxCursor: "0", queryParams.sortType: LATEST}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  tikhub.x.douyin-app-v3-fetch-user-post-videos:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.sec_user_id}
+    in_expr: {queryParams.count: limit}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  tikhub.x.douyin-web-fetch-user-post-videos:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.sec_user_id}
+    in_expr: {queryParams.count: limit}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  tikhub.x.douyin-douplus-fetch-user-posts:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: body.sec_uid}
+    in_expr: {body.count: limit, body.cursor: "0"}
+    out: {videos: data.data.itemInfoList, next_cursor: data.data.cursor, has_more: data.data.hasMore}
+    miss: "data.data.itemInfoList == []"
+
+  justoneapi.x.xiaohongshu-get-note-comment-v2:
+    accepts: [[note_id]]
+    in:  {note_id: queryParams.noteId}
+    const: {queryParams.sort: latest}
+    out: {comments: data.comments, count: data.comment_count}
+    miss: "data.comments == []"
+  tikhub.x.xiaohongshu-app-v2-get-note-comments:
+    accepts: [[note_id]]
+    in:  {note_id: queryParams.note_id}
+    const: {queryParams.index: 0, queryParams.pageArea: UNFOLDED}
+    out: {comments: data.data.comments, count: data.data.comment_count, has_more: data.data.has_more}
+    miss: "data.data.comments == []"
+
+  justoneapi.xiaohongshu.user.notes:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.userId}
+    out: {notes: data.notes, has_more: data.has_more}
+    miss: "data.notes == []"
+  tikhub.x.xiaohongshu-app-v2-get-user-posted-notes:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {notes: data.data.notes, has_more: data.data.has_more}
+    miss: "data.data.notes == []"
+
+  aviato.linkedin.post.reactions:
+    accepts: [[post_urn]]
+    in:  {post_urn: pathParams.postUrn}
+    in_expr: {queryParams.perPage: limit}
+    const: {queryParams.page: "1"}
+    out: {reactions: results, count: totalResults}
+    miss: "results == []"
+  justoneapi.x.linkedin-get-post-reactions-v1:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.postId}
+    const: {queryParams.page: "1", queryParams.type: all}
+    out: {reactions: data.data, count: data.total}
+    miss: "data.data == []"
+
+  aviato.linkedin.post.comments:
+    accepts: [[post_urn]]
+    in:  {post_urn: pathParams.postUrn}
+    in_expr: {queryParams.perPage: limit}
+    const: {queryParams.page: "1"}
+    out: {comments: results, count: totalResults}
+    miss: "results == []"
+  justoneapi.x.linkedin-get-post-comments-v1:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.postId}
+    const: {queryParams.page: "1", queryParams.sortOrder: relevance, queryParams.postType: activity}
+    out: {comments: data.data, count: data.total}
+    miss: "data.data == []"
+
+  dataforseo.web.anchors.list:
+    accepts: [[target]]
+    in:  {target: body.target}
+    in_expr: {body.limit: limit}
+    body_array: true
+    out: {anchors: "tasks[0].result[0].items", count: "tasks[0].result[0].total_count"}
+    miss: "tasks[0].result[0].items == []"
+  moz.web.anchors.list:
+    accepts: [[target]]
+    in:  {target: body.target}
+    in_expr: {body.limit: limit}
+    const: {body.scope: root_domain}
+    out: {anchors: results, next_cursor: next_token}
+    miss: "results == []"
+  seranking.web.anchors.list:
+    accepts: [[target]]
+    in:  {target: queryParams.target}
+    in_expr: {queryParams.limit: limit}
+    const: {queryParams.mode: domain}
+    out: {anchors: anchors}
+    miss: "anchors == []"
+
+  eodhd.eod:
+    accepts: [[symbol]]
+    in:  {}
+    in_expr: {queryParams.symbol: "fmt('{}.US', upper(symbol))", queryParams.from: from}
+    const: {queryParams.fmt: json}
+    test_identity: {symbol: AAPL}
+    out: {bars: "."}
+    miss: ". == []"
+  marketstack.eod:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.symbols}
+    in_expr: {queryParams.symbols: "upper(symbol)", queryParams.limit: limit}
+    out: {bars: data}
+    miss: "data == []"
+  tiingo.daily.prices:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.ticker}
+    in_expr: {queryParams.ticker: "lower(symbol)", queryParams.startDate: from}
+    out: {bars: "."}
+    miss: ". == []"
+  twelvedata.time-series:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.symbol}
+    in_expr: {queryParams.symbol: "upper(symbol)", queryParams.outputsize: limit}
+    const: {queryParams.interval: 1day}
+    out: {bars: values}
+    miss: "values == []"
+
+  dataforseo.x.serp-yahoo-organic-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  dataforseo.x.serp-yahoo-organic-live-regular:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.yahoo-search:
+    accepts: [[q]]
+    in:  {q: queryParams.p}
+    in_expr: {queryParams.vc: "lower(country)"}
+    const: {queryParams.engine: yahoo}
+    out: {results: organic_results}
+    miss: "organic_results == []"
+
+  icypeas.people.identity.resolve:
+    accepts: [[email]]
+    in:  {email: body.email}
+    out: {linkedin_url: result}
+    miss: "status != 'FOUND'"
+  pdl.x.person-identify:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {linkedin_url: "matches[0].data.linkedin_url", full_name: "matches[0].data.full_name"}
+    miss: "matches == []"
+  fiber-ai.people.identity.resolve:
+    accepts: [[email]]
+    in:  {email: body.email}
+    out: {linkedin_url: "output.data[0].url", full_name: "output.data[0].name"}
+    miss: "output.data == []"
+
+  justoneapi.x.bilibili-get-video-comment-v2:
+    accepts: [[aid]]
+    in:  {aid: queryParams.aid}
+    const: {queryParams.cursor: "0"}
+    out: {comments: data.data.replies}
+    miss: "data.data.replies == []"
+  tikhub.x.bilibili-app-fetch-video-comments:
+    accepts: [[aid, bvid]]
+    in:  {aid: queryParams.av_id, bvid: queryParams.bv_id}
+    out: {comments: data.data.replies}
+    miss: "data.data.replies == []"
+
+  justoneapi.x.bilibili-search-video-v2:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.page: "1", queryParams.order: general}
+    out: {videos: data.data.result, count: data.data.numResults}
+    miss: "data.data.result == []"
+  tikhub.x.bilibili-app-fetch-search-by-type:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    in_expr: {queryParams.page_size: limit}
+    out: {videos: data.data.items}
+    miss: "data.data.items == []"
+  # threads.user.posts, linkedin.user.posts (aviato alone; justoneapi wants an URN), youtube.trending.videos (no
+  # identity), trustpilot.business.reviews (async task), youtube.channel.shorts, facebook.post.detail,
+  # kuaishou.search.videos, amazon.bestsellers.list, instagram.music.posts, bilibili.video.detail (justoneapi's
+  # body is a page-state blob): one usable vendor each — not routed. people.signals: not lookup-shaped.

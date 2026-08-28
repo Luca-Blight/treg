@@ -240,6 +240,20 @@ async def test_caller_fault_on_a_child_stops_and_own_key_ranks_first(clients: As
     assert r.status_code == 200 and r.json()["_treg"]["served_by"] == "tomba.people.email.find", r.text
 
 
+async def test_a_2xx_without_the_required_core_is_a_miss_not_a_hit(clients: AsyncClient, enrichment_on, monkeypatch):
+    """A 200 whose body lacks the contract's required field (a null result under a success envelope)
+    is a MISS: the waterfall goes on, and the verdict/hit-rate never counts it as answered."""
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"hunter": [(200, {"data": {"email": None, "score": None}})],
+         "tomba": [(200, {"data": {"email": "p@stripe.com", "score": 90, "verification": {"status": "valid"}}})]}, seen))
+    await clients.post("/secrets", json={"name": "hunter", "value": "MY-HUNTER-KEY"})
+    r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
+    assert r.status_code == 200, r.text
+    outcomes = {t["endpoint_id"]: t["outcome"] for t in r.json()["_treg"]["tried"]}
+    assert outcomes["hunter.people.email.find"] == "miss" and r.json()["_treg"]["served_by"] == "tomba.people.email.find"
+
+
 async def test_catalog_get_on_the_routed_endpoint_shows_the_plan(clients: AsyncClient, enrichment_on):
     r = await clients.get(f"/catalog/endpoints/{ROUTED}")
     assert r.status_code == 200, r.text

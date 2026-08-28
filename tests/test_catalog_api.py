@@ -283,10 +283,14 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
     assert all(e["tier"] == "core" and e["verified"] for e in rows[1:4])
     # rank is total and stable: score desc, then core before extended WITHIN a score tie — tier
     # never outranks relevance, so a strong extended match may sit above a weak core one
-    scores = [e["score"] for e in rows]
+    # …except that a capability with a routed row is shown as a GROUP (parent first, then its
+    # children), so the tie-break is asserted over rows outside routed groups.
+    routed_caps = {e["capability"] for e in rows if e.get("kind") == "routed"}
+    loose = [e for e in rows if e["capability"] not in routed_caps]
+    scores = [e["score"] for e in loose]
     assert scores == sorted(scores, reverse=True)
     for score in set(scores):
-        group = [e["tier"] for e in rows if e["score"] == score]
+        group = [e["tier"] for e in loose if e["score"] == score]
         assert group == sorted(group, key=lambda t: t != "core")
 
     first = rows[1]  # the first CHILD; rows[0] is the generated treg.* row, whose provider is treg itself
