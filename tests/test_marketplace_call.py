@@ -816,7 +816,7 @@ def test_local_run_cannot_export_a_platform_binding():
 
     provider = A.oauth_providers.get("tikhub")
     tool = Tool(org_id=1, name=EP, base_url=provider.base_url, host="api.tikhub.io",
-                bindings=A._platform_bindings(provider),
+                bindings=A.oauth_providers.platform_bindings(provider),
                 cli={"enabled": True, "bin": "sh", "inject": [{"via": "env", "name": "TIKHUB_API_KEY"}]})
     assert all(b.get("secret_id") is None for b in tool.bindings)
     assert localrun._resolve_secret_id(tool.cli["inject"][0], tool) is None
@@ -841,14 +841,14 @@ def test_brightdata_platform_key_injects_as_bearer(platform_on):
     field is found by name (`platform_key_for`) and the header shape comes from the registry entry,
     so this is the regression guard on the generic path staying generic."""
     assert get_settings().platform_key_for("brightdata") == PLATFORM_KEYS["BRIGHTDATA"]
-    assert A._platform_bindings(A.oauth_providers.get("brightdata")) == [
+    assert A.oauth_providers.platform_bindings(A.oauth_providers.get("brightdata")) == [
         {"platform_setting": "platform_key_brightdata", "injector": "env", "location": "header",
          "name": "Authorization", "format": "Bearer {secret}"}]
 
 
 def test_crustdata_platform_key_keeps_the_required_version_header():
     """Tier 4 must speak the same provider protocol as BYOK, not only inject the key."""
-    assert A._platform_bindings(A.oauth_providers.get("crustdata")) == [
+    assert A.oauth_providers.platform_bindings(A.oauth_providers.get("crustdata")) == [
         {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
          "name": "Authorization", "format": "Bearer {secret}"},
         {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
