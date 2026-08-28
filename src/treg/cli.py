@@ -4786,7 +4786,7 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         _dim("  something (per-success providers bill only on a hit); a ✓ age is the catalog's own")
         _dim("  verification stamp, not live traffic. Pick the one whose inputs match what you")
         _dim("  HAVE, then weigh reliability against price.")
-    elif e.get("capability"):
+    elif e.get("capability") and not routing:
         _dim("  the only provider offering this capability")
 
     _print_params(e.get("input") or {})

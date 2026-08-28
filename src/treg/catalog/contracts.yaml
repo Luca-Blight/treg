@@ -117,6 +117,7 @@ contracts:
       country_code: {type: str}
     miss: "phone == null"
     idempotent: true
+    default_max_cost_usd: 0.25   # phone providers run 4–25¢; the $0.10 lookup default would skip all but the cheapest
 
   people.email.verify:
     summary: "Verify an email address — treg picks the provider (own keys first, then cheapest) and names the one that served"

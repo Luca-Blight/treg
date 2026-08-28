@@ -382,3 +382,21 @@ def test_a_contract_may_set_its_own_default_ceiling():
     assert RouteOptions.from_headers(lambda k: None, 500_000).max_cost_micro == 500_000
     assert RouteOptions.from_headers(lambda k: None).max_cost_micro == DEFAULT_MAX_COST_MICRO
     assert RouteOptions.from_headers(lambda k: "0.02" if k == "x-treg-route-max-cost" else None, 500_000).max_cost_micro == 20_000
+
+
+async def test_routed_call_and_access_name_the_providers_dropped_for_this_deployment(clients: AsyncClient, enrichment_on, monkeypatch):
+    monkeypatch.setenv("TREG_PLATFORM_KEY_AVIATO", "")
+    get_settings.cache_clear()
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"tomba": [(200, {"data": {"email": None, "score": None, "verification": {"status": None}}})],
+         "findymail": [(200, {"contact": {"name": "x", "email": None}})],
+         "leadsforge": [(200, {"email": None, "status": "failed"})]}, seen))
+    r = await clients.post(f"/call/{ROUTED}", json={"linkedin_url": "https://www.linkedin.com/in/x"}, headers={"X-Treg-Route-Max-Cost": "0.03"})
+    assert r.status_code == 200 and r.json()["_treg"]["outcome"] == "miss"
+    assert any(d["endpoint_id"] == "aviato.people.email.find" and "no aviato key" in d["why"] for d in r.json()["_treg"]["dropped"])
+    a = await clients.get(f"/catalog/endpoints/{ROUTED}/access")
+    assert a.status_code == 200 and a.json()["tier"] == "routed" and a.json()["detail"].startswith("routed — ")
+    assert "aviato.people.email.find" in a.json()["detail"]
+    cat = catalog_store.load()
+    assert cat.contracts["people.phone.find"].default_max_cost_usd == 0.25

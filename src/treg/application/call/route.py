@@ -279,19 +279,22 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         if outcome == "miss":
             last = next(t for t in reversed(tried) if t.outcome == "miss")
             body_out = {"output": {k: None for k in plan.contract.output}, "raw": None,
-                        "_treg": {"served_by": None, "outcome": "miss", "tried": [t.view() for t in tried], "charged_micro": spent}}
+                        "_treg": {"served_by": None, "outcome": "miss", "tried": [t.view() for t in tried], "charged_micro": spent,
+                                  **({"dropped": plan.dropped} if plan.dropped else {})}}
             _audit_parent(parent, ep, 200, spent, audit_client)
             return _json(body_out, 200, {"X-Treg-Providers-Tried": ",".join(t.provider for t in tried), "X-Treg-Route-Outcome": "miss"}), spent
         _audit_parent(parent, ep, 502, spent, audit_client)
         raise GatewayFailed("route_failed", status_code=502, detail={
             "error": "route_failed", "endpoint_id": ep["id"], "tried": [t.view() for t in tried], "charged_micro": spent,
+            "dropped": plan.dropped,
             "message": f"every candidate for {ep['id']} failed; nothing useful was charged" if spent == 0 else
                        f"every candidate for {ep['id']} failed"})
     cand, doc, output, raw = winner
     served = cand.endpoint["id"]
     body_out = {"output": output or {k: None for k in plan.contract.output}, "raw": doc,
                 "_treg": {"served_by": served, "provider": cand.endpoint["provider"], "tier": cand.tier,
-                          "outcome": tried[-1].outcome, "tried": [t.view() for t in tried], "charged_micro": spent}}
+                          "outcome": tried[-1].outcome, "tried": [t.view() for t in tried], "charged_micro": spent,
+                          **({"dropped": plan.dropped} if plan.dropped else {})}}
     _audit_parent(parent, ep, 200, spent, audit_client)
     return _json(body_out, 200, {"X-Treg-Served-By": served, "X-Treg-Providers-Tried": ",".join(t.provider for t in tried),
                                  "X-Treg-Route-Outcome": tried[-1].outcome}), spent
