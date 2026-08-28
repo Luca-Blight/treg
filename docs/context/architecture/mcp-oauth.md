@@ -88,6 +88,8 @@ new directory review approves a contract change:
 - V1 and V2 OAuth audiences do not cross.
 - The feature flag controls the V2 mount, metadata, new grants, call route, and lifespan.
 - V2 directory titles, descriptions, schemas, annotations, and neutral review copy stay under test.
+  Each tool repeats its exact display title in `annotations.title`; Anthropic's submission portal
+  validates the annotation title independently of the top-level tool title.
 
 `tests/test_mcp.py` protects team MCP behavior. `tests/test_mcp_directory.py` protects the V2 surface
 and calls both public URLs with the same inputs to compare search results and prices, endpoint
