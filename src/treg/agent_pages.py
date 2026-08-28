@@ -4993,3 +4993,129 @@ USE_CASE_PAGES["job-postings-across-companies"] = {
     "related": ("Hiring, headcount and news signals", "Employee reviews of a company",
                 "Get a company's LinkedIn page", "Build a company list by industry, size or tech"),
 }
+
+
+USE_CASE_PAGES["daily-price-history"] = {
+    "label": "Daily price history",
+    "sentence": "Historical stock data API: daily OHLCV price history by ticker, free to try, then your own Polygon, EODHD or Marketstack key",
+    "title": "Historical stock data API: EOD prices, free to try | treg.to",
+    "lede": (
+        "Give your agent a ticker and a date range and get the daily open, high, low, close "
+        "and volume back as rows, adjusted where the provider adjusts. {n} providers answer "
+        "through one treg.to key. Tiingo and Twelve Data are free for twenty calls a day per "
+        "team on treg.to's own key, enough to backfill a watchlist; past that, and for "
+        "Polygon, EODHD and Marketstack, you connect your own subscription key and the calls "
+        "are never metered. Two things this page will not pretend: there is no Yahoo Finance "
+        "row and no Alpha Vantage row, because neither is in the catalog, and nothing here "
+        "is unlimited and free."),
+    "prompt": "Using treg, get the daily price history for AAPL, MSFT and NVDA from January "
+              "2020 to today, show me which providers are free on treg.to's key and how many "
+              "calls I have left today, use one of those, then give me a table of ticker, "
+              "date, adjusted close and volume as CSV, and say if any day is missing.",
+    "prompt_why": [
+        ("Give the ticker and the range", "Every row takes a symbol and a start and end date. Thirty years is one call on most of them, so the range is free to widen."),
+        ("Ask which rows are free today", "Two providers are served on treg.to's own key with a daily allowance per team. The agent can see the allowance before it spends one."),
+        ("Say adjusted or unadjusted", "Splits and dividends change the series. Tiingo returns both; the others differ. Say which you want before the agent picks."),
+        ("Ask for the missing days", "A gap in a daily series is silent unless the agent counts. Ask for it and a holiday looks different from a hole."),
+    ],
+    "result_noun": "bar",
+    "result_image": None,
+    "q_cheapest": "Which historical stock data API is free?",
+    "q_reliable": "Which is the most reliable?",
+    "q_compare": "How do the providers compare?",
+    "what_is_heading": "What is a historical stock data API?",
+    "what_is": (
+        "It is a call that returns end of day bars for a ticker over a date range: the open, "
+        "high, low and close, the volume, and on most providers an adjusted close that folds "
+        "splits and dividends back into the series. It is the data behind every backtest, "
+        "every chart and every do it yourself portfolio tracker, and it is the data the free "
+        "scripts of the last decade leaned on Yahoo Finance for, which is why every time that "
+        "unofficial endpoint changes a forum fills with people asking for another. The rows "
+        "here are documented APIs with a published allowance or a subscription behind them, "
+        "which is the trade: nothing breaks on a Tuesday, and nothing is unlimited."),
+    "notes": [
+        "Two rows cost nothing to start, on treg.to's own key. Tiingo and Twelve Data are "
+        "served from treg.to's free tier keys with an allowance of twenty calls a day per "
+        "team; a call is one ticker over any range, so twenty calls is twenty tickers of full "
+        "history a day, and past the allowance the call is refused with a hint to connect your "
+        "own key. Polygon and EODHD serve on your own subscription key only, and treg.to "
+        "publishes no rate for them, so the table prints none: your plan's limits apply and "
+        "treg.to meters nothing. Marketstack's row prints a per call figure derived from its "
+        "plan's monthly request cap, which is the catalog's way of saying one request against "
+        "the cap whatever it returns, not a metered price.",
+        "Adjusted and unadjusted are different series and the rows treat them differently. "
+        "Tiingo returns both in the same row, with adjusted open, high, low, close and volume "
+        "beside the raw ones, across thirty plus years. Polygon's bars endpoint takes an "
+        "adjusted flag. Twelve Data, Marketstack and EODHD document their own conventions on "
+        "the linked pages. A backtest built on the wrong one will look right until a split "
+        "lands in the window, so say which you want in the prompt and check one known "
+        "split date.",
+        "Coverage is the provider's, not this page's. EODHD documents seventy plus exchanges, "
+        "Marketstack a similar spread, Polygon is US equities, and Tiingo and Twelve Data "
+        "cover US plus a range of international symbols; the research turned up real demand "
+        "for Indian and Sri Lankan exchange data and nothing here promises it. Nothing on "
+        "this page serves intraday history except Polygon's bars and Twelve Data's series, "
+        "and the crypto history page covers coins. All six rows were verified on 2026-08-15 "
+        "and the routed row, labelled treg, is the explicit opt in where you ask treg.to to "
+        "choose among them, your own keys first.",
+    ],
+    "faq": [
+        ("Is there a free historical stock data API here?",
+         "Free to try: Tiingo and Twelve Data at twenty calls a day per team on treg.to's own "
+         "key, no card and no account with either provider. Past the allowance you connect "
+         "your own key, which on both providers has a free tier of its own. Nothing here is "
+         "unlimited and free, and this page will not say otherwise."),
+        ("Where is Yahoo Finance or Alpha Vantage?",
+         "Not in the catalog. Yahoo has no official API and the unofficial endpoints break on "
+         "their own schedule; Alpha Vantage is a documented API whose free tier is a handful "
+         "of calls a day, and it is not a row here today. The rows on this page are the "
+         "documented alternatives people move to when either fails."),
+        ("Do I get adjusted prices?",
+         "On Tiingo, both series in one row. On Polygon, with a flag. On the others, per "
+         "their documentation, linked from each row. Say which you want in the prompt, and "
+         "check one known split date before trusting a backtest."),
+        ("Can I use my own Polygon subscription?",
+         "Yes, and it is the only way Polygon serves here: connect the key once and every "
+         "call runs on your plan, never metered by treg.to. The same is true of EODHD and "
+         "Marketstack, and of Tiingo and Twelve Data once the daily allowance is used."),
+    ],
+    "voices_intro": (
+        "Of the ~200 Reddit and X posts read in August 2026 about thirty were on the job, and "
+        "six vendor clusters were excluded, including one open source launch posted to four "
+        "Indian trading subreddits at once and an eight free APIs list where every link "
+        "carried an affiliate tag. These five are people whose data source broke."),
+    "voices": [
+        ("The free endpoint everyone used",
+         "yfinance is so unreliable; any other free apis?",
+         "r/algotrading, 118 points", "https://www.reddit.com/r/algotrading/comments/1kdw27f/yfinance_is_so_unreliable_any_other_free_apis/",
+         "The honest answer is free to try rather than free: twenty calls a day on treg.to's "
+         "key across two documented providers, then your own key. What that buys is an "
+         "endpoint with a published contract, which is the thing yfinance never had."),
+        ("Public facts, private prices",
+         "How is it possible that you need to pay hundreds of dollars just to access historical data / facts that are publicly known?",
+         "r/webdev, 117 points", "https://www.reddit.com/r/webdev/comments/151zk8y/is_there_any_free_stock_market_api_that_allows/",
+         "Because the exchanges license the data and everyone downstream pays them. The rows "
+         "here do not change that; what they change is the entry price, which for a "
+         "watchlist of daily bars is zero on two providers and your own plan on the rest."),
+        ("Rate limits measured in minutes",
+         "even with multithreading i'm looking at 45 minutes to get all the data because of their rate limiting",
+         "r/algotrading", "https://www.reddit.com/r/algotrading/comments/76tqyt/alternatives_to_alpha_vantage/",
+         "A daily allowance is a rate limit too, and this page says so. The difference is the "
+         "shape: one call here is a ticker over its whole history, so twenty calls is twenty "
+         "full series, not twenty days of one."),
+        ("This data should not be hard to find",
+         "In all honesty, I don't feel like this data should be expensive or hard to find.",
+         "r/algotrading, 65 points", "https://www.reddit.com/r/algotrading/comments/1atlh3o/i_need_highquality_historical_fundamental_data/",
+         "Hard to find is the part a catalog fixes: six documented providers, their "
+         "allowances and their conventions on one page, callable through one key. Expensive "
+         "is the exchanges' decision, and no page undoes it."),
+        ("Fifty eight million answers",
+         "there are 58 million answers and the vast majority of them are sarcastic, rhetorical, or a simple 'try this platform'",
+         "r/algotrading, 79 points", "https://www.reddit.com/r/algotrading/comments/1nzqrl8/what_preferably_free_apis_are_preferred_for/",
+         "This page is one more, so here is what makes it checkable: every row names its "
+         "endpoint, its allowance or its key requirement, and its verified date, and the "
+         "prompt above asks the agent to show the allowance before spending it."),
+    ],
+    "related": ("Current quote for a ticker", "News for a ticker",
+                "Dividends and splits", "Company profile and fundamentals behind a ticker"),
+}
