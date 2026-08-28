@@ -154,6 +154,10 @@ def _migrate_to_orgs(conn) -> None:
     if "callrecord" in tables and "kind" not in {c["name"] for c in insp.get_columns("callrecord")}:
         conn.execute(text("ALTER TABLE callrecord ADD COLUMN kind VARCHAR NOT NULL DEFAULT 'call'"))
 
+    # (A-routing) additive, nullable: callrecord.hit — the adapter's found/not-found verdict.
+    if "callrecord" in tables and "hit" not in {c["name"] for c in insp.get_columns("callrecord")}:
+        conn.execute(text("ALTER TABLE callrecord ADD COLUMN hit BOOLEAN"))
+
     # (A12) additive: per-member tool ACL — membership+invite tool_access (JSON, NULL=all tools) and
     # local_run_enabled (BOOLEAN, default true). See api._require_tool_access / _require_local_run.
     for tbl in ("membership", "invite"):

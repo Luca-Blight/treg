@@ -292,6 +292,11 @@ class CallRecord(SQLModel, table=True):
     budget_val: str = Field(default="", index=True)
     tags: dict | None = Field(default=None, sa_column=Column("tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
+    # Did the provider FIND something? Decided at settle from the response body by the endpoint's
+    # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
+    # NULL = no adapter could tell (or the call failed). Feeds `stats.observed` `hit_rate`, the
+    # P(hit) of the router's expected-cost-per-hit ranking. Last column on purpose (alembic appends).
+    hit: bool | None = Field(default=None)
 
 
 class RunRecord(SQLModel, table=True):

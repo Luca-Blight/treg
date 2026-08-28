@@ -130,6 +130,10 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
+def _per_success(cat, endpoint_ids: list[str]) -> set[str]:
+    return {i for i in endpoint_ids if ((cat.by_id.get(i) or {}).get("cost") or {}).get("type") == "per_success"}
+
+
 async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
     """What the served calls say about these endpoints — or `{}` if that query is unavailable.
 
@@ -137,7 +141,7 @@ async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[
     step every agent starts from, while these numbers are an enrichment on top of it.
     """
     try:
-        return await endpoint_stats.observed(db, endpoint_ids)
+        return await endpoint_stats.observed(db, endpoint_ids, per_success=_per_success(catalog_store.load(), endpoint_ids))
     except Exception:  # noqa: BLE001
         logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
         return {}
@@ -259,7 +263,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
             st = stats.get(k["id"]) or {}
             ad = cat.adapters.get(k["id"])
             cands.append(Candidate(k, ad, ad.accepts[0] if ad and ad.accepts else (), "platform",
-                                   cost_at(cat.cost_view(k.get("cost"), k["provider"]), {}), None,
+                                   cost_at(cat.cost_view(k.get("cost"), k["provider"]), {}), st.get("hit_rate"),
                                    st.get("ok_rate"), st.get("p50_ms"), st.get("last_ok_days")))
         routing = {
             "contract": {"identity": [list(v) for v in contract.identity], "output": contract.output,

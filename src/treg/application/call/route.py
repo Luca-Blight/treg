@@ -112,7 +112,8 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
     if ids:
         async with session_maker() as db:
             try:
-                stats = await endpoint_stats.observed(db, ids)
+                stats = await endpoint_stats.observed(
+                    db, ids, per_success={e["id"] for e, _, _ in raw if (e.get("cost") or {}).get("type") == "per_success"})
             except Exception:  # noqa: BLE001 — stats are advisory
                 stats = {}
             for service in {e["provider"] for e, _, _ in raw}:
@@ -124,7 +125,7 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         tier = "credential" if e["provider"] in own else "platform"
         cv = cat.cost_view(e.get("cost"), e["provider"])
         price = 0 if tier != "platform" else cost_at(cv, identity)
-        c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=None,
+        c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=st.get("hit_rate"),
                       ok_rate=st.get("ok_rate"), p50_ms=st.get("p50_ms"), last_ok_days=st.get("last_ok_days"),
                       exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])))
         if tier == "platform" and not cat.platform_eligible(e):

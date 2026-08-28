@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 
-from ... import analytics, audit, oauth
+from ... import analytics, audit, catalog_store, oauth
 from ... import sandbox as demo_sandbox
 from ...client_identity import _norm_client
 from ...config import get_settings
@@ -186,6 +186,26 @@ def _burst_retry_after(provider: str, response: UpstreamResponse, body: bytes) -
     if signal.retry_after_s > SMOOTHING_RETRY_MAX_S:
         return None
     return float(signal.retry_after_s)
+
+
+def _hit_verdict(mk: MarketplaceCall, status: int, body: bytes) -> bool | None:
+    """Found or not, read off a 2xx body by the endpoint's fixture-verified routing adapter; None
+    when nothing can tell. The verdict is all that is kept — never the body."""
+    if not 200 <= status < 300:
+        return None
+    adapter = catalog_store.load().adapters.get(mk.endpoint_id)
+    if adapter is None or not adapter.verified:
+        return None
+    try:
+        doc = json.loads(body)
+    except ValueError:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    try:
+        return not adapter.is_miss(doc)
+    except Exception:  # noqa: BLE001 — an undecidable predicate is a NULL, not a wrong verdict
+        return None
 
 
 def _refusal_kind(status_code: int) -> str | None:
@@ -449,7 +469,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None,
-               refused_by: str | None = None,
+               refused_by: str | None = None, hit: bool | None = None,
                error_request: str | None = None, error_response: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
@@ -471,6 +491,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 "cost_charged_micro": charged_micro,
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
                 "params_hash": mk.params_hash,
+                # found / not found, when this endpoint's routing adapter could read the body
+                **({"hit": hit} if hit is not None else {}),
             }
         # Sanctioned reversal of PR #139: failed own-key and own-tool calls now retain the same
         # redacted, admin-only, 14-day evidence as marketplace failures. Successes remain empty and
@@ -826,7 +848,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 err_response = _error_response_evidence(
                     response.raw_headers, body, _renderings)
         _audit(response.status, observed_micro=observed, charged_micro=charged,
-               duration_ms=duration_ms, response_bytes=len(body),
+               duration_ms=duration_ms, response_bytes=len(body), hit=_hit_verdict(mk, response.status, body),
                error_request=err_request, error_response=err_response)
         served_via = ""
         if response.status >= 400 and mk.tier == "platform":

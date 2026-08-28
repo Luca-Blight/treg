@@ -4449,6 +4449,16 @@ def _pinned_provider(cfg: dict, capability: str | None) -> str | None:
         return None
 
 
+def _hit_cell(obs: dict | None) -> str:
+    """How often the provider found something — the router's P(hit). Blank below the floor."""
+    rate = (obs or {}).get("hit_rate")
+    if rate is None:
+        return f"{_M}—{_R}"
+    pct = rate * 100
+    colour = _G if pct >= 70 else (_AM if pct >= 40 else _A)
+    return f"{colour}{pct:.0f}%{_R}"
+
+
 def _observed_cell(obs: dict | None) -> str:
     """The success rate, or an honest blank. `—` means nobody has called it enough to say (the
     server refuses to publish a rate below its sample floor); a rate with a tiny sample is worse
@@ -4738,13 +4748,14 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         # one you asked about is somewhere above is how you pick the wrong row.
         rows = [dict(e, id=e["id"], provider=e["provider"], observed=e.get("observed"), _me=True)] + \
                [dict(x, _me=False) for x in sibs]
-        print(f"  {'PROVIDER':<12} {'ENDPOINT':<38} {'COST':<15} {'WORKS':<11} {'SPEED':<7} {'LAST OK':<8} ●")
+        print(f"  {'PROVIDER':<12} {'ENDPOINT':<38} {'COST':<15} {'WORKS':<11} {'HIT':<6} {'SPEED':<7} {'LAST OK':<8} ●")
         for s in rows:
             mark = f"{_A}▸{_R}" if s.get("_me") else " "
             if pinned and s["provider"] != pinned:
                 continue          # the team pinned this job elsewhere; these are not callable
             print(f" {mark}{_clip(s['provider'], 12):<12} {_clip(s['id'], 38):<38} "
                   f"{_clip(_cost_usd(s.get('cost')), 15):<15} {_pad(_observed_cell(s.get('observed')), 11)} "
+                  f"{_pad(_hit_cell(s.get('observed')), 6)} "
                   f"{_pad(_speed_cell(s.get('observed')), 7)} {_pad(_last_ok_cell(s), 8)} "
                   f"{'●' if s['provider'] in connected else ' '}")
         if pinned:
@@ -4752,7 +4763,8 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
             _dim(f"  only theirs are listed (admin: treg org unpin {e.get('capability')}).")
         else:
             _dim("  the same job from another provider.")
-        _dim("  WORKS/SPEED are what treg has actually observed; a ✓ age is the catalog's own")
+        _dim("  WORKS/SPEED are what treg has actually observed; HIT is how often the provider FOUND")
+        _dim("  something (per-success providers bill only on a hit); a ✓ age is the catalog's own")
         _dim("  verification stamp, not live traffic. Pick the one whose inputs match what you")
         _dim("  HAVE, then weigh reliability against price.")
     elif e.get("capability"):

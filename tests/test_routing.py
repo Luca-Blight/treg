@@ -278,3 +278,38 @@ async def test_discovery_puts_the_routed_parent_first_and_its_children_under_it(
     from treg.domain.catalog.store import group_routed
     plain = [{"id": "a", "capability": "x", "kind": "data"}, {"id": "b", "capability": "y", "kind": "data"}]
     assert group_routed(plain) == plain, "no routed row → order untouched"
+
+
+async def test_hit_verdict_is_recorded_and_becomes_a_hit_rate(clients: AsyncClient, enrichment_on, monkeypatch):
+    from treg.domain.catalog import stats
+    from treg.models import CallRecord
+    hit = (200, {"data": {"email": "p@stripe.com", "score": 90, "verification": {"status": "valid"}}})
+    miss = (200, {"data": {"email": None, "score": None, "verification": {"status": None}}})
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({"tomba": [hit, miss, hit]}, seen))
+    for _ in range(3):
+        assert (await clients.get("/call/tomba.people.email.find?full_name=P%20C&domain=stripe.com")).status_code == 200
+    await audit.drain()
+    async with session_maker() as db:
+        rows = (await db.execute(select(CallRecord).where(CallRecord.endpoint_id == "tomba.people.email.find"))).scalars().all()
+        assert sorted(r.hit for r in rows) == [False, True, True], "the verdict, never the body"
+        # below the floor → None; the floor is about evidence, not a bug
+        assert (await stats.observed(db, ["tomba.people.email.find"]))["tomba.people.email.find"]["hit_rate"] is None
+        monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
+        s = (await stats.observed(db, ["tomba.people.email.find"], per_success={"tomba.people.email.find"}))["tomba.people.email.find"]
+        assert s["hit_rate"] == pytest.approx(2 / 3, abs=1e-3) and s["hit_samples"] == 3
+        # historical rows without a verdict: a per-success 2xx with cost_observed 0 is a miss, > 0 a hit
+        for r in rows:
+            r.hit = None
+            r.cost_observed_micro = 8_900 if r.status_code == 200 and "x" else 0
+        rows[0].cost_observed_micro = 0
+        await db.commit()
+        s = (await stats.observed(db, ["tomba.people.email.find"], per_success={"tomba.people.email.find"}))["tomba.people.email.find"]
+        assert s["hit_samples"] == 3 and s["hit_rate"] == pytest.approx(2 / 3, abs=1e-3)
+        s = (await stats.observed(db, ["tomba.people.email.find"]))["tomba.people.email.find"]
+        assert s["hit_samples"] == 0, "the zero-cost fallback applies to per-success endpoints only"
+    # the plan reads it: with a measured hit rate the confidence flips from unmeasured to measured
+    monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
+    r = await clients.get(f"/catalog/endpoints/{ROUTED}")
+    tomba = next(c for c in r.json()["routing"]["plan"] if c["endpoint_id"] == "tomba.people.email.find")
+    assert tomba["hit_rate"] == pytest.approx(2 / 3, abs=1e-3) and tomba["confidence"] == "measured"

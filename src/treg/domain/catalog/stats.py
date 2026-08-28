@@ -51,8 +51,12 @@ def _pct(sorted_values: list[int], q: float) -> int | None:
     return int(sorted_values[i])
 
 
+MIN_HIT_SAMPLES = 20     # a hit rate below this many decided lookups is published as None
+
+
 async def observed(
     db: AsyncSession, endpoint_ids: list[str], *, days: int = WINDOW_DAYS,
+    per_success: set[str] | None = None,
 ) -> dict[str, dict]:
     """Per endpoint id: `{samples, ok_rate, p50_ms, p95_ms, last_ok_days}`.
 
@@ -99,6 +103,15 @@ async def observed(
             # read "LAST OK: today", which is the opposite of the truth and exactly how a broken
             # row passes for a merely new one.
             func.max(case((CallRecord.status_code < 300, CallRecord.created_at))).label("last_ok"),
+            # HIT RATE: the adapter's verdict (`hit`), plus — for per-success endpoints, which bill
+            # only when they found something — the provider's own zero-cost signal on rows written
+            # before the column existed. `per_success` says which endpoints the fallback applies to.
+            func.sum(case((CallRecord.hit.is_(True), 1), else_=0)).label("hits"),
+            func.sum(case((CallRecord.hit.is_not(None), 1), else_=0)).label("hit_decided"),
+            func.sum(case(((CallRecord.hit.is_(None)) & (CallRecord.status_code < 300)
+                           & (CallRecord.cost_observed_micro > 0), 1), else_=0)).label("paid_hits"),
+            func.sum(case(((CallRecord.hit.is_(None)) & (CallRecord.status_code < 300)
+                           & (CallRecord.cost_observed_micro == 0), 1), else_=0)).label("free_misses"),
         )
         .where(CallRecord.endpoint_id.in_(ids), CallRecord.created_at >= since,
                # treg's own refusals (paywall 402s, caps, bad requests never relayed) are facts
@@ -119,8 +132,13 @@ async def observed(
         by_id.setdefault(ep_id, []).append(int(ms))
 
     out: dict[str, dict] = {}
-    for ep_id, n, ok, bad, last_ok in rows:
+    for ep_id, n, ok, bad, last_ok, hits, hit_decided, paid_hits, free_misses in rows:
         n, ok, bad = int(n or 0), int(ok or 0), int(bad or 0)
+        hits, hit_decided = int(hits or 0), int(hit_decided or 0)
+        if ep_id in (per_success or ()):
+            hits += int(paid_hits or 0)
+            hit_decided += int(paid_hits or 0) + int(free_misses or 0)
+        hit_rate = round(hits / hit_decided, 4) if hit_decided >= MIN_HIT_SAMPLES else None
         decided = ok + bad          # 4xx excluded — the caller's fault, not the provider's
         if decided < MIN_SAMPLES:
             # Honest emptiness: say how thin the evidence is, claim nothing from it. An earlier
@@ -137,7 +155,8 @@ async def observed(
             # published the outcome of that ONE decided call as 0%, violating both the evidence
             # and privacy reasons for having the floor.
             out[ep_id] = {"samples": n, "ok_rate": None,
-                          "p50_ms": None, "p95_ms": None, "last_ok_days": None}
+                          "p50_ms": None, "p95_ms": None, "last_ok_days": None,
+                          "hit_rate": hit_rate, "hit_samples": hit_decided}
             continue
         ms = sorted(by_id.get(ep_id, []))
         enough_latency = len(ms) >= MIN_SAMPLES
@@ -150,8 +169,10 @@ async def observed(
             "p50_ms": _pct(ms, 0.50) if enough_latency else None,
             "p95_ms": _pct(ms, 0.95) if enough_latency else None,
             "last_ok_days": (_now() - last_ok).days if last_ok else None,
+            "hit_rate": hit_rate, "hit_samples": hit_decided,
         }
     for ep_id in ids:                # an endpoint nobody has called says so, rather than vanishing
         out.setdefault(ep_id, {"samples": 0, "ok_rate": None,
-                               "p50_ms": None, "p95_ms": None, "last_ok_days": None})
+                               "p50_ms": None, "p95_ms": None, "last_ok_days": None,
+                               "hit_rate": None, "hit_samples": 0})
     return out
