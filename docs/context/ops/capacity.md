@@ -168,8 +168,17 @@ the policy table. `rate_pressure` alerting is step C.
 
 `application/call/overflow.py` is documented in `architecture/proxy-model.md` § Overflow. Operating
 it: `TREG_OVERFLOW_MODE` = `off` (default) | `shadow` | `on`; `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
-per aggregator per UTC day, read from `OverflowSpend`; the aggregator keys `TREG_OVERFLOW_KEY_*` in
-the web service env (the cron pulls them). The route view (`routes_view.py`) is the call path's
+per aggregator per UTC day is a hard admission cap backed by `OverflowSpend`. Before either an
+`on` call or a `shadow` probe goes to the network, a conditional atomic upsert reserves the route's
+estimated micro-USD only if the resulting daily total fits under the cap. Completion reconciles the
+estimate to actual aggregator cost and increments `calls` once, including a vendor 5xx that the
+aggregator charged but treg cannot charge to the caller. Known no-charge failures return the whole
+estimate. Once network I/O has started, a timeout, disconnect, parser crash, cancellation, or any
+other outcome without a known actual fee keeps the estimate reserved. A process crash after the
+reservation commit can do the same; that bias is deliberately conservative because it reduces later
+service instead of allowing excess prepaid spend.
+The aggregator keys `TREG_OVERFLOW_KEY_*` live in the web service env (the cron pulls them). The
+route view (`routes_view.py`) is the call path's
 60 s copy of the enabled `OverflowRoute` rows; `overflow sync` / `overflow verify` are the only
 writers. **Rollout (plan §5):** run `shadow` for a week with routes enabled — every probe logs
 `overflow SHADOW <endpoint> via <aggregator>: … shape …` and lands a child audit row

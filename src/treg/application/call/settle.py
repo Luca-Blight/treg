@@ -349,7 +349,7 @@ async def _peek_stream_head(response: UpstreamResponse, limit: int) -> tuple[Ups
 async def _platform_settle(
     mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
     reason: str = "", finalized: Callable[[], None] | None = None,
-    observed_override: int | None = None, overflow_spend: tuple[str, int] | None = None,
+    observed_override: int | None = None, overflow_spend: tuple[str, int, int] | None = None,
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -367,8 +367,10 @@ async def _platform_settle(
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
     # `observed_override`: the overflow child cycle knows its cost from the aggregator's envelope, not
     # from the vendor body — the caller pays exactly that (plan §4.3 step 5), whatever the vendor's
-    # own billing shape. `overflow_spend` = (aggregator, delta vs treg's direct price): folded into
-    # the SAME settle transaction, the one allowlisted overflow write (`overflow_spend_in_settle`).
+    # own billing shape. `overflow_spend` = (aggregator, adjustment from the budget reservation,
+    # delta vs treg's direct price): folded into the SAME settle transaction, the one allowlisted
+    # overflow write (`overflow_spend_in_settle`). It is recorded even when the vendor response is
+    # not billable to the caller because the aggregator's prepaid account still incurred the cost.
     observed = ((observed_override if observed_override is not None
                  else _observed_cost_micro(mk, body, headers)) if billable else None)
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
@@ -382,15 +384,15 @@ async def _platform_settle(
                     "cost_source": ("aggregator" if overflow_spend is not None
                                     else "provider" if observed is not None else "estimate"),
                     **({"served_via": f"overflow:{overflow_spend[0]}"} if overflow_spend else {})})
-                if overflow_spend is not None:
-                    await overflow_spend_ledger.add_in_transaction(
-                        db, overflow_spend[0], observed or 0, overflow_spend[1])
             else:
                 await ledger.release_in_transaction(
                     db, call_id, reason=reason or f"not_billable_{status_code}",
                     meta={"provider": mk.provider, "cost_type": mk.cost_type,
                           "status_code": status_code})
                 charged = 0
+            if overflow_spend is not None:
+                await overflow_spend_ledger.add_in_transaction(
+                    db, overflow_spend[0], overflow_spend[1], overflow_spend[2])
             await db.commit()
             if finalized is not None:
                 finalized()

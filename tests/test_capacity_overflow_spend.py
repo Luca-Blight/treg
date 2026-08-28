@@ -7,6 +7,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from treg.db import session_maker
+from treg.domain.capacity import overflow_spend as spend_ledger
 from treg.domain.capacity.overflow_spend import add_in_transaction
 from treg.models import OverflowSpend
 
@@ -58,3 +59,45 @@ async def test_concurrent_first_adds_are_atomic(clients, monkeypatch):
         row = await db.get(OverflowSpend, ("orthogonal", "2026-08-28"))
     assert row is not None
     assert (row.calls, row.cost_micro, row.delta_micro) == (2, 5_000, 50)
+
+
+async def test_concurrent_budget_reservations_allow_at_most_one_call_at_the_cap(clients):
+    async def reserve() -> bool:
+        async with session_maker() as db:
+            row = await spend_ledger.reserve_in_transaction(
+                db, "orthogonal", 3_000, 4_000, day="2026-08-28",
+            )
+            await db.commit()
+            return row is not None
+
+    admitted = await asyncio.gather(reserve(), reserve())
+
+    assert sum(admitted) == 1
+    async with session_maker() as db:
+        row = await db.get(OverflowSpend, ("orthogonal", "2026-08-28"))
+    assert row is not None
+    assert (row.calls, row.cost_micro) == (0, 3_000)
+
+
+async def test_first_budget_reservation_larger_than_the_cap_is_rejected(clients):
+    async with session_maker() as db:
+        row = await spend_ledger.reserve_in_transaction(
+            db, "orthogonal", 5_000, 4_000, day="2026-08-28",
+        )
+        await db.commit()
+
+    assert row is None
+    async with session_maker() as db:
+        assert await db.get(OverflowSpend, ("orthogonal", "2026-08-28")) is None
+
+
+async def test_budget_reservation_does_not_commit_for_its_caller(clients):
+    async with session_maker() as db:
+        row = await spend_ledger.reserve_in_transaction(
+            db, "orthogonal", 3_000, 4_000, day="2026-08-28",
+        )
+        assert row is not None
+        await db.rollback()
+
+    async with session_maker() as db:
+        assert await db.get(OverflowSpend, ("orthogonal", "2026-08-28")) is None

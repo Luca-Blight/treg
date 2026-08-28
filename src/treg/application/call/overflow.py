@@ -61,6 +61,16 @@ class OverflowOutcome:
     note: str = ""
 
 
+@dataclass
+class _BudgetReservation:
+    aggregator: str
+    estimate_micro: int
+    direct_micro: int
+    outbound: bool = False
+    actual_micro: int | None = None
+    finalized: bool = False
+
+
 def _trigger(mk: MarketplaceCall, status: int, headers, body: bytes) -> str | None:
     """Why this call may overflow, or None. Only treg-side failures qualify (plan §4.1)."""
     if status == 401:
@@ -82,9 +92,11 @@ async def _send(client: httpx.AsyncClient, req: AggregatorRequest) -> httpx.Resp
 
 
 async def _run(client: httpx.AsyncClient, aggregator: str, route, key: str, query, body: bytes | None,
-               path_params: dict | None) -> AggregatorResult:
+               path_params: dict | None, budget: _BudgetReservation | None = None) -> AggregatorResult:
     adapter = by_name(aggregator)
     req = adapter.build(route, key, query, body, path_params)
+    if budget is not None:
+        budget.outbound = True
     r = await _send(client, req)
     res = adapter.parse(r.status_code, r.content)
     polls = 0
@@ -129,12 +141,78 @@ def _capacity_503(mk: MarketplaceCall, aggregator: str, why: str) -> CallFailure
     })
 
 
-async def _record_shadow(aggregator: str, cost_micro: int, delta_micro: int) -> None:
+async def _record_shadow(
+    aggregator: str, actual_micro: int, estimate_micro: int, delta_micro: int,
+) -> None:
     """Shadow mode's spend row — the same `overflow_spend` write as the child settle, on its own
     short session because there is no child hold to settle in."""
     async with session_maker() as db:
-        await overflow_spend_ledger.add_in_transaction(db, aggregator, cost_micro, delta_micro)
+        await overflow_spend_ledger.add_in_transaction(
+            db, aggregator, actual_micro - estimate_micro, delta_micro,
+        )
         await db.commit()
+
+
+async def _release_budget(reservation: _BudgetReservation) -> None:
+    """Return an estimate for an attempt that never reached the aggregator."""
+    if reservation.finalized:
+        return
+    async with session_maker() as db:
+        await overflow_spend_ledger.release_reservation_in_transaction(
+            db, reservation.aggregator, reservation.estimate_micro,
+        )
+        await db.commit()
+    reservation.finalized = True
+
+
+async def _finish_budget(reservation: _BudgetReservation, actual_micro: int) -> None:
+    """Reconcile a completed attempt to actual spend and count it once."""
+    if reservation.finalized:
+        return
+    async with session_maker() as db:
+        await overflow_spend_ledger.add_in_transaction(
+            db, reservation.aggregator, actual_micro - reservation.estimate_micro,
+            actual_micro - reservation.direct_micro,
+        )
+        await db.commit()
+    reservation.finalized = True
+
+
+async def _preserve_unknown_budget(reservation: _BudgetReservation) -> None:
+    """Count a cancelled outbound attempt while conservatively retaining its estimate."""
+    if reservation.finalized:
+        return
+    async with session_maker() as db:
+        await overflow_spend_ledger.add_in_transaction(
+            db, reservation.aggregator, 0,
+            reservation.estimate_micro - reservation.direct_micro,
+        )
+        await db.commit()
+    reservation.finalized = True
+
+
+def _overflow_spend_adjustment(
+    reservation: _BudgetReservation,
+) -> tuple[str, int, int] | None:
+    """Return the known actual adjustment, or None when the estimate must stay reserved."""
+    if reservation.actual_micro is None:
+        return None
+    return (
+        reservation.aggregator,
+        reservation.actual_micro - reservation.estimate_micro,
+        reservation.actual_micro - reservation.direct_micro,
+    )
+
+
+async def _record_shadow_budget(reservation: _BudgetReservation) -> None:
+    if reservation.actual_micro is None:
+        await _preserve_unknown_budget(reservation)
+        return
+    await _record_shadow(
+        reservation.aggregator, reservation.actual_micro,
+        reservation.estimate_micro, reservation.actual_micro - reservation.direct_micro,
+    )
+    reservation.finalized = True
 
 
 async def _maybe_overflow_attempt(
@@ -142,6 +220,7 @@ async def _maybe_overflow_attempt(
     method: str, query_items: list[tuple[str, str]], caller_body: bytes, client: httpx.AsyncClient,
     audit_client: str = "", force_trigger: str | None = None,
     reserved: list[MarketplaceCall],
+    budget_reservations: list[_BudgetReservation],
 ) -> OverflowOutcome | None:
     """After the primary's settle released — or, with `force_trigger`, INSTEAD of a direct attempt
     the resolver already knows would 402 (`mk.skip_direct`). None = nothing to do (the vendor's
@@ -164,13 +243,19 @@ async def _maybe_overflow_attempt(
     aggregator = route.aggregator
     key = settings.overflow_key_for(aggregator) or ""
     price = int(route.agg_price_micro or 0)
-    # Budget: the aggregator's day so far + this call, before any hold (plan §4.3 step 5).
+    # Atomically reserve the estimate before any network call. A rejected upsert means another
+    # concurrent attempt already claimed the remaining daily budget.
     async with session_maker() as db:
-        spent = await overflow_spend_ledger.spent_today(db, aggregator)
-    if spent + price > settings.overflow_daily_budget_micro:
-        log.warning("overflow budget reached for %s (%d + %d > %d)", aggregator, spent, price,
+        budget_row = await overflow_spend_ledger.reserve_in_transaction(
+            db, aggregator, price, settings.overflow_daily_budget_micro,
+        )
+        await db.commit()
+    if budget_row is None:
+        log.warning("overflow budget reached for %s (estimate %d, cap %d)", aggregator, price,
                     settings.overflow_daily_budget_micro)
         return None
+    budget = _BudgetReservation(aggregator, price, int(mk.estimate_micro or 0))
+    budget_reservations.append(budget)
     child = _child(mk, route)
     query = [(k, v) for k, v in query_items if k not in mk.consumed]
     path_params = {k: v for k, v in query_items if k in mk.consumed}
@@ -180,10 +265,14 @@ async def _maybe_overflow_attempt(
         reserved.append(child)
     res: AggregatorResult | None = None
     try:
-        res = await _run(client, aggregator, route, key, query, caller_body or None, path_params)
+        res = await _run(
+            client, aggregator, route, key, query, caller_body or None, path_params, budget,
+        )
     except httpx.RequestError as exc:
-        res = AggregatorResult(None, b"", 0, "malformed", f"{type(exc).__name__}: {exc}")
-    delta = (res.cost_micro or 0) - int(mk.estimate_micro or 0)
+        res = AggregatorResult(None, b"", None, "malformed", f"{type(exc).__name__}: {exc}")
+    budget.actual_micro = int(res.cost_micro) if res.cost_micro is not None else None
+    delta = (budget.actual_micro - budget.direct_micro
+             if budget.actual_micro is not None else None)
     # --- decide ---
     if res.failure in ("aggregator_auth", "aggregator_balance", "malformed") or res.upstream_status == 402:
         why_agg = res.failure or "upstream 402 through the aggregator"
@@ -191,7 +280,17 @@ async def _maybe_overflow_attempt(
                                             + __import__("datetime").timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
                                             note=f"{why_agg}: {res.detail[:80]}")
         if mode == "on":
-            await _platform_settle(child, None, reason=f"overflow_{why_agg[:24]}")
+            spend_adjustment = _overflow_spend_adjustment(budget)
+            await _platform_settle(
+                child, None, reason=f"overflow_{why_agg[:24]}",
+                overflow_spend=spend_adjustment,
+            )
+            if spend_adjustment is None:
+                await _preserve_unknown_budget(budget)
+            else:
+                budget.finalized = True
+        else:
+            await _record_shadow_budget(budget)
         log.warning("overflow via %s failed for %s: %s %s", aggregator, mk.endpoint_id, why_agg, res.detail)
         _audit_child(mk, child, call_ref, aggregator, res, charged=0, client=audit_client, note=why_agg)
         return OverflowOutcome(False, None, aggregator=aggregator, note=why_agg,
@@ -200,7 +299,17 @@ async def _maybe_overflow_attempt(
         # The aggregator's stricter schema refused (no vendor call, no charge): this route is wrong for
         # this call; the vendor's own answer stands. Worth a log line — verify should have caught it.
         if mode == "on":
-            await _platform_settle(child, None, reason="overflow_contract")
+            spend_adjustment = _overflow_spend_adjustment(budget)
+            await _platform_settle(
+                child, None, reason="overflow_contract",
+                overflow_spend=spend_adjustment,
+            )
+            if spend_adjustment is None:
+                await _preserve_unknown_budget(budget)
+            else:
+                budget.finalized = True
+        else:
+            await _record_shadow_budget(budget)
         log.warning("overflow via %s refused %s: %s", aggregator, mk.endpoint_id, res.detail)
         _audit_child(mk, child, call_ref, aggregator, res, charged=0, client=audit_client, note=res.failure)
         return OverflowOutcome(False, None, aggregator=aggregator, note=res.failure)
@@ -212,15 +321,18 @@ async def _maybe_overflow_attempt(
             body_shape = "non-json"
         log.info("overflow SHADOW %s via %s: vendor %s direct→%s relay, cost %s, delta %s, shape %s",
                  mk.endpoint_id, aggregator, status, res.upstream_status, res.cost_micro, delta, body_shape)
-        try:
-            await _record_shadow(aggregator, res.cost_micro or 0, delta)
-        except Exception:  # noqa: BLE001 — accounting for a probe must not touch the caller's answer
-            log.warning("shadow spend row not written", exc_info=True)
+        await _record_shadow_budget(budget)
         _audit_child(mk, child, call_ref, aggregator, res, charged=0, client=audit_client, note="shadow")
         return OverflowOutcome(False, None, aggregator=aggregator, note="shadow")
+    spend_adjustment = _overflow_spend_adjustment(budget)
     charged, observed = await _platform_settle(
         child, int(res.upstream_status or 200), res.upstream_body,
-        observed_override=res.cost_micro, overflow_spend=(aggregator, delta))
+        observed_override=res.cost_micro,
+        overflow_spend=spend_adjustment)
+    if spend_adjustment is None:
+        await _preserve_unknown_budget(budget)
+    else:
+        budget.finalized = True
     response = _response(res)
     _audit_child(mk, child, call_ref, aggregator, res, charged=charged, client=audit_client)
     return OverflowOutcome(True, response, res.upstream_body, charged, observed, aggregator)
@@ -234,21 +346,51 @@ async def maybe_overflow(
     """Run one optional overflow attempt without letting its infrastructure replace the caller's
     existing vendor answer. A skip-direct caller interprets None as its original capacity 503."""
     reserved: list[MarketplaceCall] = []
+    budget_reservations: list[_BudgetReservation] = []
     try:
         return await _maybe_overflow_attempt(
             mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=status, headers=headers,
             body=body, method=method, query_items=query_items, caller_body=caller_body,
             client=client, audit_client=audit_client, force_trigger=force_trigger,
-            reserved=reserved,
+            reserved=reserved, budget_reservations=budget_reservations,
         )
     except asyncio.CancelledError:
+        if budget_reservations:
+            try:
+                if budget_reservations[0].actual_micro is not None:
+                    await _finish_budget(
+                        budget_reservations[0], budget_reservations[0].actual_micro,
+                    )
+                elif budget_reservations[0].outbound:
+                    await _preserve_unknown_budget(budget_reservations[0])
+                else:
+                    await _release_budget(budget_reservations[0])
+            except Exception:  # noqa: BLE001 - cancellation must remain the result
+                log.exception("overflow budget cleanup failed for cancelled %s", mk.endpoint_id)
         raise
     except CallFailure:
+        if budget_reservations:
+            try:
+                await _release_budget(budget_reservations[0])
+            except Exception:  # noqa: BLE001 - preserve the typed call failure
+                log.exception("overflow budget release failed for %s", mk.endpoint_id)
         raise
     except Exception:  # noqa: BLE001 - overflow is advisory and must not replace the primary result
         log.exception("overflow attempt crashed for %s", mk.endpoint_id)
         if reserved:
             await _platform_settle(reserved[0], None, reason="overflow_crashed")
+        if budget_reservations:
+            try:
+                if budget_reservations[0].actual_micro is not None:
+                    await _finish_budget(
+                        budget_reservations[0], budget_reservations[0].actual_micro,
+                    )
+                elif budget_reservations[0].outbound:
+                    await _preserve_unknown_budget(budget_reservations[0])
+                else:
+                    await _release_budget(budget_reservations[0])
+            except Exception:  # noqa: BLE001 - the primary vendor answer still wins
+                log.exception("overflow budget release failed for crashed %s", mk.endpoint_id)
         return None
 
 

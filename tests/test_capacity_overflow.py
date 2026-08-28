@@ -111,6 +111,24 @@ async def test_findymail_shaped_402_on_tier4_runs_one_child_cycle(clients: Async
     assert tiers == {"platform", "platform-overflow"}
 
 
+async def test_overflow_budget_reconciles_the_estimate_to_the_actual_cost(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"out"}'))
+    seen = []
+    envelope = {"success": True, "data": VENDOR_BODY, "priceCents": 0.25}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 200
+    assert response.headers["X-Treg-Cost-Micro"] == "2500"
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 2_500)
+
+
 async def test_overflow_substitutes_consumed_path_params_before_calling_aggregator(
     clients: AsyncClient, overflow_on, monkeypatch,
 ):
@@ -210,6 +228,57 @@ async def test_adapter_parse_crash_falls_back_to_vendor_answer_and_releases_chil
     assert response.content == b'{"detail":"vendor out"}'
     assert len(seen) == 1
     assert not any(hold.call_id.endswith(":overflow") for hold in await _holds())
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
+
+
+async def test_request_error_after_send_preserves_unknown_budget_estimate(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"vendor out"}'))
+    seen = []
+
+    async def timeout_after_send(client, request):
+        seen.append(request)
+        raise httpx.ReadTimeout(
+            "aggregator response timed out",
+            request=httpx.Request(request.method, request.url),
+        )
+
+    monkeypatch.setattr(O, "_send", timeout_after_send)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 503
+    assert len(seen) == 1
+    assert await _holds() == []
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
+
+
+async def test_vendor_500_cost_reported_by_aggregator_is_counted_in_daily_spend(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"out"}'))
+    seen = []
+    envelope = {
+        "success": False,
+        "error": "upstream returned status 500",
+        "data": {"error": "vendor failed"},
+        "priceCents": 0.3,
+    }
+    monkeypatch.setattr(O, "_send", _orthogonal([(500, envelope)], seen))
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 500
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
 
 
 async def test_budget_crossing_skips_overflow(clients: AsyncClient, overflow_on, monkeypatch):
@@ -308,7 +377,7 @@ async def test_an_exhausted_account_with_a_route_skips_the_direct_attempt(client
     assert len(seen) == 1, "the replay never touched the aggregator"
 
 
-async def test_skip_direct_spend_lookup_crash_falls_back_to_typed_capacity_503(
+async def test_skip_direct_budget_reservation_crash_falls_back_to_typed_capacity_503(
     clients: AsyncClient, overflow_on, monkeypatch,
 ):
     from datetime import timedelta
@@ -323,10 +392,10 @@ async def test_skip_direct_spend_lookup_crash_falls_back_to_typed_capacity_503(
         await db.commit()
     capacity_view.invalidate()
 
-    async def crash_spent_today(db, aggregator, *, day=None):
-        raise RuntimeError("spend lookup crashed")
+    async def crash_reservation(db, aggregator, estimate_micro, cap_micro, *, day=None):
+        raise RuntimeError("budget reservation crashed")
 
-    monkeypatch.setattr(O.overflow_spend_ledger, "spent_today", crash_spent_today)
+    monkeypatch.setattr(O.overflow_spend_ledger, "reserve_in_transaction", crash_reservation)
 
     response = await clients.get(f"/call/{EP}?aweme_id=7")
 
