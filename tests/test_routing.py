@@ -338,6 +338,11 @@ async def test_hit_verdict_is_recorded_and_becomes_a_hit_rate(clients: AsyncClie
         assert s["hit_samples"] == 0, "the zero-cost fallback applies to per-success endpoints only"
     # the plan reads it: with a measured hit rate the confidence flips from unmeasured to measured
     monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
+    # the catalog reads observations through the process cache: a cold entry answers nothing and
+    # refreshes in the background, so warm it the way test_endpoint_stats does
+    from treg import api as A
+    await clients.get(f"/catalog/endpoints/{ROUTED}")
+    await A.app.state.endpoint_observation_reader.wait_for_idle()
     r = await clients.get(f"/catalog/endpoints/{ROUTED}")
     tomba = next(c for c in r.json()["routing"]["plan"] if c["endpoint_id"] == "tomba.people.email.find")
     assert tomba["hit_rate"] == pytest.approx(2 / 3, abs=1e-3) and tomba["usd_per_hit"] == pytest.approx(0.0089, abs=1e-4)
