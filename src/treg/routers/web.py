@@ -178,9 +178,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
   <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
   <div class="links">
     {navlink("/catalog", "Catalog")}
-    {navlink("/use-cases", "Use cases")}
-    {navlink("/workflows", "Workflows")}
-    {navlink("/tutorial", "Tutorial", ' class="hidem"')}
+    {navlink("/tutorial", "Tutorial")}
     {navlink("/docs", "API")}
     <a class="hidem" href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a>
     <a class="candy" href="/app?ref={ref}">Start free</a>
@@ -189,13 +187,21 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
 {body}
 <footer>
   <div class="foot-in">
-    <div class="brand"><span class="glyph">▚</span> treg</div>
-    <span style="font-family:var(--mono);font-size:12px">· 100% open source</span>
-    <span class="sp"></span>
-    <a href="/catalog">catalog</a><a href="/use-cases">use cases</a><a href="/workflows">workflows</a
-    ><a href="/agents/claude-code">agents</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
-    ><a href="{_GH}" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a
-    ><a href="/terms">terms</a><a href="/privacy">privacy</a>
+    <div class="foot-brand">
+      <div class="brand"><span class="glyph">▚</span> treg</div>
+      <div class="note">100% open source</div>
+    </div>
+    <nav class="foot-cols" aria-label="Site">
+      <div class="foot-col"><div class="lab">Explore</div>
+        <a href="/catalog">Catalog</a><a href="/use-cases">Use cases</a
+        ><a href="/workflows">Workflows</a><a href="/agents/claude-code">Agents</a></div>
+      <div class="foot-col"><div class="lab">Build</div>
+        <a href="/tutorial">Docs</a><a href="/docs">API</a><a href="/llms.txt">llms.txt</a
+        ><a href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a></div>
+      <div class="foot-col"><div class="lab">Company</div>
+        <a href="/resources">Resources</a><a href="/support">Support</a
+        ><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div>
+    </nav>
   </div>
 </footer>
 </body>
