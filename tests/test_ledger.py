@@ -475,7 +475,7 @@ async def test_a_grant_failure_after_staging_still_returns_the_signup(c: AsyncCl
     recovery rollback expires every object the session tracks. Both signup doors must still answer
     with the fields they promised, and the referral must still be attributed - the never-500-the-
     signup contract does not stop at objects that now need a reload."""
-    from treg.api import REFERRAL_COOKIE
+    from treg.routers.signup_cookies import REFERRAL_COOKIE
     from treg.models import Referral
 
     _, ann_token = await _org(c, "ref-ann@superdesign.dev")
@@ -894,6 +894,6 @@ async def test_demo_orgs_get_no_promo_credit(c: AsyncClient):
         await ledger._add_balance(db, org_id, -org.balance_micro)  # zero it as a demo org would be
         await db.commit()
         # the hook is what enforces this — a demo org that somehow reaches it gets nothing
-        from treg.api import _grant_signup_promo
+        from treg.application.signup import _grant_signup_promo
         await _grant_signup_promo(db, await db.get(Org, org_id))
         assert await ledger.balance_of(db, org_id) == 0

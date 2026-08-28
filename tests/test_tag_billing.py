@@ -17,8 +17,9 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import api as A, audit, crypto, ledger
+from treg import audit, crypto, ledger
 from treg.application.call import service as call_service
+from treg.application.call import settle as call_settle
 from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
@@ -779,10 +780,10 @@ async def test_a_caller_input_4xx_is_still_billed_on_a_per_call_endpoint(clients
     r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"X-Treg-Meta": "customer=cust_A"})
     assert r.status_code == 400
     # tikhub comments is per_success, so 400 releases; assert the RULE directly for per_call.
-    assert A._platform_billable(400, "per_call") is True
-    assert A._platform_billable(404, "per_call") is True
-    assert A._platform_billable(402, "per_call") is False
-    assert A._platform_billable(401, "per_result") is False
+    assert call_settle._platform_billable(400, "per_call") is True
+    assert call_settle._platform_billable(404, "per_call") is True
+    assert call_settle._platform_billable(402, "per_call") is False
+    assert call_settle._platform_billable(401, "per_result") is False
 
 
 # ---- per-dimension defaults with overrides -------------------------------------------------------

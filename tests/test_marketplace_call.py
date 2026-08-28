@@ -22,8 +22,9 @@ from datetime import datetime, timezone
 import pytest
 from httpx import AsyncClient
 
-from treg import api as A, audit, catalog_store, oauth_providers
+from treg import api as A, audit, catalog_store, ledger, oauth_providers
 from treg.application.call import resolve as call_resolution
+from treg.application.call import settle as call_settle
 from treg.application.call import service as call_service
 from treg.application.call.types import ResolutionFailed, UpstreamResponse
 from treg.routers import call as call_routes
@@ -201,7 +202,7 @@ def test_path_placeholders_fill_from_query_and_are_consumed():
 
 def test_gtm_catalog_builds_hierarchy_from_atomic_ids_without_encoded_slashes():
     ep = catalog_store.load().by_id["google-tag-manager.workspaces"]
-    url, consumed = A._marketplace_upstream(
+    url, consumed = call_resolution._marketplace_upstream(
         ep,
         oauth_providers.GOOGLE_TAG_MANAGER,
         {"account_id": "123", "container_id": "456", "pageToken": "next"},
@@ -326,7 +327,7 @@ async def test_empty_balance_is_a_402_an_agent_can_act_on(clients: AsyncClient, 
     """Out of money is not "no credential" — it names the balance, the price, and the way to fix it."""
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
     async with session_maker() as db:  # spend the whole promo through the ledger's own front door
-        await A.ledger.reserve(db, org_id, "drain", 1_000_000)
+        await ledger.reserve(db, org_id, "drain", 1_000_000)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 402, r.text
     d = r.json()["detail"]
@@ -351,7 +352,7 @@ async def test_402_with_autotopup_on_names_the_policy_not_a_missing_card(clients
         org.autotopup_amount_micro = 20_000_000
         org.autotopup_threshold_micro = 5_000_000
         await db.commit()
-        await A.ledger.reserve(db, org_id, "drain", 1_000_000)
+        await ledger.reserve(db, org_id, "drain", 1_000_000)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 402, r.text
     d = r.json()["detail"]
@@ -491,44 +492,44 @@ async def test_scrapecreators_settles_on_the_credits_it_charged(clients: AsyncCl
     assert (await _telemetry(clients))["cost_observed_micro"] == 3 * EP_CALL_MICRO
 
 
-def _mk(provider: str, **kw) -> A.MarketplaceCall:
+def _mk(provider: str, **kw) -> call_resolution.MarketplaceCall:
     """A minimal MarketplaceCall for observed-cost tests — only the fields the settle math reads."""
     kw.setdefault("tier", "platform")
     kw.setdefault("endpoint_id", "ep")  # hunter's derived cost is keyed on the endpoint, not just the provider
-    return A.MarketplaceCall(tool=None, upstream="", consumed=set(), provider=provider, **kw)
+    return call_resolution.MarketplaceCall(tool=None, upstream="", consumed=set(), provider=provider, **kw)
 
 
 def test_observed_cost_only_trusts_a_real_number():
     """A missing, non-numeric or negative charge means "we never learned it" — settle at the estimate.
     A reported ZERO is different: the provider is saying it did not charge, and is honoured."""
-    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": 0}') == 0
-    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": "0.5"}') is None
-    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": -1}') is None
-    assert A._observed_cost_micro(_mk("dataforseo"), b"not json") is None
-    assert A._observed_cost_micro(_mk("dataforseo"), b"[1,2,3]") is None
-    assert A._observed_cost_micro(_mk("tikhub"), b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
+    assert call_settle._observed_cost_micro(_mk("dataforseo"), b'{"cost": 0}') == 0
+    assert call_settle._observed_cost_micro(_mk("dataforseo"), b'{"cost": "0.5"}') is None
+    assert call_settle._observed_cost_micro(_mk("dataforseo"), b'{"cost": -1}') is None
+    assert call_settle._observed_cost_micro(_mk("dataforseo"), b"not json") is None
+    assert call_settle._observed_cost_micro(_mk("dataforseo"), b"[1,2,3]") is None
+    assert call_settle._observed_cost_micro(_mk("tikhub"), b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
     # exa reports dollars one level down; a 20-result search is the base plus ten $0.001 riders
-    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0.016, "search": {"neural": 0.016}}}') == 16_000
-    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0}}') == 0
-    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": "0.007"}}') is None
-    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": 0.007}') is None
-    assert A._observed_cost_micro(_mk("exa"), b'{"results": []}') is None
-    assert A._observed_cost_micro(_mk("scrapecreators"), b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
-    assert A._observed_cost_micro(_mk("scrapecreators"), b'{"success": true}') is None
+    assert call_settle._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0.016, "search": {"neural": 0.016}}}') == 16_000
+    assert call_settle._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0}}') == 0
+    assert call_settle._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": "0.007"}}') is None
+    assert call_settle._observed_cost_micro(_mk("exa"), b'{"costDollars": 0.007}') is None
+    assert call_settle._observed_cost_micro(_mk("exa"), b'{"results": []}') is None
+    assert call_settle._observed_cost_micro(_mk("scrapecreators"), b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
+    assert call_settle._observed_cost_micro(_mk("scrapecreators"), b'{"success": true}') is None
     # akta reports `credits_consumed` — the field that makes its per-section enrich billable at
     # actuals rather than the catalog's upper-bound estimate. $0.05/credit (fx.yaml).
-    assert A._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0.5}') == 25_000
-    assert A._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
-    assert A._observed_cost_micro(_mk("akta"), b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
+    assert call_settle._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0.5}') == 25_000
+    assert call_settle._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
+    assert call_settle._observed_cost_micro(_mk("akta"), b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
 
 
 def test_crustdata_settles_from_the_response_credit_header():
     """Crustdata's body has no billing field; X-Credits-Used is the exact call charge."""
     mk = _mk("crustdata", endpoint_id="crustdata.companies.search")
-    assert A._observed_cost_micro(
+    assert call_settle._observed_cost_micro(
         mk, b'{"rows": []}', httpx.Headers({"X-Credits-Used": "0.03"})) == 9_000
-    assert A._observed_cost_micro(mk, b'{"rows": []}', httpx.Headers()) is None
-    assert A._observed_cost_micro(
+    assert call_settle._observed_cost_micro(mk, b'{"rows": []}', httpx.Headers()) is None
+    assert call_settle._observed_cost_micro(
         mk, b'{"rows": []}', httpx.Headers({"X-Credits-Used": "not-a-number"})) is None
 
 
@@ -538,7 +539,7 @@ def test_aviato_conditional_prices_follow_live_balance_deltas():
     def price(endpoint_id, query=None, body=None):
         ep = cat.by_id[endpoint_id]
         cv = cat.cost_view(ep["cost"], "aviato")
-        return A._marketplace_pricing(
+        return call_resolution._marketplace_pricing(
             "aviato", endpoint_id, cv, query or {}, json.dumps(body or {}).encode())
 
     assert price("aviato.companies.enrich", {"preview": "true"}) == (0, 0)
@@ -557,19 +558,19 @@ def test_aviato_conditional_prices_follow_live_balance_deltas():
 
 def test_aviato_bulk_settles_from_counts_and_simple_search_releases_unbilled_rider():
     companies = _mk("aviato", endpoint_id="aviato.companies.enrich.bulk", unit_micro=150_000)
-    assert A._observed_cost_micro(companies, b'{"companies": [{"id": "1"}, null]}') == 150_000
+    assert call_settle._observed_cost_micro(companies, b'{"companies": [{"id": "1"}, null]}') == 150_000
     people = _mk("aviato", endpoint_id="aviato.people.enrich.bulk", unit_micro=70_000)
-    assert A._observed_cost_micro(people, b'[{"id": "1"}, null]') == 70_000
+    assert call_settle._observed_cost_micro(people, b'[{"id": "1"}, null]') == 70_000
     simple = _mk("aviato", endpoint_id="aviato.people.search.simple", unit_micro=0)
-    assert A._observed_cost_micro(simple, b'{"items": [{"id":"1"},{"id":"2"},{"id":"3"},'
+    assert call_settle._observed_cost_micro(simple, b'{"items": [{"id":"1"},{"id":"2"},{"id":"3"},'
                                                   b'{"id":"4"},{"id":"5"}]}') == 2_500
 
 
 def test_aviato_single_enrich_releases_documented_but_live_unbilled_riders():
     company = _mk("aviato", endpoint_id="aviato.companies.enrich", unit_micro=150_000)
-    assert A._observed_cost_micro(company, b'{"id":"company"}') == 150_000
+    assert call_settle._observed_cost_micro(company, b'{"id":"company"}') == 150_000
     person = _mk("aviato", endpoint_id="aviato.people.enrich", unit_micro=80_000)
-    assert A._observed_cost_micro(person, b'{"id":"person"}') == 80_000
+    assert call_settle._observed_cost_micro(person, b'{"id":"person"}') == 80_000
 
 
 def test_observed_cost_counts_resources_for_billed_oauth_reads():
@@ -578,25 +579,25 @@ def test_observed_cost_counts_resources_for_billed_oauth_reads():
     zero, and a single-object `data` (a profile read) at one. Anything unparseable falls back to
     the estimate (None), and a non-per_result billed call never counts."""
     x = _mk("x", tier="tool", billed_oauth=True, cost_type="per_result", unit_micro=5_000)
-    assert A._observed_cost_micro(x, b'{"data": [{}, {}, {}]}') == 15_000
-    assert A._observed_cost_micro(x, b'{"data": []}') == 0
-    assert A._observed_cost_micro(x, b'{"data": {"id": "1"}}') == 5_000
-    assert A._observed_cost_micro(x, b'{"errors": [{}]}') == 0, "no data key = nothing served"
-    assert A._observed_cost_micro(x, b"not json") is None, "unreadable body settles at the estimate"
+    assert call_settle._observed_cost_micro(x, b'{"data": [{}, {}, {}]}') == 15_000
+    assert call_settle._observed_cost_micro(x, b'{"data": []}') == 0
+    assert call_settle._observed_cost_micro(x, b'{"data": {"id": "1"}}') == 5_000
+    assert call_settle._observed_cost_micro(x, b'{"errors": [{}]}') == 0, "no data key = nothing served"
+    assert call_settle._observed_cost_micro(x, b"not json") is None, "unreadable body settles at the estimate"
     write = _mk("x", tier="tool", billed_oauth=True, cost_type="per_call", unit_micro=0)
-    assert A._observed_cost_micro(write, b'{"data": {"id": "1"}}') is None, "per_call settles at the estimate"
+    assert call_settle._observed_cost_micro(write, b'{"data": {"id": "1"}}') is None, "per_call settles at the estimate"
 
     # leadmagic reports `credits_consumed` too — including 0 on a 2xx miss (observed at verify
     # time) and fractions (email verify = 0.25 credits). $0.025/credit (fx.yaml).
-    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 1}') == 25_000
-    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0.25}') == 6_250
+    assert call_settle._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 1}') == 25_000
+    assert call_settle._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
+    assert call_settle._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0.25}') == 6_250
     # lusha nests the same contract one level down: billing.creditsCharged — 0 on a 2xx miss
     # (the captured people.enrich example is one), 2 credits on a company enrich. $0.1248/credit.
-    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
-    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 2}}') == 249_600
-    assert A._observed_cost_micro(_mk("lusha"), b'{"requestId": "x"}') is None, "no billing block means we never learned it"
+    assert call_settle._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
+    assert call_settle._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
+    assert call_settle._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 2}}') == 249_600
+    assert call_settle._observed_cost_micro(_mk("lusha"), b'{"requestId": "x"}') is None, "no billing block means we never learned it"
 
 
 def test_apollo_settles_a_2xx_miss_at_zero():
@@ -606,12 +607,12 @@ def test_apollo_settles_a_2xx_miss_at_zero():
     carrying neither documented shape (people enrichment's 1-9 credit range) stays at the
     estimate — deriving is only safe where the rule is flat."""
     credit = 26_000  # $0.026/credit (fx.yaml, Basic $65/mo / 2,500 credits)
-    assert A._observed_cost_micro(_mk("apollo"), b'{"organization": {"name": "Apple"}}') == credit
-    assert A._observed_cost_micro(_mk("apollo"), b'{"organization": null}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro(_mk("apollo"), b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
-    assert A._observed_cost_micro(_mk("apollo"), b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
-    assert A._observed_cost_micro(_mk("apollo"), b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
-    assert A._observed_cost_micro(_mk("apollo"), b"not json") is None
+    assert call_settle._observed_cost_micro(_mk("apollo"), b'{"organization": {"name": "Apple"}}') == credit
+    assert call_settle._observed_cost_micro(_mk("apollo"), b'{"organization": null}') == 0, "a 2xx miss is free"
+    assert call_settle._observed_cost_micro(_mk("apollo"), b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
+    assert call_settle._observed_cost_micro(_mk("apollo"), b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
+    assert call_settle._observed_cost_micro(_mk("apollo"), b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
+    assert call_settle._observed_cost_micro(_mk("apollo"), b"not json") is None
 
 
 def test_hunter_domain_search_settles_on_the_emails_it_returned():
@@ -622,19 +623,19 @@ def test_hunter_domain_search_settles_on_the_emails_it_returned():
     and one email costs the same whole credit ten do."""
     credit = 24_500  # $0.0245/credit (fx.yaml, Starter $49/mo / 2,000 credits)
     h = _mk("hunter", endpoint_id="hunter.companies.emails", cost_type="per_result")
-    assert A._observed_cost_micro(h, b'{"data": {"domain": "x.com", "emails": []}}') == 0, \
+    assert call_settle._observed_cost_micro(h, b'{"data": {"domain": "x.com", "emails": []}}') == 0, \
         "a domain with no results is free — the catalog says so and Hunter bills so"
-    assert A._observed_cost_micro(h, b'{"data": {"emails": [{"value": "a@x.com"}]}}') == credit, \
+    assert call_settle._observed_cost_micro(h, b'{"data": {"emails": [{"value": "a@x.com"}]}}') == credit, \
         "one email costs a whole search credit, not a tenth of one"
     def _emails(n: int) -> bytes:
         return json.dumps({"data": {"emails": [{"value": f"p{i}@x.com"} for i in range(n)]}}).encode()
-    assert A._observed_cost_micro(h, _emails(10)) == credit, "ten still fit in one credit"
-    assert A._observed_cost_micro(h, _emails(11)) == 2 * credit, "the 11th rounds up to a second credit"
-    assert A._observed_cost_micro(h, b'{"errors": [{"code": "wrong_params"}]}') is None, \
+    assert call_settle._observed_cost_micro(h, _emails(10)) == credit, "ten still fit in one credit"
+    assert call_settle._observed_cost_micro(h, _emails(11)) == 2 * credit, "the 11th rounds up to a second credit"
+    assert call_settle._observed_cost_micro(h, b'{"errors": [{"code": "wrong_params"}]}') is None, \
         "no emails key at all: we never learned the count, settle at the estimate"
-    assert A._observed_cost_micro(h, b"not json") is None
+    assert call_settle._observed_cost_micro(h, b"not json") is None
     other = _mk("hunter", endpoint_id="hunter.people.email.verify", cost_type="per_call")
-    assert A._observed_cost_micro(other, b'{"data": {"emails": []}}') is None, \
+    assert call_settle._observed_cost_micro(other, b'{"data": {"emails": []}}') is None, \
         "only domain search bills per 10 returned; every other hunter route settles at its estimate"
 
 
@@ -645,14 +646,14 @@ def test_hunter_email_finder_miss_is_free():
     nothing on. The body is the only place the found/missed distinction exists."""
     credit = 24_500  # $0.0245/credit (fx.yaml, Starter $49/mo / 2,000 credits)
     f = _mk("hunter", endpoint_id="hunter.people.email.find", cost_type="per_success")
-    assert A._observed_cost_micro(f, b'{"data": {"email": "a@x.com", "score": 92}}') == credit
-    assert A._observed_cost_micro(f, b'{"data": {"email": null, "score": null}}') == 0, \
+    assert call_settle._observed_cost_micro(f, b'{"data": {"email": "a@x.com", "score": 92}}') == credit
+    assert call_settle._observed_cost_micro(f, b'{"data": {"email": null, "score": null}}') == 0, \
         "a miss is free — the catalog says so and Hunter bills so"
-    assert A._observed_cost_micro(f, b'{"data": {"email": "", "score": null}}') == 0, \
+    assert call_settle._observed_cost_micro(f, b'{"data": {"email": "", "score": null}}') == 0, \
         "an empty string is a miss too"
-    assert A._observed_cost_micro(f, b'{"errors": [{"code": "wrong_params"}]}') is None, \
+    assert call_settle._observed_cost_micro(f, b'{"errors": [{"code": "wrong_params"}]}') is None, \
         "no email key at all: we never learned the outcome, settle at the estimate"
-    assert A._observed_cost_micro(f, b"not json") is None
+    assert call_settle._observed_cost_micro(f, b"not json") is None
 
 
 def test_tikhub_envelope_no_charge_settles_at_zero():
@@ -661,14 +662,14 @@ def test_tikhub_envelope_no_charge_settles_at_zero():
     (verified live 2026-07-30), so those settle at the estimate, faithfully. Only the explicit
     no-charge phrasing settles at zero."""
     t = _mk("tikhub", cost_type="per_success")
-    assert A._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {}}') is None, \
+    assert call_settle._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {}}') is None, \
         "a billed answer settles at the estimate — that IS what TikHub takes"
-    assert A._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {"error": "dead_page"}}') is None, \
+    assert call_settle._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {"error": "dead_page"}}') is None, \
         "a dead page TikHub bills us for is passed through, not eaten"
-    assert A._observed_cost_micro(t, b'{"code": 400, "message": "Request failed. You won\'t be charged for this request.", "data": null}') == 0
-    assert A._observed_cost_micro(t, b'{"code": 200, "message": "This request will not incur charges.", "data": {}}') == 0
-    assert A._observed_cost_micro(t, b'{"code": 200, "data": {}}') is None, "no message: estimate"
-    assert A._observed_cost_micro(t, b"not json") is None
+    assert call_settle._observed_cost_micro(t, b'{"code": 400, "message": "Request failed. You won\'t be charged for this request.", "data": null}') == 0
+    assert call_settle._observed_cost_micro(t, b'{"code": 200, "message": "This request will not incur charges.", "data": {}}') == 0
+    assert call_settle._observed_cost_micro(t, b'{"code": 200, "data": {}}') is None, "no message: estimate"
+    assert call_settle._observed_cost_micro(t, b"not json") is None
 
 
 async def test_hunter_zero_result_search_costs_nothing(clients: AsyncClient, platform_on, monkeypatch):
@@ -740,7 +741,7 @@ async def test_daily_cap_refuses_when_it_cannot_be_verified(clients: AsyncClient
     async def _boom(db, org_id):
         raise RuntimeError("ledger unavailable")
 
-    monkeypatch.setattr(A.ledger, "spent_today", _boom)
+    monkeypatch.setattr(ledger, "spent_today", _boom)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 429
     assert "refusing to spend" in r.json()["detail"]
@@ -827,9 +828,9 @@ def test_local_run_cannot_export_a_platform_binding():
     from treg import localrun
     from treg.models import Tool
 
-    provider = A.oauth_providers.get("tikhub")
+    provider = oauth_providers.get("tikhub")
     tool = Tool(org_id=1, name=EP, base_url=provider.base_url, host="api.tikhub.io",
-                bindings=A.oauth_providers.platform_bindings(provider),
+                bindings=oauth_providers.platform_bindings(provider),
                 cli={"enabled": True, "bin": "sh", "inject": [{"via": "env", "name": "TIKHUB_API_KEY"}]})
     assert all(b.get("secret_id") is None for b in tool.bindings)
     assert localrun._resolve_secret_id(tool.cli["inject"][0], tool) is None
@@ -839,14 +840,14 @@ def test_platform_estimate_normalizes_per_result_pricing():
     """A per-row price needs a row count: the caller's own limit param, else a page, and capped so one
     call can't reserve an org's whole balance."""
     per_call = {"type": "per_call", "usd": 0.002}
-    assert A._platform_estimate_micro(per_call, {}) == 2_000
+    assert call_resolution._platform_estimate_micro(per_call, {}) == 2_000
     per_row = {"type": "per_result", "usd": 0.0001}
-    assert A._platform_estimate_micro(per_row, {}) == 0.0001 * A._PLATFORM_PAGE_DEFAULT * 1_000_000
-    assert A._platform_estimate_micro(per_row, {"limit": "5"}) == 500
-    assert A._platform_estimate_micro(per_row, {"limit": "100000"}) == 0.0001 * A._PLATFORM_PAGE_MAX * 1_000_000
-    assert A._platform_estimate_micro({"type": "per_call", "usd": None}, {}) == 0
+    assert call_resolution._platform_estimate_micro(per_row, {}) == 0.0001 * call_resolution._PLATFORM_PAGE_DEFAULT * 1_000_000
+    assert call_resolution._platform_estimate_micro(per_row, {"limit": "5"}) == 500
+    assert call_resolution._platform_estimate_micro(per_row, {"limit": "100000"}) == 0.0001 * call_resolution._PLATFORM_PAGE_MAX * 1_000_000
+    assert call_resolution._platform_estimate_micro({"type": "per_call", "usd": None}, {}) == 0
     # rounds UP — a sub-micro fraction must never round to free
-    assert A._platform_estimate_micro({"type": "per_call", "usd": 0.0000005}, {}) == 1
+    assert call_resolution._platform_estimate_micro({"type": "per_call", "usd": 0.0000005}, {}) == 1
 
 
 def test_brightdata_platform_key_injects_as_bearer(platform_on):
@@ -854,14 +855,14 @@ def test_brightdata_platform_key_injects_as_bearer(platform_on):
     field is found by name (`platform_key_for`) and the header shape comes from the registry entry,
     so this is the regression guard on the generic path staying generic."""
     assert get_settings().platform_key_for("brightdata") == PLATFORM_KEYS["BRIGHTDATA"]
-    assert A.oauth_providers.platform_bindings(A.oauth_providers.get("brightdata")) == [
+    assert oauth_providers.platform_bindings(oauth_providers.get("brightdata")) == [
         {"platform_setting": "platform_key_brightdata", "injector": "env", "location": "header",
          "name": "Authorization", "format": "Bearer {secret}"}]
 
 
 def test_crustdata_platform_key_keeps_the_required_version_header():
     """Tier 4 must speak the same provider protocol as BYOK, not only inject the key."""
-    assert A.oauth_providers.platform_bindings(A.oauth_providers.get("crustdata")) == [
+    assert oauth_providers.platform_bindings(oauth_providers.get("crustdata")) == [
         {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
          "name": "Authorization", "format": "Bearer {secret}"},
         {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
@@ -889,9 +890,9 @@ def test_brightdata_estimate_counts_the_body_array():
     """Bright Data bills per record delivered and takes its targets as a bare JSON array, so the
     reserve has to scale with the array's LENGTH — there is no limit param in the query to read."""
     cost = {"type": "per_result", "usd": 0.0015}
-    assert A._platform_estimate_micro(cost, {}, json.dumps([{"url": "a"}]).encode()) == 1_500
+    assert call_resolution._platform_estimate_micro(cost, {}, json.dumps([{"url": "a"}]).encode()) == 1_500
     five = json.dumps([{"url": u} for u in "abcde"]).encode()
-    assert A._platform_estimate_micro(cost, {}, five) == 7_500
+    assert call_resolution._platform_estimate_micro(cost, {}, five) == 7_500
 
 
 def test_brightdata_documented_prices_are_billable(platform_on):
@@ -973,7 +974,7 @@ async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
 async def test_deleting_a_team_takes_its_remembered_answers(clients: AsyncClient):
     """A stored response belongs to the team that paid for it. Left behind it is a dangling row
     holding someone's data after they asked to be gone."""
-    from treg.api import _ORG_SCOPED_MODELS
+    from treg.routers.orgs import _ORG_SCOPED_MODELS
     from treg.models import IdempotentCall
 
     assert IdempotentCall in _ORG_SCOPED_MODELS
@@ -1309,7 +1310,7 @@ def test_the_billability_truth_table():
         (302, "per_call", False),
     ]
     for status, cost_type, expected in cases:
-        got = A._platform_billable(status, cost_type)
+        got = call_settle._platform_billable(status, cost_type)
         assert got is expected, f"({status}, {cost_type}) -> {got}, expected {expected}"
 
 
@@ -1463,8 +1464,8 @@ def test_x_catalog_price_equals_what_the_meter_charges():
     x = oauth_providers.get("x")
     for ep in _x_endpoints():
         method = (ep.get("method") or "GET").upper()
-        est, ctype, _ = A._oauth_billed_estimate(x, ep, method, {}, b"")
-        published = A._platform_estimate_micro(
+        est, ctype, _ = call_resolution._oauth_billed_estimate(x, ep, method, {}, b"")
+        published = call_resolution._platform_estimate_micro(
             A.catalog_store.load().cost_view(ep["cost"], "x"), {}, b"")
         assert est == published and ctype == ep["cost"]["type"], (
             f"{ep['id']}: catalog says {published} micro ({ep['cost']['type']}), "
@@ -1478,8 +1479,8 @@ def test_a_zero_price_on_a_billed_provider_falls_back_rather_than_billing_zero()
     x = oauth_providers.get("x")
     ep = {"id": "x.x.stale", "provider": "x", "method": "GET", "path": "/2/tweets",
           "cost": {"type": "free", "value": 0, "currency": "USD", "unit": "call"}}
-    est, ctype, unit = A._oauth_billed_estimate(x, ep, "GET", {}, b"")
-    assert est > 0 and ctype == "per_result" and unit == A._usd_to_micro(x.billed_read_usd)
+    est, ctype, unit = call_resolution._oauth_billed_estimate(x, ep, "GET", {}, b"")
+    assert est > 0 and ctype == "per_result" and unit == call_resolution._usd_to_micro(x.billed_read_usd)
 
 
 # ---- X end to end: the published price is the price the balance loses --------------------------
@@ -1585,30 +1586,30 @@ def test_observed_cost_counts_brightdata_records():
     consumed upstream vs $0.35 billed over three weeks (2026-08-24)."""
     bd = _mk("brightdata", cost_type="per_result", unit_micro=1500)
     # sync scrape / snapshot download, format=json: an array, one element per record
-    assert A._observed_cost_micro(bd, b'[{"url": "a"}, {"url": "b"}, {"url": "c"}]') == 4500
-    assert A._observed_cost_micro(bd, b"[]") == 0
+    assert call_settle._observed_cost_micro(bd, b'[{"url": "a"}, {"url": "b"}, {"url": "c"}]') == 4500
+    assert call_settle._observed_cost_micro(bd, b"[]") == 0
     # the >60s sync fallback and /trigger hand back a snapshot id: zero records HERE — they bill
     # when the snapshot is downloaded
-    assert A._observed_cost_micro(bd, b'{"snapshot_id": "sd_x"}') == 0
+    assert call_settle._observed_cost_micro(bd, b'{"snapshot_id": "sd_x"}') == 0
     # an early snapshot download answers the job's state, not rows: nothing delivered, nothing billed
-    assert A._observed_cost_micro(bd, b'{"status": "running", "message": "not ready"}') == 0
+    assert call_settle._observed_cost_micro(bd, b'{"status": "running", "message": "not ready"}') == 0
     # ndjson: one record per line
-    assert A._observed_cost_micro(bd, b'{"url": "a"}\n{"url": "b"}\n') == 3000
+    assert call_settle._observed_cost_micro(bd, b'{"url": "a"}\n{"url": "b"}\n') == 3000
     # csv: header + rows
-    assert A._observed_cost_micro(bd, b"url,name\na,x\nb,y\n") == 3000
+    assert call_settle._observed_cost_micro(bd, b"url,name\na,x\nb,y\n") == 3000
     # a payload the 8MB metered buffer truncated must settle at the estimate, never a partial count
-    assert A._observed_cost_micro(bd, b'[{"url": "a"}, {"url"') is None
+    assert call_settle._observed_cost_micro(bd, b'[{"url": "a"}, {"url"') is None
     # gzipped (compress=true): can't count, estimate wins
-    assert A._observed_cost_micro(bd, b"\x1f\x8b\x08\x00junk") is None
+    assert call_settle._observed_cost_micro(bd, b"\x1f\x8b\x08\x00junk") is None
     # a free management route (progress polls) never reaches the counter
-    assert A._observed_cost_micro(_mk("brightdata", cost_type="free"), b'{"status": "ready"}') is None
+    assert call_settle._observed_cost_micro(_mk("brightdata", cost_type="free"), b'{"status": "ready"}') is None
 
 
 def test_marketplace_resolution_carries_the_per_row_price():
     """`unit_micro` must ride the MarketplaceCall on every tier for per_result endpoints — a settle
     that can't see the row price can only ever bill the estimate."""
     cv = {"type": "per_result", "usd": 0.0015}
-    assert A._usd_to_micro(cv["usd"]) == 1500
+    assert call_resolution._usd_to_micro(cv["usd"]) == 1500
 
 
 async def test_brightdata_sync_scrape_settles_per_record_through_the_ledger(

@@ -16,8 +16,8 @@ import time
 
 import pytest
 
-from treg import api as treg_api
 from treg import mcp, mcp_oauth, session
+from treg.routers import auth as auth_routes
 from treg.config import Settings, get_settings
 
 # The MCP transport helpers live with the MCP tests; a token is only interesting here because it can
@@ -444,7 +444,7 @@ async def test_v2_scope_selects_v2_when_claude_omits_the_resource(clients):
 
 def test_explicit_resource_wins_over_the_v2_scope_marker():
     v1 = mcp_oauth.mcp_resource_url("v1")
-    assert treg_api._effective_mcp_resource(v1, mcp_oauth.DIRECTORY_SCOPE) == v1
+    assert auth_routes._effective_mcp_resource(v1, mcp_oauth.DIRECTORY_SCOPE) == v1
 
 
 async def test_a_code_can_be_redeemed_only_ONCE(clients):

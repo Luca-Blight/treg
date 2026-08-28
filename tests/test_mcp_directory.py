@@ -10,8 +10,8 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from starlette.routing import Mount
 
-from treg import api as treg_api
 from treg import mcp, mcp_oauth
+from treg.routers import auth as auth_routes
 from treg.bootstrap import create_app
 from treg.config import Settings, get_settings
 
@@ -114,7 +114,7 @@ async def test_v2_feature_flag_disables_mount_metadata_grants_and_catalog_route(
         assert "not enabled" in metadata.json()["detail"]
 
         resource = mcp_oauth.mcp_resource_url("v2")
-        assert "not enabled" in treg_api._wrong_resource(resource)
+        assert "not enabled" in auth_routes._wrong_resource(resource)
 
         direct = await clients.get("/catalog/call/tikhub.tiktok.video.comments?aweme_id=7")
         assert direct.status_code == 404
@@ -150,7 +150,7 @@ async def test_v2_feature_flag_enables_mount_metadata_and_resource(monkeypatch):
                 challenge.headers["www-authenticate"]
 
         resource = mcp_oauth.mcp_resource_url("v2")
-        assert treg_api._wrong_resource(resource) is None
+        assert auth_routes._wrong_resource(resource) is None
     finally:
         get_settings.cache_clear()
 

@@ -24,10 +24,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from treg import api as A
 from treg.application.call import evidence as call_evidence
 from treg.application.call import service as call_service
 from treg.application.call.types import ReservationFailed, UpstreamResponse
+from treg.routers import admin as admin_routes
 from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
@@ -59,7 +59,7 @@ def test_constant_binding_format_is_not_a_secret_rendering(monkeypatch):
         "name": "x-api-version",
         "format": "2025-11-01",
     }
-    assert A._secret_renderings(SimpleNamespace(bindings=[constant]), {}) == []
+    assert call_evidence._secret_renderings(SimpleNamespace(bindings=[constant]), {}) == []
 
     tool = SimpleNamespace(bindings=[
         constant,
@@ -72,7 +72,7 @@ def test_constant_binding_format_is_not_a_secret_rendering(monkeypatch):
         },
     ])
 
-    renderings = A._secret_renderings(tool, {})
+    renderings = call_evidence._secret_renderings(tool, {})
 
     assert "2025-11-01" not in renderings
     assert key in renderings
@@ -275,8 +275,8 @@ async def test_masking_render_failure_is_redacted_not_a_500(clients: AsyncClient
     r = await clients.get("/call/masking-fails/fail?case=render")
     assert r.status_code == 400
     row = await _row(clients)
-    assert row["error_request"] == A._ERROR_MASKING_FAILED
-    assert row["error_response"] == A._ERROR_MASKING_FAILED
+    assert row["error_request"] == call_evidence._ERROR_MASKING_FAILED
+    assert row["error_response"] == call_evidence._ERROR_MASKING_FAILED
 
 
 async def test_streaming_4xx_reaches_caller_byte_for_byte_and_keeps_evidence(
@@ -307,7 +307,7 @@ async def test_streaming_4xx_reaches_caller_byte_for_byte_and_keeps_evidence(
 async def test_large_unmetered_body_keeps_query_only(clients: AsyncClient, monkeypatch):
     await _own_tool(clients, name="large-own")
     monkeypatch.setattr(call_service, "relay", _fake_relay(400, b'{"error":"too large"}'))
-    body = b"body-marker-" + b"x" * A._ERROR_CALLER_BODY_MAX
+    body = b"body-marker-" + b"x" * call_evidence._ERROR_CALLER_BODY_MAX
     r = await clients.post("/call/large-own/fail?request_id=query-only", content=body)
     assert r.status_code == 400
     row = await _row(clients)
@@ -506,7 +506,7 @@ async def test_expired_evidence_is_a_state_not_content(clients: AsyncClient, pla
     async with session_maker() as db:
         row = (await db.execute(
             select(CallRecord).order_by(CallRecord.id.desc()).limit(1))).scalars().first()
-        row.created_at = row.created_at - timedelta(days=A._ERROR_EVIDENCE_TTL_DAYS + 1)
+        row.created_at = row.created_at - timedelta(days=admin_routes._ERROR_EVIDENCE_TTL_DAYS + 1)
         db.add(row)
         await db.commit()
     d = (await clients.get("/admin/errors?days=30", headers=ADMIN)).json()
@@ -571,7 +571,7 @@ async def test_a_huge_error_page_is_truncated(clients: AsyncClient, platform_on,
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 500
     row = await _row(clients)
-    assert len(row["error_response"]) <= A._ERROR_RESPONSE_MAX + 1
+    assert len(row["error_response"]) <= call_evidence._ERROR_RESPONSE_MAX + 1
 
 
 def test_a_compression_bomb_does_not_expand_without_bound():
@@ -586,8 +586,8 @@ def test_a_compression_bomb_does_not_expand_without_bound():
     """
     bomb = gzip.compress(b"A" * 20_000_000)
     assert len(bomb) < 32_000, "sanity: the bomb really is small compressed"
-    out = A._decode_error_body(bomb, "gzip")
-    assert len(out) <= A._ERROR_RESPONSE_MAX * 4 + 1, "decompression ran unbounded"
+    out = call_evidence._decode_error_body(bomb, "gzip")
+    assert len(out) <= call_evidence._ERROR_RESPONSE_MAX * 4 + 1, "decompression ran unbounded"
 
 
 def test_unknown_telemetry_costs_a_column_not_the_whole_row():
@@ -636,7 +636,7 @@ async def test_admin_errors_lists_all_failed_tiers_and_filters_them(clients: Asy
     await audit.drain()
 
     d = (await clients.get("/admin/errors", headers=ADMIN)).json()
-    assert d["retention_days"] == A._ERROR_EVIDENCE_TTL_DAYS
+    assert d["retention_days"] == admin_routes._ERROR_EVIDENCE_TTL_DAYS
     assert len(d["errors"]) == 3, "only failures carry evidence, across every tier"
     assert {e["tier"] for e in d["errors"]} == {"platform", "credential", None}
 
@@ -659,7 +659,7 @@ async def test_evidence_ages_out_but_the_audit_row_survives(clients: AsyncClient
     async with session_maker() as db:
         row = (await db.execute(
             select(CallRecord).order_by(CallRecord.id.desc()).limit(1))).scalars().first()
-        row.created_at = row.created_at - timedelta(days=A._ERROR_EVIDENCE_TTL_DAYS + 1)
+        row.created_at = row.created_at - timedelta(days=admin_routes._ERROR_EVIDENCE_TTL_DAYS + 1)
         db.add(row)
         await db.commit()
         call_id, status = row.id, row.status_code
@@ -667,6 +667,6 @@ async def test_evidence_ages_out_but_the_audit_row_survives(clients: AsyncClient
     assert (await clients.get("/admin/errors", headers=ADMIN)).json()["expired_rows_purged"] == 1
     async with session_maker() as db:
         aged = await db.get(CallRecord, call_id)
-        assert aged.error_response == A._ERROR_EVIDENCE_EXPIRED, "aged out, not silently NULL"
+        assert aged.error_response == admin_routes._ERROR_EVIDENCE_EXPIRED, "aged out, not silently NULL"
         assert aged.status_code == status, "the rest of the audit row is untouched"
         assert aged.endpoint_id == EP

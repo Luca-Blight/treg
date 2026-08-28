@@ -20,7 +20,8 @@ from sqlmodel import select
 from conftest import make_upstream
 
 from treg import crypto
-from treg.api import _deny_match, app
+from treg.api import app
+from treg.routers.orgs import _deny_match
 from treg.db import reset_db, session_maker
 from treg.models import DenyRule, Membership, Org, User
 

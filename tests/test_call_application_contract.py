@@ -8,7 +8,6 @@ from typing import Awaitable, Callable, Literal, Protocol
 
 import pytest
 
-from treg import api as A
 from treg.application.call import authorize, evidence, idempotency, intake, reserve, resolve, service, settle
 from treg.application.call.types import (
     AuthorizationFailed,
@@ -150,7 +149,7 @@ def test_gateway_failure_mapping_is_one_source_of_truth() -> None:
 def test_provider_responses_are_data_and_billability_is_independent(
     status: int, cost_type: str, billable: bool,
 ) -> None:
-    assert A._platform_billable(status, cost_type) is billable
+    assert settle._platform_billable(status, cost_type) is billable
 
 
 def test_compatibility_surface_stays_literal_during_boundary_extraction() -> None:

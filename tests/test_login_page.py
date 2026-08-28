@@ -267,7 +267,7 @@ async def test_approve_requires_a_started_login_and_matching_code(web):
 async def test_wrong_code_attempts_are_capped(web):
     """Brute-forcing the short code is bounded: after CLI_APPROVE_MAX_TRIES misses the pending login is
     discarded, so the real code can no longer be ground down (and the correct code then also fails)."""
-    from treg.api import CLI_APPROVE_MAX_TRIES
+    from treg.routers.auth import CLI_APPROVE_MAX_TRIES
     uid = await _seed_user()
     web.cookies.set("treg_session", sess.make(uid))
     lid, code = await _start(web)
