@@ -806,8 +806,10 @@ def _uc_providers(cat, eps: list[dict], obs: dict) -> list[dict]:
         # A $0 trial row is a third fact again: served on treg.to's own free-tier key with a daily
         # allowance per team (catalog.trial_pools), so neither "free, your own account" nor a price
         # is true of it. Carry the allowance so the cell can state it.
-        trial = max((cv.get("trial_calls_per_team_day") or 0) for e in peps
-                    if (cv := cat.cost_view(e.get("cost"), e.get("provider"))))
+        # `default=0`: a row with no cost at all (TikHub's LinkedIn comments v2 carries none)
+        # has no cost_view, and an empty max() took the whole page down with a 500.
+        trial = max(((cv.get("trial_calls_per_team_day") or 0) for e in peps
+                     if (cv := cat.cost_view(e.get("cost"), e.get("provider")))), default=0)
         out.append({
             "id": prov, "name": _provider_display(prov), "eps": peps, "free": free, "trial": trial,
             "domain": agent_pages.PROVIDER_DOMAINS.get(prov),

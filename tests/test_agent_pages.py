@@ -174,7 +174,10 @@ async def test_use_case_page_compares_one_row_per_provider_with_every_endpoint_c
     # page links to. One runnable call stays as proof.
     assert "treg call " in html
     assert 'href="/catalog/' in html
-    assert 'href="/agents/chatgpt#' in html   # up to the agent page's category anchor
+    # up to the agent page's category anchor, or to a written sibling page: a related card
+    # resolves to the page once one exists, so this stopped being an anchor the day the last
+    # related label on this page got its own page.
+    assert 'href="/agents/chatgpt#' in html or 'href="/use-cases/' in html
 
 
 async def test_reliability_section_appears_only_with_traffic(clients: AsyncClient):

@@ -4503,3 +4503,118 @@ WORKFLOWS["find-and-verify-a-lead-list"] = {
     "related": ("Find professional emails", "Verify an email before you send",
                 "Find people by role, company or location", "Build a company list by industry, size or tech"),
 }
+
+
+USE_CASE_PAGES["a-company-s-email-format"] = {
+    "label": "A company's email format",
+    "sentence": "Company email format finder: the pattern a domain uses, so a name becomes an address",
+    "title": "Company email format finder API, by domain | treg.to",
+    "lede": (
+        "Give your agent a company domain and get back the address pattern the company uses, "
+        "such as first.last or f.last, with how confident the provider is in it. Two providers "
+        "answer through one treg.to key at their own rate with $0.000 added: The Companies API "
+        "bills only when a pattern comes back, Tomba bills the call and makes a repeat of the "
+        "same domain free for the rest of the month. A pattern is a rule, not a mailbox: it "
+        "tells you how to write an address, and the verify page tells you whether that "
+        "address exists."),
+    "prompt": "Using treg, get the email format for these 40 company domains, show me the "
+              "price per domain for each provider first, then give me a table of domain, "
+              "pattern, confidence and which provider answered, and leave the pattern blank "
+              "where nothing came back rather than guessing first.last.",
+    "prompt_why": [
+        ("Give the domain, not the company name", "Both rows take a domain. A name has to be resolved to a domain first, and that is a separate call at the same rate."),
+        ("Ask for the confidence with the pattern", "A pattern seen on three addresses is a guess; one seen on three hundred is a rule. The number is the difference."),
+        ("Ask for the price per domain", "The two rows meter differently: one per pattern found, one per call. Forty domains has a worst case before anything runs."),
+        ("Do not let the agent default to first.last", "A model asked for a format will offer the commonest one. Say that an empty answer stays empty, then verify before sending."),
+    ],
+    "result_noun": "pattern",
+    "result_image": None,
+    "q_cheapest": "Which email format finder is cheapest?",
+    "q_reliable": "Which email format finder is the most reliable?",
+    "q_compare": "How do the two compare?",
+    "what_is_heading": "What is a company email format finder?",
+    "what_is": (
+        "It is a call that takes a domain and returns the shape of that company's addresses, "
+        "learned from addresses already seen on that domain: first.last@, first@, flast@, "
+        "first_last@ and so on, usually with a count or a confidence behind each. With the "
+        "pattern and a person's name, an agent can write a probable address for anyone at the "
+        "company without a per person lookup. It is the cheap first step in an outreach "
+        "pipeline, and only the first step: a probable address still bounces if the person "
+        "has left, uses a middle initial or is the one exception, which is why the pattern "
+        "call is normally followed by a verify call on the address it produced."),
+    "notes": [
+        "The two rows bill in different units, so the cheapest depends on your hit rate. The "
+        "Companies API is priced per pattern found, so a domain with no known addresses costs "
+        "nothing; Tomba is priced per call, and its logs showed the first call of the day at "
+        "one credit and two replays of the same domain at zero, so a repeat inside the month "
+        "is free. On a list of well known domains the per call row is the cheaper one; on a "
+        "list of small companies the per found row is. Both are the provider's own rate with "
+        "$0.000 added.",
+        "A pattern is only as good as the sample behind it. Both providers infer the format "
+        "from addresses they have seen on the domain, and a domain with three known addresses "
+        "yields a confident looking pattern that may be wrong for the fourth person. Read the "
+        "confidence or count the provider returns, and treat anything built on a handful of "
+        "samples as a hypothesis to verify, not a fact to send to.",
+        "Tomba's row has been called live through treg.to and carries a verified date; The "
+        "Companies API row is documented but not yet verified through treg.to, so run one "
+        "domain before an agent runs a thousand. The 1,300 a month who search for an email "
+        "format checker are mostly asking whether an address is valid, which is a different "
+        "call: that is the verify page, and the two calls are meant to run one after the other.",
+    ],
+    "faq": [
+        ("Does the pattern give me a working address?",
+         "No. It gives you the rule the company follows, and the address you build from it is "
+         "probable, not confirmed. Verify it before sending: a bounce from a guessed address "
+         "costs more in sender reputation than the verify call costs in cents."),
+        ("Which is cheaper, per pattern or per call?",
+         "It depends on how many of your domains have a known pattern. The Companies API charges "
+         "only when it finds one, Tomba charges the call and makes repeats free within the "
+         "month. Ask the agent to print both rates against your list before it runs."),
+        ("Can I get the pattern from a company name instead of a domain?",
+         "Not in one step. Resolve the name to a domain first, which Tomba's suggestions row "
+         "does for a credit, then ask for the pattern. An agent can chain the two."),
+        ("Is guessing addresses from a pattern allowed?",
+         "A pattern is public information about how a company names mailboxes, and building an "
+         "address from it is what every outreach tool does. What you then send, to whom and "
+         "under which rules is your responsibility, and nothing here changes that."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~180 Reddit and X posts read in "
+        "August 2026 about twenty were on the job, and nine vendor clusters, one in bold "
+        "Unicode from two accounts, were excluded. Nobody complains about the pattern step "
+        "itself; they complain about what happens after it."),
+    "voices": [
+        ("The pattern is easy, which cuts both ways",
+         "My work email follows a predictable format, so I surmise it's not hard to guess from my name.",
+         "r/recruitinghell, 2,112 points", "https://www.reddit.com/r/recruitinghell/comments/1r7fc9m/",
+         "That predictability is the whole reason a pattern call works, and it is why the "
+         "call is cheap: most companies follow one rule. The page will not pretend the hard "
+         "part is here; the hard part is knowing whether the person still has the mailbox."),
+        ("The price of the tools, or the price of your evening",
+         "You either pay thousands for tools like ZoomInfo/Apollo or you spend hours manually scraping LinkedIn and hoping a generic email format works.",
+         "r/smallbusiness", "https://www.reddit.com/r/smallbusiness/comments/1t11un9/",
+         "Neither, is the honest answer. A pattern lookup is a fraction of a cent per domain, "
+         "billed from a prepaid balance with no seat and no contract, and the agent can chain "
+         "it to a verify call so the guess is checked before it is sent."),
+        ("Everyone is guessing from the same data",
+         "Out of 100 people I actually wanted, maybe one address worth sending to.",
+         "X", "https://x.com/i/status/2092909603566837762",
+         "A pattern will not raise that number on its own. What it changes is the cost of "
+         "trying: a probable address for everyone on the list for cents, then verification to "
+         "keep the ones that exist. The list itself is still your job."),
+        ("Fatigue with the usual databases",
+         "I'm increasingly skeptical of relying only on Apollo, Hunter and the usual databases. Everyone is targeting the same people with the same data.",
+         "X, 6 likes", "https://x.com/i/status/2092548681425694929",
+         "A pattern call is not a database of people. It gives you the rule, and you bring the "
+         "names, which means the addresses you build are for the people you chose rather than "
+         "the ones every other list already carries."),
+        ("Finding the person is the bottleneck, not the address",
+         "Scraping Google Maps is easy. Finding the real owner behind each business is the bottleneck.",
+         "X, 3 likes", "https://x.com/i/status/2092205559961239719",
+         "Agreed, and this page does not solve it. Once you have a name and a domain, the "
+         "pattern makes the address a one line step; the people search and enrichment pages "
+         "are where the name comes from."),
+    ],
+    "related": ("Find professional emails", "Verify an email before you send",
+                "Enrich a company from its domain", "Find people by role, company or location"),
+}
