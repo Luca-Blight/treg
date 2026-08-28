@@ -93,8 +93,20 @@ def lower(v: Any) -> Any:
     return v.lower() if isinstance(v, str) else v
 
 
+def upper(v: Any) -> Any:
+    return v.upper() if isinstance(v, str) else v
+
+
+def as_list(v: Any) -> Any:
+    """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
+    if v is None:
+        return None
+    return v if isinstance(v, list) else [v]
+
+
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
-              "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower}
+              "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
+              "list": as_list}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")

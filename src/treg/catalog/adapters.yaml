@@ -391,3 +391,79 @@ adapters:
     const: {queryParams.engine: google_autocomplete}
     out: {keywords: suggestions, count: "len(suggestions)"}
     miss: "suggestions == []"
+
+  # ---- google.serp.organic ------------------------------------------------------------------
+  dataforseo.google.serp.organic:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language, body.depth: limit}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  dataforseo.x.serp-google-organic-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language, body.depth: limit}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.google.serp.organic:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.gl: "lower(country)", queryParams.hl: language, queryParams.num: limit}
+    const: {queryParams.engine: google}
+    out: {results: organic_results, count: search_information.total_results}
+    miss: "organic_results == []"
+  serpapi.x.google-light:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.gl: "lower(country)", queryParams.hl: language}
+    const: {queryParams.engine: google_light}
+    out: {results: organic_results, count: "len(organic_results)"}
+    miss: "organic_results == []"
+  scrapecreators.x.v1-google-search:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    in_expr: {queryParams.region: "upper(country)"}
+    out: {results: results, count: "len(results)"}
+    miss: "results == []"
+
+  # ---- people.search ------------------------------------------------------------------------
+  exa.people.search:
+    accepts: [[q]]
+    in:  {q: body.query}
+    in_expr: {body.numResults: limit}
+    const: {body.category: people}
+    out: {people: results, count: "len(results)"}
+    miss: "results == []"
+  icypeas.people.search:
+    accepts: [[company_domain, title], [company_domain]]
+    in:  {company_domain: body.query.currentCompanyWebsite.include, title: body.query.currentJobTitle.include}
+    in_expr: {body.query.currentCompanyWebsite.include: "list(company_domain)", body.query.currentJobTitle.include: "list(title)",
+              body.pagination.size: limit}
+    out: {people: leads, count: total, next_cursor: pagination.token}
+    miss: "leads == []"
+  companyenrich.people.search:
+    accepts: [[company_domain, title], [company_domain]]
+    in:  {company_domain: body.domains, title: body.positionQuery}
+    in_expr: {body.domains: "list(company_domain)", body.positionQuery: "list(title)", body.pageSize: limit, body.page: "1"}
+    out: {people: items, count: totalItems}
+    miss: "items == []"
+  hunter.companies.emails:
+    accepts: [[company_domain]]
+    in:  {company_domain: queryParams.domain}
+    in_expr: {queryParams.limit: limit}
+    out: {people: data.emails, count: meta.results}
+    miss: "data.emails == []"
+  leadmagic.x.employee-finder:
+    accepts: [[company_domain]]
+    in:  {company_domain: body.company_domain}
+    in_expr: {body.limit: limit}
+    out: {people: data, count: total_count}
+    miss: "data == []"
+  lusha.people.search:
+    accepts: [[title]]
+    in:  {title: body.filters.contacts.include.jobTitles}
+    in_expr: {body.filters.contacts.include.jobTitles: "list(title)", body.pagination.size: limit, body.pagination.page: "0"}
+    out: {people: results, count: pagination.total}
+    miss: "results == []"

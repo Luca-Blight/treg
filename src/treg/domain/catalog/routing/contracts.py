@@ -45,14 +45,6 @@ class Adapter:
         query: dict[str, str] = {}
         body: dict[str, Any] = {}
         doc = {"queryParams": query, "body": body}
-        for target, expr in (self.in_expr or {}).items():
-            v = P.evaluate(expr, identity)
-            if v is None:
-                continue
-            if target.startswith("pathParams."):
-                query[target.split(".", 1)[1]] = str(v)
-            else:
-                P.set_path(doc, target, v if target.startswith("body.") else str(v))
         for field_name, target in self.in_map.items():
             v = identity.get(field_name)
             if v is None:
@@ -63,6 +55,15 @@ class Adapter:
                 query[target.split(".", 1)[1]] = str(v)
                 continue
             P.set_path(doc, target, v if target.startswith("body.") else str(v))
+        # Expressions run AFTER the plain map so they can reshape a mapped value (`list(domain)`).
+        for target, expr in (self.in_expr or {}).items():
+            v = P.evaluate(expr, identity)
+            if v is None:
+                continue
+            if target.startswith("pathParams."):
+                query[target.split(".", 1)[1]] = str(v)
+            else:
+                P.set_path(doc, target, v if target.startswith("body.") else str(v))
         for target, v in (self.const or {}).items():
             P.set_path(doc, target, v)
         return query, ([body] if self.body_array else body)
@@ -152,6 +153,8 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
            "pathParams": tr.get("pathParams") or {}}
     for field_name, target in adapter.in_map.items():
         v = P.get_path(doc, target)
+        if isinstance(v, list) and len(v) == 1 and contract.identity_types.get(field_name, "str") != "list":
+            v = v[0]  # `domains: ["stripe.com"]` in the fixture is the scalar `company_domain`
         if v not in (None, ""):
             ident[field_name] = v
     ident, variant = canonical_identity(contract, ident)

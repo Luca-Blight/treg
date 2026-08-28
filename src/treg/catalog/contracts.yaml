@@ -215,3 +215,35 @@ contracts:
       count: {type: int}
     miss: "keywords == []"
     idempotent: true
+
+  # ---- batch 4 (2026-08-28) -------------------------------------------------------------------
+  google.serp.organic:
+    summary: "Google organic results for a keyword — provider-native result rows in `results`; `limit` is the depth"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us, note: "ISO country code; mapped to each provider's location code / gl / region"}
+      language: {type: str, default: en}
+      limit: {type: int, default: 10, note: "results to return where the provider bills by depth"}
+    output:
+      results: {type: list, required: true, note: "the provider's own organic result rows (title, link/url, snippet…) — shapes differ per provider"}
+      count: {type: int}
+    miss: "results == []"
+    idempotent: true
+
+  people.search:
+    summary: "Find people by a free-text description, or by company domain / title / country — provider-native rows in `people`"
+    identity:
+      - {q: str}
+      - {company_domain: str}
+      - {title: str, company_domain: str}
+      - {title: str}
+    filters:
+      country: {type: str, default: null, note: "ISO country code, where the provider supports it"}
+      limit: {type: int, default: 10, note: "rows to return — THE price dial: most providers bill per row"}
+    output:
+      people: {type: list, required: true, note: "the provider's own people rows (name, title, profile url, location…) — shapes differ per provider; raw is the same body"}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "people == []"
+    idempotent: true
