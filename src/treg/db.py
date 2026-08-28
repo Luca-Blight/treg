@@ -112,6 +112,10 @@ def _migrate_to_orgs(conn) -> None:
     _ensure_bool_col(conn, insp, tables, "user", "onboarded")
     _ensure_bool_col(conn, insp, tables, "user", "demo")
     _ensure_bool_col(conn, insp, tables, "org", "demo")
+    # The archive's serve tag (docs/context/architecture/archive.md): alembic 0003 adds it for
+    # migration-managed databases; this covers the deploy path, where startup only create_all's
+    # new tables and must add new columns on existing ones explicitly.
+    _ensure_bool_col(conn, insp, tables, "callrecord", "cached")
 
     # (A15) additive: org.public_demo — a team whose member token is published; locked to /call + reads.
     _ensure_bool_col(conn, insp, tables, "org", "public_demo")
