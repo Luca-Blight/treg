@@ -116,7 +116,7 @@ def candidates_for(contract: Contract, endpoints: list[dict], adapters: dict[str
         if v is None:
             # Say what WOULD unlock it — an agent holding a LinkedIn URL can re-send with it.
             wants = " | ".join("{" + ", ".join(a) + "}" for a in ad.accepts)
-            dropped.append({"endpoint_id": ep["id"], "why": f"needs {wants}", "accepts": [list(a) for a in ad.accepts]})
+            dropped.append({"endpoint_id": ep["id"], "why": f"needs {wants}"})
             continue
         out.append((ep, ad, v))
     return out, dropped

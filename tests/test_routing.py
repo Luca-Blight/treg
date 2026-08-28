@@ -397,7 +397,7 @@ async def test_routed_call_and_access_name_the_providers_dropped_for_this_deploy
     dropped = r.json()["_treg"]["dropped"]
     assert any(d["endpoint_id"] == "aviato.people.email.find" and "no aviato key" in d["why"] for d in dropped)
     hunter = next(d for d in dropped if d["endpoint_id"] == "hunter.people.email.find")
-    assert hunter["why"] == "needs {domain, full_name} | {domain, first_name, last_name}" and hunter["accepts"]
+    assert hunter == {"endpoint_id": "hunter.people.email.find", "why": "needs {domain, full_name} | {domain, first_name, last_name}"}
     a = await clients.get(f"/catalog/endpoints/{ROUTED}/access")
     assert a.status_code == 200 and a.json()["tier"] == "routed" and a.json()["detail"].startswith("routed — ")
     assert "aviato.people.email.find" in a.json()["detail"]
