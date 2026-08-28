@@ -809,3 +809,87 @@ contracts:
       has_more: {type: bool}
     miss: "users == []"
     idempotent: true
+
+  # ---- batch 9 (2026-08-28) ---------------------------------------------------------------------
+  xiaohongshu.search.users:
+    summary: "Search Xiaohongshu accounts by keyword — provider-native rows in `users`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      users: {type: list, required: true}
+    miss: "users == []"
+    idempotent: true
+
+  xiaohongshu.user.profile:
+    summary: "A Xiaohongshu account by user id — the provider's own profile object in `user`"
+    identity:
+      - {user_id: str}
+    filters: {}
+    output:
+      user: {type: object, required: true}
+    miss: "user == null"
+    idempotent: true
+
+  tiktok.comment.replies:
+    summary: "Replies to one TikTok comment (video id + comment id) — provider-native rows in `replies`"
+    identity:
+      - {video_id: str, comment_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      replies: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "replies == []"
+    idempotent: true
+
+  stocks.quote.live:
+    summary: "Latest quote for a stock ticker — `price` plus the provider's own row in `quote`"
+    identity:
+      - {symbol: str}
+    filters: {}
+    output:
+      price: {type: float, required: true}
+      open: {type: float}
+      high: {type: float}
+      low: {type: float}
+      previous_close: {type: float}
+      quote: {type: object}
+    miss: "price == null"
+    idempotent: true
+
+  reddit.post.detail:
+    summary: "One Reddit post by its t3_ id — the provider's own post object in `post`"
+    identity:
+      - {post_id: str}
+    filters: {}
+    output:
+      post: {type: object, required: true}
+    miss: "post == null"
+    idempotent: true
+
+  linkedin.post.detail:
+    summary: "One LinkedIn post or article by URL — the provider's own object in `post`, with title/text/likes/comments where known"
+    identity:
+      - {url: url}
+    filters: {}
+    output:
+      post: {type: object, required: true}
+      title: {type: str}
+      text: {type: str}
+      likes: {type: int}
+      comments: {type: int}
+    miss: "post == null"
+    idempotent: true
+
+  weibo.post.detail:
+    summary: "One Weibo post by id — the provider's own object in `post`"
+    identity:
+      - {post_id: str}
+    filters: {}
+    output:
+      post: {type: object, required: true}
+    miss: "post == null"
+    idempotent: true

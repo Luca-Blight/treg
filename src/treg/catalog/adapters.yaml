@@ -1451,3 +1451,128 @@ adapters:
   # creators.search (influencersclub's fixture carries a follower floor the contract has no field for),
   # x.user.followers, linkedin.search.jobs, reddit.subreddit.info, tiktok.search.general: one verifiable
   # vendor each — no waterfall yet.
+
+  # ---- batch 9 (2026-08-28) ---------------------------------------------------------------------
+  # xiaohongshu.note.detail: tikhub's fixture truncates note_list; justoneapi alone is one vendor — not routed.
+  justoneapi.x.xiaohongshu-search-user-v2:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.page: "1"}
+    out: {users: data.users}
+    miss: "data.users == []"
+  tikhub.x.xiaohongshu-app-v2-search-users:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.page: 1, queryParams.source: explore_feed}
+    out: {users: data.data.users}
+    miss: "data.data.users == []"
+
+  justoneapi.x.xiaohongshu-get-user-v3:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.userId}
+    out: {user: data}
+    miss: "data == null"
+  tikhub.x.xiaohongshu-app-v2-get-user-info:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {user: data.data}
+    miss: "data.data == null"
+  tikhub.x.xiaohongshu-web-v3-fetch-user-info:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {user: data.data}
+    miss: "data.data == null"
+
+  justoneapi.x.tiktok-get-post-sub-comment-v1:
+    accepts: [[video_id, comment_id]]
+    in:  {video_id: queryParams.awemeId, comment_id: queryParams.commentId}
+    const: {queryParams.cursor: "0"}
+    out: {replies: data.comments, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  tikhub.x.tiktok-app-v3-fetch-video-comment-replies:
+    accepts: [[video_id, comment_id]]
+    in:  {video_id: queryParams.item_id, comment_id: queryParams.comment_id}
+    in_expr: {queryParams.count: limit}
+    out: {replies: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+
+  finnhub.quote:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.symbol}
+    in_expr: {queryParams.symbol: "upper(symbol)"}
+    out: {price: c, open: o, high: h, low: l, previous_close: pc, quote: "."}
+    miss: "c == null"
+  twelvedata.quote:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.symbol}
+    in_expr: {queryParams.symbol: "upper(symbol)"}
+    out: {price: close, open: open, high: high, low: low, previous_close: previous_close, quote: "."}
+    miss: "close == null"
+  twelvedata.price:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.symbol}
+    in_expr: {queryParams.symbol: "upper(symbol)"}
+    out: {price: price, quote: "."}
+    miss: "price == null"
+  tiingo.iex.latest:
+    accepts: [[symbol]]
+    in:  {symbol: queryParams.ticker}
+    in_expr: {queryParams.ticker: "lower(symbol)"}
+    out: {price: "[0].tngoLast", open: "[0].open", high: "[0].high", low: "[0].low", quote: "[0]"}
+    miss: ". == []"
+  eodhd.real-time:
+    accepts: [[symbol]]
+    in:  {}
+    in_expr: {queryParams.symbol: "fmt('{}.US', upper(symbol))"}
+    const: {queryParams.fmt: json}
+    test_identity: {symbol: AAPL}
+    out: {price: close, open: open, high: high, low: low, previous_close: previousClose, quote: "."}
+    miss: "close == null"
+
+  justoneapi.x.reddit-get-post-detail-v1:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.postId}
+    out: {post: "data.postsInfoByIds[0]"}
+    miss: "data.postsInfoByIds == null"
+  tikhub.x.reddit-app-fetch-post-details:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.post_id}
+    out: {post: "data.postsInfoByIds[0]"}
+    miss: "data.postsInfoByIds == []"
+
+  scrapecreators.x.v1-linkedin-post:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {post: ".", title: name, text: description, likes: likeCount, comments: commentCount}
+    miss: "name == null"
+  tikhub.x.linkedin-web-v2-get-post-detail:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {post: data, title: data.title, text: data.post_text}
+    miss: "data.id == null"
+
+  justoneapi.x.weibo-get-weibo-detail-v1:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.id}
+    out: {post: data}
+    miss: "data == null"
+  tikhub.x.weibo-web-fetch-post-detail:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.post_id}
+    out: {post: data.data}
+    miss: "data.data == null"
+  tikhub.x.weibo-app-fetch-status-detail:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.status_id}
+    out: {post: data.detailInfo.status}
+    miss: "data.detailInfo == null"
+
+  predictleads.companies.job_openings:
+    accepts: [[domain]]
+    in:  {domain: pathParams.company_id_or_domain}
+    in_expr: {queryParams.limit: limit}
+    out: {jobs: data}
+    miss: "data == []"
+  # threads.user.profile / post.detail, tiktok.music.videos, x.trending.topics, weibo.search.posts (tikhub alone;
+  # justoneapi needs a date window), kuaishou.search.users (truncated), instagram.reels.recommended (no identity),
+  # companies/people.search.count (filter DSLs), crypto.price.history (coin naming differs per vendor): not routed.
