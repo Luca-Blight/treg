@@ -13,7 +13,7 @@ import re
 
 from httpx import AsyncClient
 
-from treg import api
+from treg.routers import web as web_routes
 from treg.config import get_settings
 
 
@@ -23,13 +23,13 @@ def _ld(html: str) -> list[dict]:
 
 
 def _first_provider() -> str:
-    rows = api._provider_rows()
+    rows = web_routes._provider_rows()
     assert rows, "catalog has no providers"
     return rows[0]["service"]
 
 
 async def test_every_provider_page_renders(clients: AsyncClient):
-    for row in api._provider_rows():
+    for row in web_routes._provider_rows():
         r = await clients.get(f"/tools/{row['service']}")
         assert r.status_code == 200, (row["service"], r.status_code)
         assert f'href="/tools/{row["service"]}"' in r.text or "canonical" in r.text
@@ -75,7 +75,7 @@ async def test_pricing_page(clients: AsyncClient):
 
 
 async def test_sitemap_and_catalog_link_every_provider_page(clients: AsyncClient):
-    services = [r["service"] for r in api._provider_rows()]
+    services = [r["service"] for r in web_routes._provider_rows()]
     sm = (await clients.get("/sitemap.xml")).text
     cat = (await clients.get("/catalog")).text
     for s in services:

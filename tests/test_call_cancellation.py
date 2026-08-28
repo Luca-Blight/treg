@@ -15,7 +15,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from treg import api as A, ledger
+from treg import ledger
 from treg.application.call import service as call_service
 from treg.application.call.types import GatewayFailed
 from treg.routers import call as call_routes
@@ -306,7 +306,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
     key = "cancel-before-reserve"
     resolve_reached = asyncio.Event()
     never_resolve = asyncio.Event()
-    original_resolve = A._resolve_call
+    original_resolve = call_service._resolve_call
 
     async def _blocked_resolve(*args, **kwargs):
         resolve_reached.set()

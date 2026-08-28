@@ -69,7 +69,7 @@ async def _signup(c: AsyncClient, email: str, *, ref: str = "") -> tuple[int, st
 
 
 def referrals_cookie() -> str:
-    from treg.api import REFERRAL_COOKIE
+    from treg.routers.signup_cookies import REFERRAL_COOKIE
     return REFERRAL_COOKIE
 
 

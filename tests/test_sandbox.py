@@ -15,7 +15,8 @@ from sqlalchemy import select
 
 from conftest import make_upstream
 
-from treg import api, sandbox
+from treg import sandbox
+from treg.routers.onboard import SANDBOX_RATE_MAX
 from treg.api import app
 from treg.db import reset_db, session_maker
 from treg.models import Secret, Tool, User
@@ -141,7 +142,7 @@ async def test_export_skill_rejects_non_sandbox(anon):
 
 
 async def test_rate_limited_per_ip(anon):
-    for _ in range(api.SANDBOX_RATE_MAX):
+    for _ in range(SANDBOX_RATE_MAX):
         assert (await anon.post("/demo/sandbox")).status_code == 200
     rejected = await anon.post("/demo/sandbox")
     assert rejected.status_code == 429

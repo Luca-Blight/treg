@@ -62,89 +62,12 @@ from .routers.web import LOCAL_USER_EMAIL, _WEB_DIR
 from .timeutil import utcnow_naive as _utcnow_naive
 
 # ---- compatibility re-exports --------------------------------------------------------------
-# api.py WAS the whole server before the refactor, and some callers still address moved code
-# through this module: tests import helpers as `treg.api.<name>` (or patch them on the module),
-# and bootstrap's role startup manifests resolve "treg.api._backfill_provider_extra_tools" by
-# dotted string. Everything below exists only for those callers - new code imports from the real
-# home, and a name leaves this block when its last external reference does.
-from sqlalchemy.exc import TimeoutError as PoolTimeoutError  # noqa: F401
-from . import ledger, oauth_providers  # noqa: F401
-from .application.call.evidence import (  # noqa: F401
-    _ERROR_CALLER_BODY_MAX,
-    _ERROR_MASKING_FAILED,
-    _ERROR_RESPONSE_MAX,
-    _decode_error_body,
-    _secret_renderings,
-)
-from .application.call.idempotency import (  # noqa: F401
-    _IDEM_SCOPE_SEP,
-    _request_fingerprint,
-    _scoped_idempotency_key,
-)
-from .application.call.intake import CallMeta  # noqa: F401
-from .application.call.reserve import _enforce_tag_budgets  # noqa: F401
-from .application.call.resolve import (  # noqa: F401
-    MarketplaceCall,
-    _PLATFORM_PAGE_DEFAULT,
-    _PLATFORM_PAGE_MAX,
-    _billed_endpoint_match,
-    _marketplace_pricing,
-    _marketplace_upstream,
-    _oauth_billed_estimate,
-    _platform_bindings,
-    _platform_estimate_micro,
-    _post_has_link,
-    _resolve_call,
-    _usd_to_micro,
-)
-from .application.call.settle import _observed_cost_micro, _platform_billable  # noqa: F401
+# bootstrap addresses these through this module: the role startup manifests resolve
+# "treg.api._backfill_provider_extra_tools" by dotted string, and _mount_static reads the
+# static dirs off `api_module`. Everything else moved code once re-exported here now lives at -
+# and is imported from - its real home.
 from .application.connect import _backfill_provider_extra_tools  # noqa: F401
-from .application.signup import _grant_signup_promo  # noqa: F401
-from .bootstrap_http import (  # noqa: F401
-    _BodyDecodeMiddleware,
-    _LegacyHostRedirectMiddleware,
-    _SecurityHeadersMiddleware,
-    _decode_request_body,
-)
-from .domain.identity.access import (  # noqa: F401
-    _resolve_org,
-    require_identity,
-    require_superadmin,
-)
-from .routers.admin import _ERROR_EVIDENCE_EXPIRED, _ERROR_EVIDENCE_TTL_DAYS  # noqa: F401
-from .routers.auth import (  # noqa: F401
-    CLI_APPROVE_MAX_TRIES,
-    HANDSHAKE_TTL,
-    MAX_OTP_ATTEMPTS,
-    OTP_START_MAX_PER_EMAIL,
-    OTP_START_MAX_PER_IP,
-    _cli_pending,
-    _cli_results,
-    _cli_states,
-    _effective_mcp_resource,
-    _login_callback_base,
-    _prune_handshakes,
-    _same_mcp_resource,
-    _wrong_resource,
-)
-from .routers.auth_helpers import _is_https  # noqa: F401
-from .routers.call import _parse_call_meta  # noqa: F401
-from .routers.catalog import _platform_rows  # noqa: F401
-from .routers.onboard import SANDBOX_RATE_MAX  # noqa: F401
-from .routers.orgs import _ORG_SCOPED_MODELS, _deny_match, count_today  # noqa: F401
-from .routers.signup_cookies import REFERRAL_COOKIE  # noqa: F401
-from .routers.web import (  # noqa: F401
-    _LOGO_DIR,   # bootstrap mounts the static dirs through this module
-    _MEDIA_DIR,
-    _TOUR_DIR,
-    _VENDOR_DIR,
-    _provider_rows,
-    _related_link,
-    _usd_short,
-    _use_case_page_for,
-    use_case_job_page,
-)
-from .timeutil import as_naive as _as_naive  # noqa: F401
+from .routers.web import _LOGO_DIR, _MEDIA_DIR, _TOUR_DIR, _VENDOR_DIR  # noqa: F401
 
 
 LOCAL_ORG_NAME = "personal"

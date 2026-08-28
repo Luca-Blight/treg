@@ -136,7 +136,7 @@ async def test_canonical_and_legacy_resources_are_the_same_server(raw_client):
     # A grant consented on one name must stay exchangeable/refreshable by a client re-based onto
     # the other — in BOTH directions, and regardless of slash spelling. (Round-2's refactor of
     # this helper silently dropped the cross-name rule; round-3 review caught it.)
-    from treg.api import _same_mcp_resource
+    from treg.routers.auth import _same_mcp_resource
     canon, legacy = "https://treg.to/mcp/", "https://treg.superdesign.dev/mcp/"
     assert _same_mcp_resource(canon, legacy)
     assert _same_mcp_resource(legacy, canon)
@@ -151,7 +151,7 @@ async def test_login_round_trip_is_anchored_to_the_host_it_started_on(raw_client
     # its callback exchange must keep naming that host, not public_url.
     from starlette.requests import Request as StarletteRequest
 
-    from treg.api import _login_callback_base
+    from treg.routers.auth import _login_callback_base
 
     def req(host: str) -> StarletteRequest:
         return StarletteRequest({"type": "http", "method": "GET", "path": "/",
@@ -170,7 +170,8 @@ async def test_env_revert_is_a_complete_rollback(monkeypatch):
     from httpx import ASGITransport, AsyncClient
 
     from treg import mcp, mcp_oauth
-    from treg.api import _login_callback_base, app
+    from treg.api import app
+    from treg.routers.auth import _login_callback_base
 
     monkeypatch.setenv("TREG_PUBLIC_URL", "https://treg.superdesign.dev")
     get_settings.cache_clear()

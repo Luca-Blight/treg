@@ -321,7 +321,7 @@ def test_no_shelf_is_published_that_the_app_grid_hides():
     would still render and the sitemap would still publish it — but nothing in the app's own grid
     would link to it. Give the new platform a label and category in capabilities.yaml.
     """
-    from treg.api import _platform_rows
+    from treg.routers.catalog import _platform_rows
     orphans = [r["slug"] for r in _platform_rows() if r["category"] == "Other"]
     assert not orphans, (
         f"{orphans} have endpoints but no capabilities.yaml `platforms:` entry — the sitemap will "
@@ -333,7 +333,7 @@ def test_no_shelf_is_published_that_the_app_grid_hides():
 # suite reads as text (see tests/test_dashboard_markup.py). Both were reported from the browser.
 
 def _spa() -> str:
-    from treg.api import _WEB_DIR
+    from treg.routers.web import _WEB_DIR
     return (_WEB_DIR / "index.html").read_text(encoding="utf-8")
 
 
