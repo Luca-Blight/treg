@@ -115,6 +115,10 @@ def _serp_desc(text: str, limit: int = 155) -> str:
     return cut[:cut.rfind(" ")].rstrip(",;:") + "."
 
 
+# Google prints about 60 characters of a title; tests/test_agent_pages.py holds every page to 65.
+_TITLE_MAX = 65
+
+
 def _page(title: str, description: str, path: str, body: str, ld: list[dict],
           *, nav_current: str = "", head_extra: str = "", css: str = "catalog.css") -> HTMLResponse:
     """The shared shell for every server-rendered page. One place that owns <title>, the meta
@@ -174,7 +178,9 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
   <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
   <div class="links">
     {navlink("/catalog", "Catalog")}
-    {navlink("/tutorial", "Tutorial")}
+    {navlink("/use-cases", "Use cases")}
+    {navlink("/workflows", "Workflows")}
+    {navlink("/tutorial", "Tutorial", ' class="hidem"')}
     {navlink("/docs", "API")}
     <a class="hidem" href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a>
     <a class="candy" href="/app?ref={ref}">Start free</a>
@@ -186,7 +192,8 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     <div class="brand"><span class="glyph">▚</span> treg</div>
     <span style="font-family:var(--mono);font-size:12px">· 100% open source</span>
     <span class="sp"></span>
-    <a href="/catalog">catalog</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
+    <a href="/catalog">catalog</a><a href="/use-cases">use cases</a><a href="/workflows">workflows</a
+    ><a href="/agents/claude-code">agents</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
     ><a href="{_GH}" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a
     ><a href="/terms">terms</a><a href="/privacy">privacy</a>
   </div>
@@ -330,6 +337,12 @@ async def catalog_index():
                  + f'<p class="lede">{total_eps:,} endpoints across {len(rows)} platforms and '
                    f"{len(providers)} providers — every tool your agent can call through one key, "
                    "priced up front and billed per call, with no provider signup.</p>"
+                 # The two hubs are linked from HERE as well as the nav: this prerender is the page
+                 # Google crawls most, and before this line the job and workflow pages were reachable
+                 # only from the sitemap — "URL is unknown to Google" on every one of them.
+                 + '<p>Looking for a job rather than a platform? <a href="/use-cases">The use cases</a> '
+                   'compare the providers that do one job, and <a href="/workflows">the workflows</a> '
+                   'chain several jobs into one prompt with the price of each step.</p>'
                  + "".join(sections)
                  + f"<h2>The providers</h2><p>{len(prov_rows)} vendors serve this catalog, each "
                    f"with its own page: {prov_links}</p>")
@@ -495,6 +508,47 @@ def _use_case_caps(label: str) -> tuple[str, ...]:
             if lbl == label:
                 return caps
     return ()
+
+
+# ---- the reverse index: which job pages use a provider, which workflows use a job -------------
+#
+# Every job page already links DOWN to the catalog and every workflow step links down to its job
+# page. Nothing linked UP: a provider page did not name the jobs it serves, and a job page did not
+# name the workflows that chain it. The result was measurable — the 38 job pages and both workflow
+# pages had zero impressions and "URL is unknown to Google", while /tools/<provider> (linked from
+# /catalog) was indexed. These two indexes are computed once per process from the same tables the
+# pages render from, so a new job or workflow is cross-linked the moment it is routed.
+
+@lru_cache(maxsize=1)
+def _jobs_by_provider() -> dict[str, list[tuple[str, str]]]:
+    """provider service -> [(job slug, job sentence)], for every job whose capabilities the
+    provider answers. Ordered by the job table so the list reads the way the hub does."""
+    cat = catalog_store.load()
+    out: dict[str, list[tuple[str, str]]] = {}
+    for slug, spec in agent_pages.USE_CASE_PAGES.items():
+        provs = {e["provider"] for cid in _use_case_caps(spec["label"])
+                 for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS}
+        for p in provs:
+            out.setdefault(p, []).append((slug, spec["sentence"]))
+    return out
+
+
+@lru_cache(maxsize=1)
+def _workflows_by_capability() -> dict[str, list[tuple[str, str]]]:
+    """capability id -> [(workflow slug, workflow sentence)] for every workflow with a step on it."""
+    out: dict[str, list[tuple[str, str]]] = {}
+    for slug, spec in agent_pages.WORKFLOWS.items():
+        for _name, cid, *_rest in spec.get("steps", ()):
+            out.setdefault(cid, []).append((slug, spec["sentence"]))
+    return out
+
+
+def _workflows_for_caps(caps: tuple[str, ...]) -> list[tuple[str, str]]:
+    seen: dict[str, str] = {}
+    for cid in caps:
+        for slug, sentence in _workflows_by_capability().get(cid, ()):
+            seen.setdefault(slug, sentence)
+    return list(seen.items())
 
 
 def _menu_rows(cat, category: str, jobs) -> list[dict]:
@@ -892,6 +946,7 @@ async def use_case_job_page(request: Request, job: str,
     eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
     if not eps:
         raise HTTPException(status_code=404, detail="no endpoints for this job")
+    job_workflows = _workflows_for_caps(caps)
     obs = await _observed_or_empty(observations, [e["id"] for e in eps])
     provs = _uc_providers(cat, eps, obs)
 
@@ -943,6 +998,17 @@ async def use_case_job_page(request: Request, job: str,
     title = spec.get("title", "{sentence}: {n} providers | treg.to").format(
         sentence=spec["sentence"], n=n, agent=agent_name,
         cheapest=money(headline["usd"]) if headline else free_words)
+    # The number goes in the title. Search Console shows the pricing phrasing is what reaches this
+    # site, and a title that already names the cheapest price is the one fact a vendor's own page
+    # cannot carry. Only the compare form has a price to name; a hand-written title that already
+    # carries one is left alone.
+    if form == "compare" and headline and "$" not in title and title.endswith(" | treg.to"):
+        head = title[: -len(" | treg.to")]
+        if head.endswith(" compared"):  # "5 verifiers compared" -> "5 verifiers, from $0.0019"
+            head = head[: -len(" compared")]
+        priced = f"{head}, from {money(headline['usd'])} | treg.to"
+        if len(priced) <= _TITLE_MAX:
+            title = priced
     lede = spec["lede"].format(n=n, agent=agent_name,
                                cheapest=money(headline["usd"]) if headline else free_words)
     bits_desc = [spec["sentence"] + "."]
@@ -1287,6 +1353,12 @@ async def use_case_job_page(request: Request, job: str,
 
         + (f'<section id="related"><div class="wrap"><div class="seclab">Related</div>'
            f'<h2>Other jobs your agent can do</h2><div class="cards">{related}</div></div></section>' if related else "")
+        + (f'<section id="workflows"><div class="wrap"><div class="seclab">Run the full sequence</div>'
+           f'<h2>Workflows that use this job</h2><div class="cards">'
+           + "".join(f'<a class="card" href="/workflows/{_esc_html(ws)}"><h3>{_esc_html(wsent)}</h3>'
+                     f'<p>One prompt, every step priced, with the receipt from a real run.</p></a>'
+                     for ws, wsent in job_workflows)
+           + '</div></div></section>' if job_workflows else "")
         + _COPY_JS)
     ld = [
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
@@ -1758,9 +1830,10 @@ details.tl li small{color:var(--muted)}
 
 
 @app.get("/tools/{service}", include_in_schema=False)
-async def tools_provider(service: str):
-    """One provider's public page, in the use-case pages' skin (usecase.css): hero on the measured
-    "{provider} mcp" term, the agent->treg->provider flow, setup (agent one-liner first), a prompt
+async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
+    """One provider's public page, in the use-case pages' skin (usecase.css): hero on the two
+    measured terms — "{provider} api pricing" (what Search Console shows people typing) and
+    "{provider} mcp" — the agent->treg->provider flow, setup (agent one-liner first), a prompt
     to try, why-treg cards, EVERY tool grouped by platform, alternatives and an FAQ that also
     feeds the FAQPage JSON-LD. The signed-in twin stays at /app/marketplace/<service>."""
     cat = catalog_store.load()
@@ -1810,6 +1883,22 @@ async def tools_provider(service: str):
     sample_eps = sorted([e for e in eps if e["verified"]], key=lambda e: len(e["id"])) or eps
     sample_id = sample_eps[0]["id"]
     badge = "YOUR ACCOUNT" if is_oauth else "NO SIGNUP"
+    # The measured line: what treg.to has actually observed calling this provider. It is the one
+    # thing a vendor's own pricing page cannot print, and it goes above the fold for that reason.
+    obs = await _observed_or_empty(db, [e["id"] for e in eps])
+    o_samples = sum(int(o.get("samples") or 0) for o in obs.values())
+    o_ok = [o for o in obs.values() if o.get("samples") and o.get("ok_rate") is not None]
+    o_ok_rate = (sum(o["ok_rate"] * o["samples"] for o in o_ok) / sum(o["samples"] for o in o_ok)) if o_ok else None
+    o_p50s = sorted(o["p50"] for o in obs.values() if o.get("p50"))
+    o_p50 = o_p50s[len(o_p50s) // 2] if o_p50s else None
+    measured = ""
+    if o_samples:
+        measured = f"{o_samples:,} calls measured"
+        if o_ok_rate is not None:
+            measured += f" · {round(o_ok_rate * 100)}% ok"
+        if o_p50:
+            measured += f" · {(f'{o_p50/1000:.1f}s' if o_p50 >= 1000 else f'{int(o_p50)}ms')} median"
+    used_in = _jobs_by_provider().get(svc, [])
     demo_eps = []
     _seen_caps: set[str] = set()
     for e in sample_eps:
@@ -1822,6 +1911,8 @@ async def tools_provider(service: str):
 
     kicker = (f"{len(eps)} tools · your own account · never metered" if is_oauth
               else f"{len(eps)} tools · from {_esc_html(cheapest)} · $0.000 markup")
+    if measured:
+        kicker += f" · {_esc_html(measured)}"
     lede = (f"{_esc_html(blurb)} Connect your own {esc_d} account once and your agent uses it "
             "from then on, through one treg.to token. Calls on your own connection are never metered."
             if is_oauth else
@@ -2017,16 +2108,35 @@ async def tools_provider(service: str):
                "b.dataset.copy);b.textContent='copied';setTimeout(function(){b.textContent='copy'},1400)"
                "}catch(e){}})});</script>")
 
-    body = _TOOLS_CSS + hero + flow + setup + tryit + why + tools_sec + alt_sec + faq + copy_js
+    # "Used in": the job pages this provider answers. Contextual, intent-matched links from a page
+    # Google already indexes into the ones it had never fetched (see `_jobs_by_provider`).
+    used_sec = ""
+    if used_in:
+        used_sec = ('<section id="used-in"><div class="wrap"><div class="seclab">Used in</div>'
+                    f"<h2>Jobs {esc_d} does, compared with the other providers</h2>"
+                    '<div class="cards">'
+                    + "".join(f'<a class="card" href="/use-cases/{_esc_html(js)}"><h3>{_esc_html(jsent)}</h3>'
+                              f"<p>Every provider that does this job, side by side: price per call, "
+                              f"measured success rate and speed.</p></a>" for js, jsent in used_in)
+                    + "</div></div></section>")
+
+    body = _TOOLS_CSS + hero + flow + setup + tryit + why + tools_sec + used_sec + alt_sec + faq + copy_js
 
     if is_oauth:
         title = f"{display} MCP for AI Agents — connect your own account | treg.to"
         desc = (f"Use {display} from Claude Code, ChatGPT or any MCP agent: {len(eps)} tools "
                 "through one treg.to token. Calls on your own connection are never metered.")
     else:
-        title = f"{display} MCP for AI Agents — {len(eps)} tools, pay per call | treg.to"
-        desc = (f"Use {display} from Claude Code, ChatGPT or any MCP agent: {len(eps)} tools, "
-                f"priced per call{' from ' + cheapest if cheapest else ''}, no {display} signup.")
+        # The title leads with the pricing intent: Search Console shows "{provider} api pricing" is
+        # what reaches these pages ("linkedin api pricing", "1688 api pricing" — the site's one
+        # non-brand click), and the number is the part no vendor page prints.
+        title = (f"{display} API pricing per call: from {cheapest} | treg.to" if cheapest
+                 else f"{display} API pricing per call, no signup | treg.to")
+        if len(title) > _TITLE_MAX:
+            title = f"{display} API pricing per call | treg.to"
+        desc = (f"{display} API pricing, per call, with no {display} signup: {len(eps)} tools "
+                f"{'from ' + cheapest + ' ' if cheapest else ''}through one treg.to key or MCP server"
+                f"{' — ' + measured if measured else ''}. Use it from Claude Code, ChatGPT or any agent.")
 
     ld = [
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
@@ -2522,6 +2632,19 @@ async def sitemap_xml():
     out.append("</urlset>")
     return Response("\n".join(out), media_type="application/xml; charset=utf-8",
                     headers={"Cache-Control": "max-age=3600"})
+
+
+# IndexNow (Bing, Yandex, Seznam, Naver share the feed): the key file the protocol needs on this
+# host. Not a secret — the protocol only checks that the key named in a submission is served from
+# the same host, so a submission cannot claim someone else's URLs. `scripts/indexnow_submit.py`
+# pushes every sitemap URL through it after a deploy.
+INDEXNOW_KEY = "7c2e4a91b5d3f8e6treg2026"
+
+
+@app.get(f"/{INDEXNOW_KEY}.txt", include_in_schema=False)
+async def indexnow_key():
+    return Response(INDEXNOW_KEY, media_type="text/plain; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/install.sh", include_in_schema=False)

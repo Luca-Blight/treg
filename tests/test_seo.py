@@ -394,3 +394,50 @@ async def test_brand_files_are_hot_linkable(clients: AsyncClient, path: str, cty
 async def test_favicon_is_the_mono_mark(clients: AsyncClient):
     body = (await clients.get("/favicon.svg")).text
     assert 'fill="#000000"' in body and 'fill="#ffffff"' in body
+
+
+# ---- discovery: the hubs are linked from pages Google already crawls -----------------------
+#
+# Before these links existed the 38 job pages and both workflow pages answered "URL is unknown
+# to Google" (Search Console URL inspection, 2026-08-27): they were listed in the sitemap and
+# linked from nothing. Every server-rendered page, the landing and the public catalog now carry
+# the three hubs, /catalog names them in its crawlable prerender, a provider page names the jobs
+# it serves, and a job page names the workflows that chain it.
+
+async def test_every_surface_links_the_three_hubs(clients: AsyncClient):
+    for path in ("/", "/catalog", "/tools/hunter", "/use-cases/verify-an-email"):
+        html = (await clients.get(path)).text
+        for hub in ('href="/use-cases"', 'href="/workflows"'):
+            assert hub in html, f"{path} does not link {hub}"
+    assert 'href="/agents/claude-code"' in (await clients.get("/tools/hunter")).text
+
+
+async def test_provider_page_names_the_jobs_it_serves(clients: AsyncClient):
+    html = (await clients.get("/tools/hunter")).text
+    assert 'id="used-in"' in html
+    assert 'href="/use-cases/verify-an-email"' in html
+    assert 'href="/use-cases/find-professional-emails"' in html
+
+
+async def test_job_page_names_the_workflows_that_chain_it(clients: AsyncClient):
+    html = (await clients.get("/use-cases/verify-an-email")).text
+    assert 'href="/workflows/find-and-verify-a-lead-list"' in html
+
+
+async def test_compare_titles_carry_the_cheapest_price(clients: AsyncClient):
+    html = (await clients.get("/use-cases/verify-an-email")).text
+    title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
+    assert "$" in title and len(title) <= 65, title
+
+
+async def test_provider_title_leads_with_pricing(clients: AsyncClient):
+    html = (await clients.get("/tools/hunter")).text
+    title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
+    assert title.startswith("Hunter API pricing per call"), title
+    assert len(title) <= 65, title
+
+
+async def test_indexnow_key_is_served_from_the_root(clients: AsyncClient):
+    from treg.routers.web import INDEXNOW_KEY
+    r = await clients.get(f"/{INDEXNOW_KEY}.txt")
+    assert r.status_code == 200 and r.text == INDEXNOW_KEY
