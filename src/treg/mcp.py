@@ -568,10 +568,18 @@ async def _catalog_search_impl(
     # one of the 24 "ad library" matches scores 6 — so with a default limit of 8 the rows an agent
     # actually sees were decided by file order. That handed back seven tikhub rows (one of them
     # uncallable) and hid the cheapest endpoint with a perfect measured record.
-    ranked, total, tie_truncated = catalog_store.rank_band(query, cat, limit)
+    ranked, total, tie_truncated = catalog_store.rank_band(query, cat, min(100, limit * 4))  # wider: groups collapse below
     stats = await _observed_stats([ep["id"] for ep, _ in ranked])
-    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
+    ranked = catalog_store.rerank(ranked, stats, cat)
     results = []
+    # Same order the HTTP route serves: a capability with a ROUTED row shows the parent first and
+    # its children right under it (catalog_store.group_routed), so an agent sees "let treg choose"
+    # before the specific providers.
+    grouped = catalog_store.group_routed(
+        [{"ep": ep, "score": score, "capability": ep.get("capability"), "kind": ep.get("kind")} for ep, score in ranked],
+        max_children=catalog_store.MAX_ROUTED_CHILDREN)
+    hidden = {r["ep"]["id"]: r["children_hidden"] for r in grouped if r.get("children_hidden")}
+    ranked = [(r["ep"], r["score"]) for r in grouped][:limit]
     for ep, score in ranked:
         obs = stats.get(ep["id"]) or {}
         cost = cat.cost_view(ep.get("cost"), ep.get("provider")) or {}
@@ -579,13 +587,23 @@ async def _catalog_search_impl(
             "endpoint_id": ep["id"],
             "name": ep.get("name") or (ep.get("summary") or "")[:70],
             "provider": ep.get("provider"),
+            # a generated routed row: treg picks among N children (own keys first, then cheapest
+            # per hit) and names the one that served — the children follow in this list
+            **({"routed": f"treg picks among {len(ep.get('routed_children') or [])} providers"
+                          + (f" — {hidden[ep['id']]} more than shown here; catalog_get('{ep['id']}') ranks them all"
+                             if ep["id"] in hidden else " below")}
+               if ep.get("kind") == "routed" else {}),
             "usd_per_call": cost.get("usd"),
             # BOTH halves of tier 4's own truth, not just the price side: `platform_eligible` says
             # the row is priceable, `platform_key_for` says this deploy actually holds an enabled
             # key. Eligible-but-keyless rows used to advertise `no_key_needed: true` here and then
             # refuse at call time — an agent-facing lie the CLI's /access line never told.
-            "no_key_needed": cat.platform_eligible(ep)
-                             and bool(get_settings().platform_key_for(ep.get("provider"))),
+            # a routed row is servable when any child is: its children carry the keys
+            "no_key_needed": cat.platform_eligible(ep) and (
+                ep.get("kind") == "routed"
+                and any(get_settings().platform_key_for((cat.by_id.get(i) or {}).get("provider"))
+                        for i in ep.get("routed_children") or [])
+                or bool(get_settings().platform_key_for(ep.get("provider")))),
             "score": score,
             # The measured half of the answer, at the step where the agent is choosing. Without it
             # the "your agent picks on evidence" story only came true at catalog_get — one endpoint

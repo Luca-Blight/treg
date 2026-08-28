@@ -11,13 +11,16 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 
-from ... import analytics, archive, audit, oauth
+from ... import analytics, archive, audit, catalog_store, oauth
 from ... import sandbox as demo_sandbox
 from ...client_identity import _norm_client
 from ...config import get_settings
 from ...db import session_maker
 from ...models import Secret
 from ...sandbox_identity import visitor_name
+from ...domain.capacity import signatures as capacity_signatures
+from ...domain.capacity.view import view as capacity_view
+from ...infra.upstream.limiter import limiter as provider_limiter
 from ...infra.upstream.relay import relay
 from .authorize import authorize_call, enforce_public_demo_limit
 from .evidence import (
@@ -43,9 +46,12 @@ from .resolve import (
     resolve_call_target,
     resolve_marketplace_target,
 )
+from . import overflow as overflow_cycle
+from . import route as routed
 from .settle import (
     _buffer_response,
     _finish_cancelled_call as finish_cancelled_call,
+    _note_capacity_signal,
     _peek_stream_head,
     _platform_settle,
     _record_first_call,
@@ -183,6 +189,46 @@ def _has_body(raw_headers: tuple[tuple[bytes, bytes], ...]) -> bool:
         "chunked" in headers.get("transfer-encoding", "").lower())
 
 
+SMOOTHING_RETRY_MAX_S = 5
+"""The longest `retry-after` treg will honour with one re-send (plan §4.4, decided 2026-08-28)."""
+
+
+def _idempotent_read(request: _ApplicationRequest) -> bool:
+    """Only a body-less GET/HEAD is re-sent: the same bytes, provably, with nothing to replay."""
+    return request.method.upper() in ("GET", "HEAD") and not request.has_body
+
+
+def _burst_retry_after(provider: str, response: UpstreamResponse, body: bytes) -> float | None:
+    """Seconds to wait before ONE re-send, or None when this 429 must be relayed as is: a quota
+    429 (exhausted — marked after the settle), an unknown one, or a burst longer than the cap."""
+    signal = capacity_signatures.classify(provider, 429, httpx.Headers(response.raw_headers), body[:4096])
+    if signal is None or signal.kind != "burst" or signal.retry_after_s is None:
+        return None
+    if signal.retry_after_s > SMOOTHING_RETRY_MAX_S:
+        return None
+    return float(signal.retry_after_s)
+
+
+def _hit_verdict(mk: MarketplaceCall, status: int, body: bytes) -> bool | None:
+    """Found or not, read off a 2xx body by the endpoint's fixture-verified routing adapter; None
+    when nothing can tell. The verdict is all that is kept — never the body."""
+    if not 200 <= status < 300:
+        return None
+    adapter = catalog_store.load().adapters.get(mk.endpoint_id)
+    if adapter is None or not adapter.verified:
+        return None
+    try:
+        doc = json.loads(body)
+    except ValueError:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    try:
+        return not adapter.is_miss(doc)
+    except Exception:  # noqa: BLE001 — an undecidable predicate is a NULL, not a wrong verdict
+        return None
+
+
 def _refusal_kind(status_code: int) -> str | None:
     if status_code >= 500:
         return None
@@ -201,6 +247,16 @@ async def _one_chunk(body: bytes):
 
 async def _closed() -> None:
     return None
+
+
+async def _drain(response: UpstreamResponse) -> bytes:
+    """Read a small buffered response and re-arm it so it can still be returned."""
+    chunks = []
+    async for chunk in response.body_stream:
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    response.body_stream = _one_chunk(body)
+    return body
 
 
 def _bytes_response(
@@ -285,6 +341,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             media_type=replayed.media_type,
             headers={"X-Treg-Idempotent-Replay": "true",
                      "X-Treg-Cost-Micro": str(replayed.charged_micro),
+                     **({"X-Treg-Error": "1"} if replayed.status_code >= 400 else {}),
                      **({"X-Treg-Call-Id": replayed.call_ref} if replayed.call_ref else {})},
         )
     # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
@@ -317,6 +374,60 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             if (isinstance(exc.detail, dict)
                     and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
                 own_tool_miss = exc.detail
+    if ep is not None and ep.get("kind") == "routed":
+        # A first-party routed endpoint (treg.<capability>): the router picks children and runs
+        # each through THIS use case again (child contexts, own hold ids), then assembles one
+        # answer. The parent owns the idempotency label and the X-Treg-* stamping below.
+        try:
+            body_bytes = await _await_before_reserve(request.body(), request, call_ref)
+            response, charged = await routed.run_routed(
+                request.context, ep, body_bytes, request.headers.get, upstream_client, execute_call,
+                audit_client=_client_name(request))
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, None, call_ref)
+            raise
+        except CallFailure as exc:
+            request.state.call_audited = True
+            charged = (int(exc.detail.get("charged_micro") or 0)
+                       if isinstance(exc.detail, dict) else 0)
+            if exc.kind in ("route_caller_fault", "route_failed"):
+                request.state.call_cost_micro = charged
+            if idem_key and charged > 0 and exc.kind in ("route_caller_fault", "route_failed"):
+                error_body = json.dumps(
+                    {"detail": exc.detail}, ensure_ascii=False, allow_nan=False,
+                    separators=(",", ":"),
+                ).encode()
+                try:
+                    await _store_idempotent(
+                        idem_key, caller, status_code=exc.status_code, body=error_body,
+                        media_type="application/json", charged_micro=charged, metered=True,
+                        call_ref=call_ref, terminal=True,
+                    )
+                except asyncio.CancelledError:
+                    await _finish_cancelled_call(request, None, call_ref)
+                    raise
+                request.state.idem_claim = None
+            audit.record_call(
+                org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
+                method=request.method, path=rest, status_code=exc.status_code,
+                client=_client_name(request), refused_by=_refusal_kind(exc.status_code),
+                telemetry={"call_ref": call_ref, "endpoint_id": ep["id"], "provider": "treg",
+                           "credential_tier": "routed", **_tag_telemetry(meta)})
+            raise
+        request.state.call_audited = True
+        request.state.call_cost_micro = charged
+        if idem_key:
+            try:
+                await _store_idempotent(idem_key, caller, status_code=response.status,
+                                        body=await _drain(response), media_type="application/json",
+                                        charged_micro=charged, metered=True, call_ref=call_ref)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, None, call_ref)
+                raise
+            request.state.idem_claim = None
+        _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
+        _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        return response
     if ep is not None:
         try:
             mk = await _await_before_reserve(resolve_marketplace_target(
@@ -343,7 +454,9 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             audit.record_call(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
-                client=_client_name(request), refused_by=_refusal_kind(mkexc.status_code),
+                client=_client_name(request),
+                refused_by=("capacity" if mkexc.kind == "provider_capacity"
+                            else _refusal_kind(mkexc.status_code)),
                 telemetry={"call_ref": call_ref,
                            "endpoint_id": ep["id"], "provider": ep.get("provider"),
                            **_tag_telemetry(meta)})
@@ -398,7 +511,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None,
-               refused_by: str | None = None,
+               refused_by: str | None = None, hit: bool | None = None,
                error_request: str | None = None, error_response: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
@@ -423,6 +536,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 "cost_charged_micro": charged_micro,
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
                 "params_hash": mk.params_hash,
+                # found / not found, when this endpoint's routing adapter could read the body
+                **({"hit": hit} if hit is not None else {}),
             }
         # Sanctioned reversal of PR #139: failed own-key and own-tool calls now retain the same
         # redacted, admin-only, 14-day evidence as marketplace failures. Successes remain empty and
@@ -520,6 +635,44 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             read_body=request.body,
         ), request, call_ref)
 
+    if mk is not None and mk.skip_direct:
+        # The resolver knows treg's own account is out and an overflow route is on: no direct
+        # attempt, no parent hold — straight to the child cycle (plan §4 ladder, tier 4b). The DB
+        # phase ends here; the child places its own hold and the aggregator answers with none open.
+        await db.commit()
+        _audit(503, charged_micro=0, refused_by="capacity",
+               error_response="treg: own account exhausted — served via overflow" )
+        try:
+            outcome = await overflow_cycle.maybe_overflow(
+                mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=402,
+                headers=httpx.Headers(()), body=b"", method=request.method,
+                query_items=request.query_params.multi_items(), caller_body=caller_body,
+                client=upstream_client, audit_client=_client_name(request), force_trigger="exhausted")
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref)
+            raise
+        if outcome is None or not outcome.served or outcome.response is None:
+            request.state.call_cost_micro = 0
+            from .resolve import _provider_capacity_unavailable
+            raise (outcome.failure if outcome is not None and outcome.failure is not None
+                   else _provider_capacity_unavailable(
+                       _catalog_endpoint_for(mk.endpoint_id) or {"id": mk.endpoint_id},
+                       mk.provider, capacity_view.get(mk.provider)))
+        response, body, charged = outcome.response, outcome.body, outcome.charged_micro
+        if idem_key:
+            try:
+                await _store_idempotent(idem_key, caller, status_code=response.status, body=body,
+                                        media_type=_response_header(response, "content-type"),
+                                        charged_micro=charged, metered=True, call_ref=call_ref)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
+            request.state.idem_claim = None
+        _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
+        _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        _set_response_header(response, "X-Treg-Served-Via", f"overflow:{outcome.aggregator}")
+        return response
+
     # Metered — treg's own money is about to be spent (tier 4's platform key, or a registry OAuth
     # connect on a pay-per-use app), so take the money FIRST. Deliberately the last gate before the
     # network: everything above (ACL, deny rules, caps) can still refuse the call, and a refused
@@ -589,7 +742,26 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # (settle, first-call and the idempotent store all run on their own sessions), and the session
         # is `expire_on_commit=False`, so `tool`/`secrets`/`caller.org` stay usable without a reload.
         await db.commit()
+        smoothed: list[str] = []
         try:
+            upstream_request = UpstreamRequest(
+                method=request.method,
+                raw_headers=tuple(request.headers.raw),
+                query_items=tuple(request.query_params.multi_items()),
+                body_stream=request.stream,
+                has_body=request.has_body,
+            )
+            platform_tier = mk is not None and mk.tier == "platform"
+            if platform_tier:
+                # Burst smoothing, half one (plan §4.4): many callers share treg's key, so a call that
+                # would exceed the provider's published rate waits briefly (≤ 2 s, in-process, no DB —
+                # the DB phase ended above) instead of being relayed into a 429 nobody can fix. Beyond
+                # the cap it proceeds as before; nothing is ever refused here.
+                rl = capacity_view.rate_limit(mk.provider)
+                if rl is not None:
+                    waited = await provider_limiter.acquire(mk.provider, *rl)
+                    if waited:
+                        smoothed.append(f"wait={waited}")
             # The archive's serve path (docs/context/architecture/archive.md): a fresh stored
             # answer replaces ONLY the network trip. Reserve already ran, settle/audit/cost header
             # run below unchanged — a cached hit is billed exactly like the live call it stands in
@@ -612,13 +784,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 response = _served_response(served, body)
             else:
                 response = await relay(
-                    UpstreamRequest(
-                        method=request.method,
-                        raw_headers=tuple(request.headers.raw),
-                        query_items=tuple(request.query_params.multi_items()),
-                        body_stream=request.stream,
-                        has_body=request.has_body,
-                    ),
+                    upstream_request,
                     upstream_url, tool, secrets, upstream_client,
                     drop_params=drop_params or None,
                     force_identity=mk is not None and mk.metered,
@@ -628,6 +794,18 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.
                 response, body = await _buffer_response(response)
+                if (platform_tier and response.status == 429 and _idempotent_read(request)
+                        and (retry_s := _burst_retry_after(mk.provider, response, body)) is not None):
+                    # Half two: ONE bounded wait on the provider's own `retry-after`, then the identical
+                    # request again on the same hold — idempotent reads only, only when the provider
+                    # said when, never on 401/402/5xx (the "no retries" rule stands for those).
+                    await response.close()
+                    await asyncio.sleep(retry_s)
+                    response = await relay(
+                        upstream_request, upstream_url, tool, secrets, upstream_client,
+                        drop_params=drop_params or None, force_identity=True)
+                    response, body = await _buffer_response(response)
+                    smoothed.append("retry=1")
                 # The archive's recorder (docs/context/architecture/archive.md): the body is already
                 # in memory here for the settle, so observing it costs nothing on-request. Metered
                 # 2xx only — gate 3 of eligibility is exactly 'this fact, at this line'. Off unless
@@ -727,6 +905,14 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         except asyncio.CancelledError:
             await _finish_cancelled_call(request, mk, call_ref, response)
             raise
+        if response.status >= 400:
+            # Did the provider just say OUR account is out? Mark it for the next caller (plan
+            # §4.1). After the settle on purpose: the hold is closed, no connection is held.
+            try:
+                await _note_capacity_signal(mk, response.status, httpx.Headers(response.raw_headers), body)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.
@@ -743,8 +929,32 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 err_response = _error_response_evidence(
                     response.raw_headers, body, _renderings)
         _audit(response.status, observed_micro=observed, charged_micro=charged,
-               duration_ms=duration_ms, response_bytes=len(body),
+               duration_ms=duration_ms, response_bytes=len(body), hit=_hit_verdict(mk, response.status, body),
                error_request=err_request, error_response=err_response)
+        served_via = ""
+        if response.status >= 400 and mk.tier == "platform":
+            # Overflow (plan §4.3): the primary attempt is settled ($0) and audited above; a child
+            # cycle may now serve the SAME endpoint through an aggregator. Off by default; shadow
+            # mode returns the vendor's answer regardless.
+            try:
+                outcome = await overflow_cycle.maybe_overflow(
+                    mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=response.status,
+                    headers=httpx.Headers(response.raw_headers), body=body, method=request.method,
+                    query_items=request.query_params.multi_items(), caller_body=caller_body,
+                    client=upstream_client, audit_client=_client_name(request))
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
+            except CallFailure as exc:  # the child's own 402 (insufficient balance for the child hold)
+                request.state.call_cost_micro = 0
+                raise
+            if outcome is not None and outcome.failure is not None:
+                request.state.call_cost_micro = 0
+                raise outcome.failure
+            if outcome is not None and outcome.served and outcome.response is not None:
+                await response.close()
+                response, body, charged = outcome.response, outcome.body, outcome.charged_micro
+                served_via = f"overflow:{outcome.aggregator}"
         if idem_key:
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the
@@ -764,6 +974,10 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # `0` there would read as "free" rather than "not applicable".
         _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
         _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        if served_via:
+            _set_response_header(response, "X-Treg-Served-Via", served_via)
+        if smoothed:
+            _set_response_header(response, "X-Treg-Smoothed", " ".join(smoothed))
         return response
     # Fire-and-forget audit — does not block the streaming response (rule #2). A failed unmetered
     # call has already yielded just enough response bytes to retain redacted evidence; successes

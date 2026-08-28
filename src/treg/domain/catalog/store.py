@@ -30,6 +30,8 @@ EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
 ALIASES_FILE = "aliases.yaml"
+CONTRACTS_FILE = "contracts.yaml"   # capability contracts (routing)
+ADAPTERS_FILE = "adapters.yaml"     # per-endpoint adapters (routing)
 
 # What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
 #   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
@@ -38,7 +40,9 @@ ALIASES_FILE = "aliases.yaml"
 #   utility — helpers with no data of their own (token generators, enum/location lookups, decrypt).
 # `data`+`action` are the browse surface; `account`+`utility` are "management endpoints" — served in
 # the endpoint list with `kind` set, but kept OUT of the census counts and the default platform view.
-KINDS = ("data", "action", "account", "utility")
+#   routed  — a GENERATED first-party endpoint (`treg.<capability>`) that picks among the children
+#             of one capability (domain/catalog/routing); never hand-written.
+KINDS = ("data", "action", "account", "utility", "routed")
 DEFAULT_KIND = "data"
 HIDDEN_KINDS = frozenset({"account", "utility"})  # served, but never inflate the browse counts
 
@@ -98,6 +102,8 @@ class Catalog:
     _search_fields: list | None = field(default=None, init=False, repr=False, compare=False)
     by_id: dict[str, dict] = field(default_factory=dict)
     provider_meta: dict[str, dict] = field(default_factory=dict)  # service -> {limits, pricing_url, docs}
+    contracts: dict = field(default_factory=dict)   # capability -> routing.Contract
+    adapters: dict = field(default_factory=dict)    # endpoint id -> routing.Adapter (verified flag set)
 
     def for_capability(self, capability: str) -> list[dict]:
         return [e for e in self.endpoints if capability and e["capability"] == capability]
@@ -162,6 +168,8 @@ class Catalog:
         # never an offer treg may spend against, even if its historical price remains complete.
         if endpoint.get("status"):
             return False
+        if endpoint.get("kind") == "routed":
+            return bool(endpoint.get("routed_children"))
         # Blocked on treg's own plan: the route works, the price is real, and the shared key
         # still cannot serve it — a documented upstream "your subscription does not include this
         # endpoint". Discovery keeps the row (a caller's own key may serve it); the offer doesn't.
@@ -222,7 +230,7 @@ def _parse(directory: Path) -> Catalog:
     # `<service>.yaml`, and both land under the same provider (curation splits a provider's
     # core operations from the long tail across two files).
     for path in sorted(directory.glob("*.yaml")):
-        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE):
+        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE, CONTRACTS_FILE, ADAPTERS_FILE):
             continue
         doc = _read_yaml(path)
         provider = doc.get("provider") or path.name.split(".")[0]
@@ -262,6 +270,9 @@ def _parse(directory: Path) -> Catalog:
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
+    # Routing: contracts + adapters, each adapter verified against its endpoint's fixtures, then one
+    # GENERATED `treg.<capability>` row per capability with ≥ 2 verified children (routing/synthetic).
+    contracts, adapters = _load_routing(directory, by_id)
     aliases = {
         str(k).lower(): [str(v).lower() for v in (vals if isinstance(vals, list) else [vals])]
         for k, vals in (_read_yaml(directory / ALIASES_FILE).get("aliases") or {}).items()
@@ -291,10 +302,36 @@ def _parse(directory: Path) -> Catalog:
                        for meter, v in (meters or {}).items()}
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
-    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
-                   shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
-                   capabilities=capabilities, endpoints=endpoints, by_id=by_id,
-                   provider_meta=provider_meta, aliases=aliases)
+    cat = Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
+                  shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
+                  capabilities=capabilities, endpoints=endpoints, by_id=by_id,
+                  provider_meta=provider_meta, aliases=aliases, contracts=contracts, adapters=adapters)
+    from .routing.synthetic import routed_endpoint
+    for cap, contract in contracts.items():
+        row = routed_endpoint(contract, cat.for_capability(cap), adapters, cat.cost_view)
+        if row is not None and row["id"] not in by_id:
+            by_id[row["id"]] = row
+            endpoints.append(row)
+    return cat
+
+
+def _load_routing(directory: Path, by_id: dict[str, dict]):
+    from .routing.contracts import load_routing
+
+    def _example(ep: dict):
+        name = ep.get("example_file")
+        if not name:
+            return None
+        try:
+            return json.loads((directory / EXAMPLES_DIRNAME / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+    try:
+        return load_routing(directory, by_id, _read_yaml, _example)
+    except Exception:  # noqa: BLE001 — a broken routing file must not take the catalog down
+        import logging
+        logging.getLogger("treg.catalog").warning("routing files failed to load", exc_info=True)
+        return {}, {}
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -518,7 +555,57 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # verbatim (it also carries the ground truth the input spec can't express: whether the
         # body is a bare object or an ARRAY of tasks, which dataforseo requires)
         "test_request": ep.get("test_request") or None,
+        # A generated routed row (`treg.<capability>`) names the children it chooses among, so a
+        # discovery surface can draw the hierarchy without a second request.
+        **({"routed_children": list(ep.get("routed_children") or [])} if ep.get("kind") == "routed" else {}),
     }
+
+
+MAX_ROUTED_CHILDREN = 5  # children shown under a routed parent in discovery; the rest are in `catalog get`
+
+
+def group_routed(rows: list[dict], key=lambda r: r, max_children: int | None = None) -> list[dict]:
+    """Discovery order with routed parents FIRST: a capability that has a routed row in `rows` is
+    shown as a group — the parent at the position its best member earned, its children (same
+    capability) right under it — and everything else keeps its order. Relevance still decides
+    where the group sits; within it, "let treg choose" leads and the specific providers follow.
+
+    `max_children` caps each group: a search page is a list of JOBS, and one capability's 24
+    providers must not eat the whole result budget (`find leads`, 2026-08-28: people.search's
+    children pushed people.email.find to one line and people.enrich off the page). The children
+    kept are the best-ranked ones; the parent row is stamped `children_hidden` = how many were cut,
+    and the full ranked list is one `catalog get <parent>` away."""
+    routed_caps = {key(r)["capability"] for r in rows if key(r).get("kind") == "routed"}
+    if not routed_caps:
+        return rows
+    first_pos: dict[str, int] = {}
+    for i, r in enumerate(rows):
+        first_pos.setdefault(key(r)["capability"], i)
+    def _k(item):
+        i, r = item
+        v = key(r)
+        if v["capability"] in routed_caps:
+            return (first_pos[v["capability"]], 0 if v.get("kind") == "routed" else 1, i)
+        return (i, 0, i)
+    ordered = [r for _, r in sorted(enumerate(rows), key=_k)]
+    if max_children is None:
+        return ordered
+    out: list[dict] = []
+    shown: dict[str, int] = {}
+    parents: dict[str, dict] = {}
+    for r in ordered:
+        v = key(r)
+        cap = v["capability"]
+        if cap in routed_caps and v.get("kind") != "routed":
+            if shown.get(cap, 0) >= max_children:
+                if cap in parents:
+                    parents[cap]["children_hidden"] = parents[cap].get("children_hidden", 0) + 1
+                continue
+            shown[cap] = shown.get(cap, 0) + 1
+        elif v.get("kind") == "routed":
+            parents[cap] = v
+        out.append(r)
+    return out
 
 
 def endpoint_context(ep: dict, cat: Catalog) -> dict:
@@ -784,6 +871,20 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
         if sum(1 for i in required if per_tok[i]) < need:
             continue
         scored.append((ep, round(sum(w * idf[i] for i, w in enumerate(per_tok)), 4)))
+    # A routed parent (`treg.<capability>`) rides in whenever one of its children matched, at the
+    # best child's score: `find leads` matches `leadsforge.people.email.find` on the PROVIDER's
+    # name, and the row an agent should see first for that job is the one where treg chooses among
+    # every provider — which contains no word of that query (2026-08-28).
+    present = {ep["id"] for ep, _ in scored}
+    best_child: dict[str, float] = {}
+    for ep, score in scored:
+        parent_id = f"treg.{ep.get('capability')}" if ep.get("capability") else None
+        if parent_id and parent_id not in present and ep.get("kind") != "routed":
+            best_child[parent_id] = max(best_child.get(parent_id, 0.0), score)
+    for parent_id, score in best_child.items():
+        parent = cat.by_id.get(parent_id)
+        if parent is not None and parent.get("kind") == "routed":
+            scored.append((parent, score))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
 

@@ -98,8 +98,9 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
         else:
             extended.append(view)
     for views in grouped.values():
-        # core before mapped-extended, verified before not — same convention as search ranking
-        views.sort(key=lambda v: (v["tier"] != "core", not v["verified"], v["id"]))
+        # routed parent first, then core before mapped-extended, verified before not — same
+        # convention as search ranking
+        views.sort(key=lambda v: (v.get("kind") != "routed", v["tier"] != "core", not v["verified"], v["id"]))
     return {
         "platform": {"slug": slug,
                      "label": cat.platforms.get(slug, {}).get("label", slug),
@@ -126,6 +127,22 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
             for service in sorted({ep["provider"] for ep in eps})
         },
     }
+
+
+def _plan_row(c) -> dict:
+    """One quote line, token-frugal: what an agent needs to pick or set a ceiling. Measured rates
+    ride only when they exist; the unmeasured case says nothing rather than four nulls."""
+    row = {"endpoint_id": c.endpoint["id"], "accepts": [list(v) for v in c.adapter.accepts],
+           "usd": (c.price_micro / 1_000_000) if c.price_micro is not None else None}
+    if c.hit_rate is not None:
+        row["hit_rate"] = c.hit_rate
+        row["usd_per_hit"] = c.expected_cost_per_hit / 1_000_000
+    if c.ok_rate is not None:
+        row["works"] = c.ok_rate
+    if c.exhausted:
+        row["exhausted"] = True
+    return row
+
 
 
 def _endpoint_observation_reader(request: Request) -> endpoint_stats.EndpointObservationReader:
@@ -160,9 +177,11 @@ async def catalog_search(q: str = "", limit: int = 25,
     command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
+    # Rank a WIDER band than the page: collapsing a routed group (below) frees rows, and the next
+    # jobs down the ranking should fill them rather than the page coming up short.
+    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, min(100, limit * 4))
     stats = await _observed_or_empty(observations, [ep["id"] for ep, _ in ranked])
-    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
+    ranked = catalog_store.rerank(ranked, stats, cat)
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
         | catalog_store.endpoint_context(ep, cat)
@@ -171,6 +190,7 @@ async def catalog_search(q: str = "", limit: int = 25,
         | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
+    results = catalog_store.group_routed(results, max_children=catalog_store.MAX_ROUTED_CHILDREN)[:limit]
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
@@ -184,7 +204,12 @@ async def catalog_search(q: str = "", limit: int = 25,
                  "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
-                 f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
+                 f"{catalog_store.call_template(cat.by_id.get(results[0]['id'], ranked[0][0]))}   # run it — key injected server-side"]
+        routed_row = next((r for r in results if r.get("kind") == "routed"), None)
+        if routed_row is not None:
+            hints.insert(1, f"{routed_row['id']} is ROUTED: treg picks among {len(routed_row.get('routed_children') or [])} "
+                            f"providers (own keys first, then cheapest per hit) and names the one that served; "
+                            f"call a child id to choose the provider yourself")
         if total > len(results):
             hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
         if tie_truncated:
@@ -249,11 +274,40 @@ async def catalog_endpoint(
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
+    routing = None
+    if ep.get("kind") == "routed":
+        # The QUOTE (routing plan §3.5): the contract and the ranked children on treg's key, priced
+        # at a one-row lookup. Own keys rank first at call time (this route is open, so it cannot
+        # know the caller's); nothing is reserved here.
+        from ..domain.catalog.routing.plan import Candidate, cost_at, rank
+        contract = cat.contracts.get(ep["capability"])
+        kids = [cat.by_id[i] for i in ep.get("routed_children") or [] if i in cat.by_id]
+        cands = []
+        for k in kids:
+            st = stats.get(k["id"]) or {}
+            ad = cat.adapters.get(k["id"])
+            cands.append(Candidate(k, ad, ad.accepts[0] if ad and ad.accepts else (), "platform",
+                                   cost_at(cat.cost_view(k.get("cost"), k["provider"]), {}), st.get("hit_rate"),
+                                   st.get("ok_rate"), st.get("p50_ms"), st.get("last_ok_days")))
+        routing = {
+            "contract": {"identity": [list(v) for v in contract.identity], "output": contract.output,
+                         "miss": contract.miss, "derive": contract.derive} if contract else None,
+            "plan": [_plan_row(c) for c in rank(cands)],
+            # The same job from providers whose adapter is not (yet) verified: not chosen by the
+            # router, still callable by id — the search page groups them under this row, so the
+            # page it points at must name them too (found 2026-08-28: "+18 more" led to a list of 6).
+            "also": [{"endpoint_id": s["id"], "usd": ((s.get("cost") or {}).get("usd"))}
+                     for s in siblings if s["id"] not in set(ep.get("routed_children") or [])],
+            "headers": {"X-Treg-Route-Waterfall": "on by default: a miss tries the next provider; 0 = stop at the first miss",
+                        "X-Treg-Route-Max-Cost": "USD ceiling for the whole call (default 1.00)",
+                        "X-Treg-Route-Prefer": "provider[,…]", "X-Treg-Route-Exclude": "provider[,…]"},
+        }
     return {
-        "endpoint": view,
+        "endpoint": view | ({"routed_children": ep.get("routed_children")} if ep.get("kind") == "routed" else {}),
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
                      **cat.provider_meta.get(ep["provider"], {})},
         "siblings": siblings,
+        **({"routing": routing} if routing is not None else {}),
         "call_template": catalog_store.call_template(ep),
         "example_response": example,
         "hints": [f"{catalog_store.call_template(ep)}   # run it — key injected server-side"]

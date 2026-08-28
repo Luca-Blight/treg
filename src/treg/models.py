@@ -113,6 +113,13 @@ class Org(SQLModel, table=True):
     first_call_at: datetime | None = Field(default=None)
 
     created_at: datetime = Field(default_factory=_now)
+    # Opt-OUT of overflow (docs/context/ops/capacity.md): when treg's own account for a provider is
+    # out, a metered call may be served through a treg-owned aggregator account on the same endpoint.
+    # Default allowed (disclosed via X-Treg-Served-Via); a team that must not have its requests
+    # relayed through a third party sets this (`treg org overflow off`). Stored as the opt-out so the
+    # column default is the plain `false` the legacy helper adds — and LAST in the class, because
+    # alembic's add_column appends and the schema-parity test compares column order.
+    platform_overflow_disabled: bool = Field(default=False)
 
 
 class User(SQLModel, table=True):
@@ -290,6 +297,11 @@ class CallRecord(SQLModel, table=True):
     # founder decision (docs/context/architecture/archive.md). Declared LAST to match the
     # migration's ALTER TABLE ADD COLUMN position (the baseline parity test compares order).
     cached: bool = Field(default=False)
+    # Did the provider FIND something? Decided at settle from the response body by the endpoint's
+    # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
+    # NULL = no adapter could tell (or the call failed). Feeds `stats.observed` `hit_rate`, the
+    # P(hit) of the router's expected-cost-per-hit ranking. Last column on purpose (alembic appends).
+    hit: bool | None = Field(default=None)
 
 
 class RunRecord(SQLModel, table=True):
@@ -1034,6 +1046,114 @@ class SearchMiss(SQLModel, table=True):
     # api (HTTP /catalog/search: web + CLI) | mcp | claude-connector
     source: str = Field(default="api", index=True)
     created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class CapacityPolicy(SQLModel, table=True):
+    """How one treg-owned provider account (tier 4) is funded and metered — written by the capacity
+    worker only (`treg-worker capacity sweep`), never by the call path.
+
+    One row per platform-key slot plus one per overflow aggregator (`overflow:orthogonal`, …): the
+    aggregators are prepaid accounts that run dry exactly like a vendor's. `capacity_type` says what
+    the provider meters (cash, credits, requests, a resetting quota, a flat subscription) and
+    `source` how we learn it (its free account API, response headers, a calculation, a hand entry,
+    nothing). `unknown`/`none` are honest defaults for a provider nobody has classified yet — a
+    sweep flags them rather than inventing a number. Numbers only: no key or payment detail lives
+    here. See docs/PROVIDER-CAPACITY-PLAN.md §2.2.
+    """
+
+    provider: str = Field(primary_key=True)
+    capacity_type: str = Field(default="unknown")  # cash | credits | requests | monthly_quota | subscription | unknown
+    source: str = Field(default="none")             # api | headers | calculated | manual | none
+    funding_mode: str = Field(default="unknown")    # auto_recharge | auto_upgrade | manual | quota_reset | unknown
+    auto_funding_enabled: bool = Field(default=False)
+    auto_funding_verified_at: datetime | None = Field(default=None)
+    auto_trigger_below: float | None = Field(default=None)  # in the provider's own unit
+    auto_amount: float | None = Field(default=None)
+    auto_ceiling: float | None = Field(default=None)
+    target_runway_days: int = Field(default=30)
+    warn_days: int = Field(default=14)
+    urgent_days: int = Field(default=7)
+    critical_days: int = Field(default=3)
+    # micro-USD per provider unit, NULL = unknown (never invent a dollar figure from it)
+    usd_per_unit_micro: int | None = Field(default=None)
+    owner_email: str = Field(default="")
+    dashboard_url: str = Field(default="")
+    runbook: str = Field(default="")
+    overflow_allowed: bool = Field(default=True)
+    # {"limit": int, "window_s": int, "source": "headers|docs|observed"} — the burst limit
+    rate_limit: dict | None = Field(default=None, sa_column=Column("rate_limit", JSON, nullable=True))
+    # {"limit": int, "period": "day|month|billing", "resets_at_rule": str} — the period allowance
+    quota: dict | None = Field(default=None, sa_column=Column("quota", JSON, nullable=True))
+    enabled: bool = Field(default=True)  # a slot with no key in the env is imported disabled
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class CapacitySnapshot(SQLModel, table=True):
+    """One observation of what a provider says treg's account has left. Appended by every sweep
+    (and later by header capture); never updated. `remaining`/`total` are in the provider's own
+    `unit` — only DataForSEO and TikHub speak dollars. A failed collector is still a row, with
+    `error` set and `confidence='stale'`, so an outage is visible as a gap in the curve rather than
+    as silence. Contains numbers and a short note only — never a credential or payment detail.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    provider: str = Field(index=True)
+    observed_at: datetime = Field(default_factory=_now, index=True)
+    remaining: float | None = Field(default=None)
+    total: float | None = Field(default=None)
+    unit: str = Field(default="")
+    resets_at: datetime | None = Field(default=None)
+    source: str = Field(default="api")           # api | headers | calculated | manual
+    confidence: str = Field(default="exact")     # exact | estimate | stale
+    note: str = Field(default="")
+    error: str = Field(default="")
+
+
+class OverflowRoute(SQLModel, table=True):
+    """One `(endpoint_id, aggregator)` pair: the same vendor endpoint served through a treg-owned
+    aggregator account (tier 4b, `platform-overflow`) when our direct account is out.
+
+    Filled by the worker's `treg-worker overflow sync` — never by hand, never by the call path.
+    `enabled` is DERIVED by `domain.capacity.routes.eligible` at sync time (same unit, ratio ≤ 4,
+    platform-eligible, policy allows, verified < 7 days ago); the call path only ever reads it.
+    Prices are the aggregator's list price in micro-USD: the caller pays exactly that, 0% markup,
+    disclosed in-band. See docs/PROVIDER-CAPACITY-PLAN.md §4.3.
+    """
+
+    endpoint_id: str = Field(primary_key=True)
+    aggregator: str = Field(primary_key=True)   # orthogonal | monid
+    provider: str = Field(index=True)
+    method: str
+    path: str
+    agg_slug: str            # the aggregator's name for the vendor (api slug / provider id)
+    agg_path: str            # the aggregator's spelling of the vendor path
+    agg_price_micro: int | None = Field(default=None)
+    agg_unit: str = Field(default="call")       # call | result
+    ratio: float | None = Field(default=None)   # agg price / our per-event price
+    single_result: bool | None = Field(default=None)  # a per-result aggregator route that returns ≤ 1 record
+    enabled: bool = Field(default=False, index=True)
+    disabled_reason: str = Field(default="")
+    matched_at: datetime | None = Field(default=None)
+    last_verified_at: datetime | None = Field(default=None)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class OverflowSpend(SQLModel, table=True):
+    """Per-aggregator, per-UTC-day overflow accounting: what the aggregator charged treg
+    (`cost_micro`) and the delta against what the caller would have paid direct (`delta_micro`,
+    may be negative). Written INSIDE the child's settle transaction (allowlist entry
+    `overflow_spend_in_settle`) and, in shadow mode, by the shadow probe — never anywhere else. The
+    $20/day/aggregator budget (`Settings.overflow_daily_budget_usd`) is checked against it before a
+    child hold is placed. Not money: balances move only through domain/money.
+    """
+
+    aggregator: str = Field(primary_key=True)
+    day: str = Field(primary_key=True)  # YYYY-MM-DD, UTC
+    calls: int = Field(default=0)
+    cost_micro: int = Field(default=0)
+    delta_micro: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=_now)
 
 
 class ArchiveKey(SQLModel, table=True):

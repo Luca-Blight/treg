@@ -15,6 +15,8 @@ from sqlmodel import select
 from ... import catalog_store, oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
+from ...domain.capacity.routes_view import view as overflow_routes_view
+from ...domain.capacity.view import view as capacity_view
 from ...db import session_maker
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
@@ -262,7 +264,7 @@ class MarketplaceCall:
     consumed: set[str]              # query params eaten by `{placeholder}` path substitution
     endpoint_id: str
     provider: str
-    tier: str                       # tool | credential | platform
+    tier: str                       # tool | credential | platform | platform-overflow (child cycle only)
     cost_type: str = ""             # cost.type — decides whether a 4xx is billable (per_call is)
     estimate_micro: int = 0         # RAW provider estimate; the ledger applies the margin
     params_hash: str = ""
@@ -273,13 +275,16 @@ class MarketplaceCall:
     # is metered anyway. Set by `_billed_marketplace` after the bound secrets are known.
     billed_oauth: bool = False
     unit_micro: int = 0             # RAW per-resource price for a per_result settle-by-count
+    # treg's own account is marked exhausted AND an overflow route is enabled: skip the direct
+    # attempt (no hold, no vendor 402) and go straight to the child cycle (plan §4 ladder).
+    skip_direct: bool = False
 
     @property
     def metered(self) -> bool:
         """True when OUR money is at stake: treg's platform key (tier 4), or an org credential that
         rides treg's pay-per-use OAuth app (`billed_oauth`). Tiers 1/2 on a provider that bills the
         account owner stay unmetered — there the org's own account pays."""
-        return self.tier == "platform" or self.billed_oauth
+        return self.tier in ("platform", "platform-overflow") or self.billed_oauth
 
 
 # A `per_result` price is per ROW, so an estimate needs a row count. The caller's own limit param is
@@ -287,7 +292,8 @@ class MarketplaceCall:
 # able to reserve an org's whole balance for a single call — the settle corrects the estimate either way.
 _PLATFORM_PAGE_DEFAULT = 20
 _PLATFORM_PAGE_MAX = 100
-_LIMIT_PARAMS = ("limit", "count", "depth", "page_size", "per_page", "num", "max_results", "size")
+_LIMIT_PARAMS = ("limit", "count", "depth", "page_size", "per_page", "num", "max_results", "size",
+                 "pageSize", "perPage", "numResults", "maxResults")  # camelCase: companyenrich, exa, lusha
 
 
 def _body_limit(body: bytes) -> int | None:
@@ -312,6 +318,16 @@ def _body_limit(body: bytes) -> int | None:
         val = doc.get(name)
         if isinstance(val, int) and not isinstance(val, bool) and val > 0:
             return val
+    for name in ("targets", "keywords", "domains", "urls", "lookups", "emails"):
+        val = doc.get(name)  # one row per item: moz targets, dataforseo keywords, companyenrich domains, brightdata urls
+        if isinstance(val, list) and val:
+            return len(val)
+    pagination = doc.get("pagination")  # icypeas / lusha: {"pagination": {"size": 10}}
+    if isinstance(pagination, dict):
+        for name in _LIMIT_PARAMS:
+            val = pagination.get(name)
+            if isinstance(val, int) and not isinstance(val, bool) and val > 0:
+                return val
     return items
 
 
@@ -822,16 +838,44 @@ async def _resolve_marketplace_call(
     # an org that brought its own credential is billed by the provider, not by us, and must never be
     # silently switched onto our key (their quota, their rate limits, their data agreements).
     cost = _platform_offer(ep, provider, caller.org)
+    skip_direct = False
+    if cost is not None and capacity_view.is_exhausted(service):
+        # treg's own account for this provider is known to be out (a confirmed balance/quota
+        # signature, or the sweep). Never relay a call we know will 402: with an enabled overflow
+        # route the ladder skips straight to the child cycle (plan §4); otherwise refuse BEFORE
+        # reserve with a typed 503 naming when and what else (§4.2).
+        if (get_settings().overflow_mode == "on" and not caller.org.platform_overflow_disabled
+                and overflow_routes_view.for_endpoint(ep["id"])):
+            skip_direct = True
+        else:
+            raise _provider_capacity_unavailable(ep, service, capacity_view.get(service))
     if cost is not None:
         virtual = Tool(
             org_id=caller.org_id, name=ep["id"], owner=caller.email,
             base_url=provider.base_url, host=_host_of(provider.base_url),
             bindings=_platform_bindings(provider),
         )
-        return MarketplaceCall(tool=virtual, tier="platform", **{
+        return MarketplaceCall(tool=virtual, tier="platform", skip_direct=skip_direct, **{
             **common, "cost_type": str(cost.get("type") or "per_call"),
             "estimate_micro": info_est, "unit_micro": info_unit})
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
+
+
+def _provider_capacity_unavailable(ep: dict, service: str, state) -> ResolutionFailed:
+    """The typed floor (plan §4.5): no charge, `resets_at` when known, and the same-capability
+    alternatives — treg names them and leaves the choice to the caller (charter: no failover)."""
+    resets = getattr(state, "exhausted_until", None)
+    lines = [f"treg's own {service} account is out of capacity right now — {ep['id']} can't be "
+             f"served on treg's key" + (f" until about {resets:%Y-%m-%d %H:%M} UTC" if resets else "")]
+    lines.append(f"  use your own key: treg secret add {service} --env-var "
+                 f"{service.upper().replace('-', '_')}_API_KEY  (own keys are never affected)")
+    lines.extend(_capability_alternatives(ep))
+    return ResolutionFailed("provider_capacity", status_code=503, detail={
+        "error": "provider_capacity_unavailable", "provider": service, "endpoint_id": ep["id"],
+        "resets_at": resets.isoformat() + "Z" if resets else None,
+        "alternatives": [ln.strip() for ln in _capability_alternatives(ep)[1:]],
+        "message": "\n".join(lines),
+    })
 
 
 async def resolve_marketplace_target(
@@ -844,6 +888,12 @@ async def resolve_marketplace_target(
     caller: Caller,
     resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
 ) -> MarketplaceCall:
+    # The exhausted view is refreshed here — before the resolution session opens, so at most one
+    # connection is held at a time, and before any hold exists. Cached 60 s; a stale or empty view
+    # never refuses (plan §4.1: blocking fires on confirmed signals only).
+    await capacity_view.load()
+    if get_settings().overflow_mode != "off":
+        await overflow_routes_view.load()  # same discipline: before the session, cached 60 s
     async with session_maker() as db:
         return await _resolve_marketplace_call(
             ep,

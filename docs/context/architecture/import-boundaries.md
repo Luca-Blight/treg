@@ -8,6 +8,9 @@ sources:
   - src/treg/application/call/__init__.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
+  - src/treg/application/call/overflow.py
+  - src/treg/application/call/route.py
+  - src/treg/domain/catalog/routing/__init__.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/reserve.py
@@ -25,9 +28,12 @@ sources:
   - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/__init__.py
   - src/treg/domain/money/__init__.py
+  - src/treg/domain/capacity/__init__.py
   - src/treg/infra/upstream/__init__.py
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/relay.py
+  - src/treg/infra/upstream/aggregators/__init__.py
+  - src/treg/infra/upstream/limiter.py
   - tests/test_call_architecture.py
   - tests/test_import_lightness.py
 related:
@@ -95,3 +101,15 @@ An ignore covers an entire module edge and therefore cannot detect someone movin
 module scope. `tests.test_import_lightness` closes that gap by starting an isolated Python subprocess,
 importing every lightweight module, and asserting that no server dependency root appears in `sys.modules`.
 Base dependencies such as httpx and questionary remain allowed.
+
+The capacity domain (`treg.domain.capacity`, plan step B) is a leaf like identity: it cannot import
+`treg.api`, `treg.routers`, `treg.application`, `treg.bootstrap`, `treg.audit`, FastAPI or Starlette.
+It reads config and writes only its own tables and ratestore keys, from worker-profile commands
+(`treg-worker`, a separate console script so the light `treg` CLI never gains a DB import). The call
+application imports the capacity domain inward (`resolve` → `view`, `settle` → `signatures`/`marks`);
+the domain never imports back; `application.call.overflow` composes the capacity domain, the
+aggregator envelopes and the money primitives, and the aggregator adapters stay pure envelope code; `application.call.route` composes the pure
+`domain.catalog.routing` package (contracts, adapters, ranking) with the call use case itself. The
+aggregator envelopes live under `treg.infra.upstream.aggregators` and inherit the upstream contract
+(no HTTP adapters, no routers); the capacity domain's `verify` module may import them because they are
+pure envelope code, not a web framework.

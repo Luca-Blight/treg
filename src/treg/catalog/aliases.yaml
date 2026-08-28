@@ -21,6 +21,10 @@
 # the key, the word the catalog HAS as the value.
 
 aliases:
+  # sales vocabulary — the catalog says "people" / "contact"; agents say "leads" / "prospects"
+  # (logged miss 2026-08-28: `find leads` matched only the provider names leadsforge/predictleads)
+  lead: [leads]
+  prospect: [leads, prospects]
   # market data
   cryptocurrency: [crypto]
   cryptocurrencies: [crypto]

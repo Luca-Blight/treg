@@ -53,8 +53,11 @@ class PostgresEndpointObservationReader:
         ids = list(dict.fromkeys(endpoint_ids))
         if not ids:
             return {}
+        from .. import catalog_store  # the per-success set is a catalog fact, read at query time
+        cat = catalog_store.load()
+        per_success = {i for i in ids if ((cat.by_id.get(i) or {}).get("cost") or {}).get("type") == "per_success"}
         async with self._session_factory() as db:
-            return await stats.observed(db, ids)
+            return await stats.observed(db, ids, per_success=per_success)
 
 
 class CachedEndpointObservationReader:

@@ -187,8 +187,23 @@ you can build its request; tell the human which one you switched to. **Never ret
 elsewhere**: that is usually your parameters, and retrying burns the team's money on N providers for
 one mistake.
 
-treg does **not** choose or fail over for you, by design: only you know which inputs you hold, and
-treg relays your request rather than rewriting it.
+treg does **not** choose or fail over **between providers** for you, by design: only you know which
+inputs you hold, and treg relays your request rather than rewriting it. One thing it may do, and
+tells you when it does: if treg's OWN account for the provider is out, it can serve the **same
+endpoint** through a treg-owned relay account — same request, same response shape, the relay's
+real price — with `X-Treg-Served-Via: overflow:<name>` on the response (a team can opt out with
+`treg org overflow off`). Your own keys are never relayed.
+
+**Routed endpoints — when you WANT treg to choose.** `treg.<capability>` rows (today:
+`treg.people.email.find`) are first-party endpoints generated from the providers of one capability.
+`POST /call/treg.people.email.find` with `{full_name, domain}` (or `first_name`+`last_name`+`domain`,
+or `linkedin_url`) and treg runs the best child — your own keys first, then cheapest per hit — and
+answers `{output, raw, _treg: {served_by, tried, charged_micro}}` with `X-Treg-Served-By`. A
+provider error OR a miss falls through to the next provider, cheapest first, within
+`X-Treg-Route-Max-Cost` (default $1 per call; misses on per-success providers are free) — send
+`X-Treg-Route-Waterfall: 0` to stop at the first miss. `catalog_get` on the routed id shows the
+ranked plan and prices before you spend.
+Call a specific provider's endpoint when you need a particular one.
 
 Money notes for agents:
 - The price is visible before you call (`treg catalog get`, or `estimated_cost_usd` in
@@ -198,6 +213,10 @@ Money notes for agents:
   `estimated_cost_micro`, `topup_url`. Recovery: `treg balance` (ledger), top up in the
   dashboard (Team → Billing), or connect the org's own key for that provider - own keys
   are never billed to the balance.
+- HTTP **503** with `error: provider_capacity_unavailable` → treg's OWN account for that
+  provider is out right now (not your balance, nothing charged). The body names `resets_at`
+  when known and `alternatives` — other providers for the same capability; pick one, or use
+  your own key for the provider (never affected). treg does not switch providers for you.
 - `treg balance` shows the prepaid balance and recent charges; the dashboard Activity page
   shows the exact settled cost of every call.
 

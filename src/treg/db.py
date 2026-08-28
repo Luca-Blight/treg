@@ -119,6 +119,8 @@ def _migrate_to_orgs(conn) -> None:
 
     # (A15) additive: org.public_demo — a team whose member token is published; locked to /call + reads.
     _ensure_bool_col(conn, insp, tables, "org", "public_demo")
+    # (A-capacity) additive: org.platform_overflow_disabled — the overflow opt-out (ops/capacity.md).
+    _ensure_bool_col(conn, insp, tables, "org", "platform_overflow_disabled")
 
     # (A4) additive: tool.examples (JSON list of {method,path,note}) for the dashboard
     if "tool" in tables and "examples" not in {c["name"] for c in insp.get_columns("tool")}:
@@ -155,6 +157,10 @@ def _migrate_to_orgs(conn) -> None:
     # (A11) additive: callrecord.kind — "call" (proxy) vs "local_run" (grant), for the usage breakdown.
     if "callrecord" in tables and "kind" not in {c["name"] for c in insp.get_columns("callrecord")}:
         conn.execute(text("ALTER TABLE callrecord ADD COLUMN kind VARCHAR NOT NULL DEFAULT 'call'"))
+
+    # (A-routing) additive, nullable: callrecord.hit — the adapter's found/not-found verdict.
+    if "callrecord" in tables and "hit" not in {c["name"] for c in insp.get_columns("callrecord")}:
+        conn.execute(text("ALTER TABLE callrecord ADD COLUMN hit BOOLEAN"))
 
     # (A12) additive: per-member tool ACL — membership+invite tool_access (JSON, NULL=all tools) and
     # local_run_enabled (BOOLEAN, default true). See api._require_tool_access / _require_local_run.
@@ -467,11 +473,11 @@ def _migrate_to_orgs(conn) -> None:
             # Every NOT NULL column is named explicitly, `primary_dim` and `daily_cap_micro` included:
             # a column `create_all` built from a SQLModel default is NOT NULL with NO server default
             # (the default lives in Python, and this is raw SQL). See ops/deploy.md §migration portability.
-            text("INSERT INTO org (name, slug, suspended, demo, public_demo, balance_micro, "
-                 "autotopup_enabled, autotopup_threshold_micro, autotopup_amount_micro, "
+            text("INSERT INTO org (name, slug, suspended, demo, public_demo, platform_overflow_disabled, "
+                 "balance_micro, autotopup_enabled, autotopup_threshold_micro, autotopup_amount_micro, "
                  "autotopup_monthly_cap_micro, autotopup_failures, primary_dim, daily_cap_micro, "
                  "created_at) "
-                 "VALUES ('superdesign', 'superdesign', false, false, false, 0, false, 0, 0, 0, 0, "
+                 "VALUES ('superdesign', 'superdesign', false, false, false, false, 0, false, 0, 0, 0, 0, "
                  "'customer', 0, :t)"),
             {"t": now},
         )

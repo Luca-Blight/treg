@@ -11,6 +11,9 @@ from sqlalchemy import update
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from ... import adsconv, catalog_store, ledger
+from ...domain.capacity import marks as capacity_marks
+from ...domain.capacity import overflow_spend as overflow_spend_ledger
+from ...domain.capacity import signatures as capacity_signatures
 from ...db import session_maker
 from ...models import Org
 from ...timeutil import utcnow_naive as _utcnow_naive
@@ -267,6 +270,19 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
                 if key in doc:
                     return int(rate * 1_000_000 + 0.5) if doc[key] else 0
         return None
+    # GENERIC miss rule: a `per_success` endpoint bills only when it found something, and the
+    # routing adapter (catalog/adapters.yaml, fixture-verified at load) already knows what "nothing"
+    # looks like in this provider's body. Before this, tomba / findymail / leadsforge misses settled
+    # at the estimate — a whole credit for a miss the catalog and the provider both call free
+    # (found live by the first routed waterfall, 2026-08-28: three of five misses were charged).
+    if mk.cost_type == "per_success" and isinstance(doc, dict):
+        adapter = catalog_store.load().adapters.get(mk.endpoint_id)
+        if adapter is not None and adapter.verified:
+            try:
+                if adapter.is_miss(doc):
+                    return 0
+            except Exception:  # noqa: BLE001 — a predicate that cannot decide settles at the estimate
+                pass
     return None
 
 
@@ -333,6 +349,7 @@ async def _peek_stream_head(response: UpstreamResponse, limit: int) -> tuple[Ups
 async def _platform_settle(
     mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
     reason: str = "", finalized: Callable[[], None] | None = None,
+    observed_override: int | None = None, overflow_spend: tuple[str, int, int] | None = None,
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -348,7 +365,14 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
-    observed = _observed_cost_micro(mk, body, headers) if billable else None
+    # `observed_override`: the overflow child cycle knows its cost from the aggregator's envelope, not
+    # from the vendor body — the caller pays exactly that (plan §4.3 step 5), whatever the vendor's
+    # own billing shape. `overflow_spend` = (aggregator, adjustment from the budget reservation,
+    # delta vs treg's direct price): folded into the SAME settle transaction, the one allowlisted
+    # overflow write (`overflow_spend_in_settle`). It is recorded even when the vendor response is
+    # not billable to the caller because the aggregator's prepaid account still incurred the cost.
+    observed = ((observed_override if observed_override is not None
+                 else _observed_cost_micro(mk, body, headers)) if billable else None)
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
 
@@ -357,13 +381,18 @@ async def _platform_settle(
             if billable:
                 charged = await ledger.settle_in_transaction(db, call_id, observed, meta={
                     "provider": mk.provider, "status_code": status_code, "cost_type": mk.cost_type,
-                    "cost_source": "provider" if observed is not None else "estimate"})
+                    "cost_source": ("aggregator" if overflow_spend is not None
+                                    else "provider" if observed is not None else "estimate"),
+                    **({"served_via": f"overflow:{overflow_spend[0]}"} if overflow_spend else {})})
             else:
                 await ledger.release_in_transaction(
                     db, call_id, reason=reason or f"not_billable_{status_code}",
                     meta={"provider": mk.provider, "cost_type": mk.cost_type,
                           "status_code": status_code})
                 charged = 0
+            if overflow_spend is not None:
+                await overflow_spend_ledger.add_in_transaction(
+                    db, overflow_spend[0], overflow_spend[1], overflow_spend[2])
             await db.commit()
             if finalized is not None:
                 finalized()
@@ -410,13 +439,17 @@ async def _finish_cancelled_call(
             mk.call_id = None
             try:
                 async with session_maker() as cleanup_db:
-                    await ledger.release_in_transaction(
-                        cleanup_db,
-                        call_ref,
-                        reason="call_cancelled",
-                        meta={"provider": mk.provider, "cost_type": mk.cost_type,
-                              "status_code": None},
-                    )
+                    # The parent hold AND the overflow child's (`{call_ref}:overflow`, plan §4.3
+                    # step 2): each release is a conditional claim, so a hold that never existed or
+                    # was already closed is a safe no-op, and both are released exactly once.
+                    for hold_id in (call_ref, f"{call_ref}:overflow"):
+                        await ledger.release_in_transaction(
+                            cleanup_db,
+                            hold_id,
+                            reason="call_cancelled",
+                            meta={"provider": mk.provider, "cost_type": mk.cost_type,
+                                  "status_code": None},
+                        )
                     await cleanup_db.commit()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
                 logging.getLogger("treg.ledger").error(
@@ -436,6 +469,33 @@ async def _finish_cancelled_call(
             # same cleanup task so compensation completes before the original cancellation escapes.
             continue
     await cleanup
+async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> None:
+    """After a tier-4 answer: did the provider just tell us OUR account is out? A confirmed balance/
+    quota signature (domain.capacity.signatures) marks the provider exhausted in ratestore so the next
+    call is refused before a hold exists. Burst/unknown 429s only log (D′ smooths them). Runs after
+    the settle, on its own short session, and never raises. Platform tier only: an org's own key
+    running dry is the org's business, and an oauth-billed connect has no shared account to mark."""
+    if mk.tier != "platform" or status_code < 400:
+        return
+    try:
+        signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
+        if signal is None:
+            return
+        if capacity_signatures.is_exhausting(signal):
+            await capacity_marks.mark_exhausted(
+                mk.provider, until=signal.resets_at,
+                note=f"{signal.kind} signature on {mk.endpoint_id}: {signal.detail[:80]}")
+            logging.getLogger("treg.capacity").warning(
+                "platform account exhausted: %s (%s on %s)", mk.provider, signal.kind, mk.endpoint_id)
+        else:
+            logging.getLogger("treg.capacity").info(
+                "rate signal on %s: %s retry_after=%s", mk.provider, signal.kind, signal.retry_after_s)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001 — the caller already has the provider's answer; a mark is a hint
+        logging.getLogger("treg.capacity").warning("capacity signal handling failed", exc_info=True)
+
+
 async def _record_first_call(org_id: int) -> None:
     """Set Org.first_call_at once — the metric that decides whether a marketing channel is real (see
     marketing/landing/_measurement.md). A CONDITIONAL UPDATE, not read-then-write: concurrent first

@@ -273,27 +273,32 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
     rows = body["results"]
     assert body["count"] == len(rows) <= body["total"]
 
-    top = [e["id"] for e in rows[:3]]
-    assert set(top) == {
+    top = [e["id"] for e in rows[:4]]
+    assert top[0] == "treg.tiktok.video.comments", "the routed endpoint for the job comes first"
+    assert set(top[1:]) == {
         "justoneapi.tiktok.video.comments",
         "tikhub.tiktok.video.comments",
         "scrapecreators.tiktok.video.comments",
     }
-    assert all(e["tier"] == "core" and e["verified"] for e in rows[:3])
+    assert all(e["tier"] == "core" and e["verified"] for e in rows[1:4])
     # rank is total and stable: score desc, then core before extended WITHIN a score tie — tier
     # never outranks relevance, so a strong extended match may sit above a weak core one
-    scores = [e["score"] for e in rows]
+    # …except that a capability with a routed row is shown as a GROUP (parent first, then its
+    # children), so the tie-break is asserted over rows outside routed groups.
+    routed_caps = {e["capability"] for e in rows if e.get("kind") == "routed"}
+    loose = [e for e in rows if e["capability"] not in routed_caps]
+    scores = [e["score"] for e in loose]
     assert scores == sorted(scores, reverse=True)
     for score in set(scores):
-        group = [e["tier"] for e in rows if e["score"] == score]
+        group = [e["tier"] for e in loose if e["score"] == score]
         assert group == sorted(group, key=lambda t: t != "core")
 
-    first = rows[0]
+    first = rows[1]  # the first CHILD; rows[0] is the generated treg.* row, whose provider is treg itself
     assert first["capability"] == "tiktok.video.comments" and first["capability_description"]
     assert first["platform"] == "tiktok" and first["platform_label"] == "TikTok"
     assert first["provider_display"] == P.get(first["provider"]).display_name
     assert first["cost"]["usd"] is not None, "a search row prices in one currency or comparison is fiction"
-    assert any(h.startswith(f"treg catalog get {first['id']}") for h in body["hints"])
+    assert any(h.startswith(f"treg catalog get {rows[0]['id']}") or h.startswith(f"treg catalog get {first['id']}") for h in body["hints"])
 
 
 async def test_search_requires_every_token_to_match(clients: AsyncClient):
@@ -302,6 +307,8 @@ async def test_search_requires_every_token_to_match(clients: AsyncClient):
     narrow = (await clients.get("/catalog/search", params={"q": "tiktok comments", "limit": 100})).json()
     assert 0 < narrow["total"] < broad["total"]
     for e in narrow["results"]:  # the second token really is a filter, not a scoring nudge
+        if e.get("kind") == "routed":
+            continue  # a routed parent rides in on a matched CHILD (see search); its own text need not match
         haystack = " ".join((e["id"], e["summary"], e["capability"], e["capability_description"])).lower()
         assert "comment" in haystack, e["id"]
 
@@ -991,3 +998,25 @@ def test_a_stored_EMPTY_json_body_survives_into_the_call_template():
     # …and a GET is not handed a body it never had
     gets = [e for e in cat.endpoints if e["method"] == "GET"]
     assert not any("--data" in cs.call_template(e) for e in gets)
+
+
+async def test_search_pulls_the_routed_parent_in_when_a_child_matches(clients: AsyncClient):
+    """`leadsforge email` matches leadsforge.* on the provider's NAME; the routed row for that job
+    carries no such word, yet it is the row to show first — so a matched child brings its parent
+    along. And `find leads` lands on the lead-search job itself (people.search says "leads")."""
+    rows = (await clients.get("/catalog/search", params={"q": "leadsforge email"})).json()["results"]
+    ids = [r["id"] for r in rows]
+    assert "treg.people.email.find" in ids, ids
+    assert ids.index("treg.people.email.find") < ids.index("leadsforge.people.email.find")
+    rows = (await clients.get("/catalog/search", params={"q": "find leads"})).json()["results"]
+    assert rows[0]["id"] == "treg.people.search", [r["id"] for r in rows[:3]]
+
+
+async def test_search_caps_a_routed_group_at_a_few_children(clients: AsyncClient):
+    """A search page is a list of JOBS: one capability's two dozen providers must not eat the
+    budget. The parent says how many were cut; `catalog get` ranks them all."""
+    rows = (await clients.get("/catalog/search", params={"q": "find leads"})).json()["results"]
+    parent = next(r for r in rows if r["id"] == "treg.people.search")
+    kids = [r for r in rows if r["capability"] == "people.search" and r.get("kind") != "routed"]
+    assert len(kids) <= 5 and parent["children_hidden"] >= 1
+    assert "treg.people.email.find" in {r["id"] for r in rows}, "the next job fits on the page now"

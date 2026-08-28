@@ -363,6 +363,15 @@ search the 20-row default page — $0.0490 for results nobody got, 20x the publi
 while `limit=1` on a domain that did answer settled at a tenth of the credit Hunter actually took.
 Where a provider's real rule is "whole units, rounded up, free on a miss", only the body knows.
 
+The row-count signal for that estimate (`resolve._LIMIT_PARAMS` / `_body_limit`) reads the caller's
+`limit`/`count`/`size`/`per_page`… in the query or body, the camelCase spellings (`pageSize`,
+`numResults`, `perPage`, `maxResults`), a nested `pagination.{size,…}`, and — for providers that
+bill one row per listed item — the length of `targets`/`keywords`/`domains`/`urls`/`lookups`/
+`emails`. Each of those was a live overcharge first (2026-08-28: companyenrich `pageSize: 2`
+settled 20 rows, moz's one `targets` entry settled 20 quota rows). Without any signal it is the
+20-row page, and a settle-at-estimate provider then charges that page (seranking url.metrics on a
+single `target` still does).
+
 The same family carries two more derived rules. **Hunter's email finder** is the flat case: one whole
 search credit when an email comes back, nothing on a miss — Hunter documents a miss as free, but a
 miss still answers HTTP 200 with `email: null`, so the estimate billed the full $0.0245 for a name
@@ -515,10 +524,11 @@ correctness feature into a 24-hour cache that quietly serves stale data.
 
 ### What is stored, and for how long
 
-Metered successes only, for 24 hours. A team calling on its **own** key is billed by the provider, so
-there is nothing to protect and no reason to hold their response. A failure is never billed, and
-replaying one would freeze an error the caller should be free to retry out of — so a failed call
-frees its label immediately.
+Metered successes, plus a routed waterfall's terminal failure after one or more paid children, for
+24 hours. A team calling on its **own** key is billed by the provider, so there is nothing to protect
+and no reason to hold their response. An uncharged failure frees its label immediately so the caller
+can retry; a partially charged routed failure stores the same status, `{"detail": ...}` body,
+`charged_micro` and call id, because rerunning its children would pay the providers twice.
 
 That is also what bounds storage: bodies are kept only for calls that actually cost money, for a day.
 
@@ -783,3 +793,19 @@ that this protects the person who opted into the program and exposes the person 
 the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it
 reads `/admin/referrals` — the same table, filtered — and the payout rail (and its W-9/1099
 obligations) is what gets bought rather than built.
+
+## Not money: the capacity mark
+
+`application.call.settle._note_capacity_signal` writes a ratestore row (`capacity:state:<provider>`)
+after a tier-4 balance/quota signature. It touches no balance, hold or ledger row — it is a hint for the
+NEXT caller's resolution — and is listed in the dataplane write allowlist on its own
+(`capacity_exhausted_mark`), not under the money entries. See `ops/capacity.md`.
+
+## Overflow money
+
+The overflow child (`application.call.overflow`) is an ordinary metered cycle on its own hold
+(`{call_ref}:overflow`): `_platform_reserve` at the route's aggregator price, `_platform_settle` with
+`observed_override` = the aggregator's in-band charge — the caller pays exactly that, 0% markup —
+and `cost_source: "aggregator"` + `served_via` in the ledger `meta`, so `reconcile` needs no join.
+`OverflowSpend` (per aggregator per UTC day) is updated inside that same settle transaction; it is
+accounting for the $20/day budget, not a balance. Shadow mode places no hold and charges nothing.

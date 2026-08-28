@@ -294,6 +294,106 @@ also rejects numeric IP encodings — decimal/hex/octal/short forms like `213070
 
 > Why relay instead of modeling the upstream: [foundation/charter.md](../foundation/charter.md).
 
+## Routed endpoints — the resolve stage short-circuit
+
+A catalog row with `kind: routed` (`treg.<capability>`, generated — `architecture/catalog.md`
+§ Routing) never reaches the credential ladder itself. `service._execute_call` hands it to
+`application/call/route.py`, which builds the plan and runs each child endpoint through **this same
+use case** as a child `CallContext` (`call_ref` `{parent}:r{n}`), so every rule below — ladder,
+reserve, relay faithfulness, capacity, overflow, settle, audit, cancellation — applies per child
+unchanged. The parent only assembles `{output, raw, _treg}` and owns the idempotency label.
+
+## Platform capacity: refuse before reserve (plan step D)
+
+Tier 4 spends treg's own vendor account, and that account can be empty. `_resolve_marketplace_call`
+asks two questions after `_platform_offer` says yes: is the provider marked **exhausted** in the
+in-process capacity view (`domain.capacity.view`, loaded from ratestore `capacity:state:<provider>` on a
+60 s TTL by `resolve_marketplace_target` before its session opens)? If so it raises
+`CallFailure("provider_capacity", 503, blame="treg")` — **before any hold exists** — whose body carries
+`resets_at` when known and the same-capability alternatives from `_capability_alternatives`. treg still
+does not choose for the caller (charter): it names the options. The audit row is `refused_by="capacity"`,
+`X-Treg-Error: 1`, cost 0. A stale, empty or "ok" view never refuses; only a confirmed signal does.
+
+The signal comes from the call path itself as well as from the worker's sweep: after a tier-4 answer
+≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the vendor's
+status/headers/body. A `balance` or `quota` signature (findymail "Not enough credits", lusha's "Daily"
+429, hunter's "per billing period" 429, any bare 402, …) writes the exhausted mark through
+`domain.capacity.marks.mark_exhausted` — its own short session, **after** the settle closed the hold,
+never during flight — and the next call is refused without waiting for a sweep. A burst 429
+(`retry-after ≤ 60 s`) or an unknown one only logs; step D′ smooths those. That mark is the single
+dataplane write this feature adds (`capacity_exhausted_mark` in `tests/test_call_architecture.py`).
+Tiers 1/2 resolve earlier and never consult the view: an org's own key running dry is the org's own
+answer, relayed unchanged. The vendor's 402 on THIS call is also relayed unchanged — the protection is
+for the next caller.
+
+## Burst smoothing on treg's own keys (plan step D′)
+
+Many callers share one platform key, so tier 4 makes its own bursts: leadsforge 429'd 27% of its
+calls, crustdata 34%, with `retry-after` headers nobody downstream could act on. Two bounded
+mechanisms in `service._execute_call`, both **after the DB phase ended and before the relay** (the
+pool-discipline rule holds through the wait; proven by test), both platform-tier only, neither ever a
+refusal:
+
+1. **Spacer** — `infra/upstream/limiter.py`: one call per `window_s / limit` per provider (a token
+   bucket of capacity one — a burst of `limit` at t=0 is legal for a classic bucket and exactly what a
+   sliding-window provider 429s). A call that would exceed the rate waits ≤ 2 s (`DEFAULT_MAX_WAIT_MS`),
+   then proceeds regardless; the hold is already placed, so the org pays latency, never money. The
+   limit comes from the capacity view (`view.rate_limit`: published by the sweep from
+   `CapacityPolicy.rate_limit`, with the verified defaults — leadsforge 120/min, leadmagic 300/min,
+   crustdata 30/min, tikhub 30/s — before the first sweep). In-process on purpose: a second replica
+   doubles the effective rate, and the `rate_pressure` alert (step C) is the answer to that, not a
+   shared counter on the request path.
+2. **One bounded `retry-after` re-send** — on a tier-4 **429** classified `burst` with
+   `retry-after ≤ 5 s` (`SMOOTHING_RETRY_MAX_S`), for a **body-less GET/HEAD only**: close the first
+   response, sleep, send the identical `UpstreamRequest` once more on the same hold, settle on the
+   second answer. A quota-429 (lusha "Daily", hunter "per billing period", any `retry-after` > 60 s), an
+   unknown 429, a POST, or a second 429 are relayed as is. The "no retries" rule for 401/402/5xx stands.
+
+Both are visible: `X-Treg-Smoothed: wait=<ms>` and/or `retry=1` on the response (metered exit only).
+No audit column yet — `smoothed_ms` would be an ALTER on the hot `callrecord` table, a migration-class
+change kept out of this behaviour PR.
+
+## Overflow — the child cycle (plan step E; off by default)
+
+**Overflow = the same vendor endpoint, another account of ours.** When a tier-4 call fails on treg's
+own key for a treg-side reason — a balance/quota signature, a burst-429 smoothing could not absorb —
+and the worker has an enabled `OverflowRoute` for the endpoint, `application.call.overflow.
+maybe_overflow` runs a **child cycle** after the primary's settle released its hold:
+
+1. Route from the in-process route view (`domain.capacity.routes_view`, Orthogonal first), skipping
+   an aggregator marked unhealthy (`overflow:<name>` in the capacity view) or without a key; budget
+   check against `OverflowSpend` (`overflow_daily_budget_usd`, $20/aggregator/day) on a short session.
+2. **Child hold**, own id `{call_ref}:overflow`, through the ordinary `_platform_reserve` (tag
+   budgets, daily cap, trial allowance apply; an empty balance is the normal 402). Never the parent's
+   id: release-by-id is a conditional claim and `_finish_cancelled_call` releases both ids exactly once.
+3. One aggregator run with **no DB open**: `infra.upstream.aggregators.<name>.build` wraps the
+   caller's original query + buffered body; the key comes from `Settings.overflow_key_<name>` and is
+   never logged. Monid's async runs are polled (bounded).
+4. `parse` → vendor status + body + the real in-band cost. `_platform_settle(child,
+   observed_override=cost, overflow_spend=(aggregator, cost − treg's direct price))` charges **exactly
+   the aggregator's price, 0% markup**, and folds the day's spend delta into the same transaction —
+   the one allowlisted overflow write (`overflow_spend_in_settle`).
+5. The vendor's body goes back as the answer, `X-Treg-Served-Via: overflow:<name>`, `X-Treg-Cost-Micro`
+   the child's charge, `X-Treg-Call-Id` the parent's. Two audit rows share the `call_ref`: the primary
+   attempt with its real status and the child with `credential_tier="platform-overflow"`.
+
+When the resolver already knows the account is out (the exhausted view) **and** a route is on, the
+ladder skips the direct attempt entirely (`MarketplaceCall.skip_direct`): no parent hold, no vendor
+402, straight to the child — the plan's tier 4b.
+
+**An aggregator failure is data.** Its own 401/402/403 (or a vendor 402 relayed through it — seen live)
+releases the child hold, marks `overflow:<name>` unhealthy for 15 minutes, and answers the typed
+`provider_capacity` 503 with alternatives; a second aggregator is never tried on the same call. Its
+stricter-schema refusal (`contract`) releases the child and lets the vendor's own answer stand.
+
+**Shadow mode** (`TREG_OVERFLOW_MODE=shadow`): the aggregator is called, status / shape / cost logged
+and the probe's cost recorded in `OverflowSpend` (treg pays, budget-bounded) — the caller still gets
+the vendor's own error and is charged nothing. This is the week the plan requires before routes serve.
+
+Never on tiers 1/2, a caller-caused 4xx, a 401, a timeout, PUT/PATCH/DELETE, a route the worker has
+not enabled, or a team that opted out (`Org.platform_overflow_disabled`, `treg org overflow off`) —
+checked before any aggregator is contacted, on both entry points.
+
 ## treg's own headers never reach the upstream — by PREFIX, not by name
 
 `proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:

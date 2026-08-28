@@ -365,6 +365,7 @@ async def _usage_rollup(db: AsyncSession, org_id: int, since: datetime) -> dict:
 
 class OrgSettingsIn(BaseModel):
     daily_cap_micro: int | None = None
+    platform_overflow: bool | None = None  # False = opt out of the overflow relay (ops/capacity.md)
     budget_dims: list[str] | None = None
     primary_dim: str | None = None
 
@@ -1326,6 +1327,7 @@ async def get_org_settings(
     return {"daily_cap_micro": _effective_daily_cap(org),
             "daily_cap_set_by_team": int(org.daily_cap_micro or 0) or None,
             "platform_ceiling_micro": get_settings().platform_daily_cap_micro,
+            "platform_overflow": not org.platform_overflow_disabled,
             "budget_dims": _budget_dims_of(org), "primary_dim": _primary_dim_of(caller)}
 
 
@@ -1355,6 +1357,8 @@ async def set_org_settings(
                             f"to raise it — reselling volume is a conversation, not a setting."),
             })
         org.daily_cap_micro = body.daily_cap_micro
+    if "platform_overflow" in sent and body.platform_overflow is not None:
+        org.platform_overflow_disabled = not body.platform_overflow
     if "budget_dims" in sent and body.budget_dims is not None:
         dims = [d.strip().lower() for d in body.budget_dims if d and d.strip()]
         if len(dims) > _MAX_BUDGET_DIMS:

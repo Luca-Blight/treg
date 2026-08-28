@@ -37,6 +37,15 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "tag_call_cap_reached": "caller",
     "tag_spend_cap_reached": "caller",
     "insufficient_balance": "caller",
+    # treg's OWN vendor account for the provider is out (balance/quota) — a 503 the caller cannot
+    # fix, answered before any hold exists, with the same-capability alternatives named.
+    "provider_capacity": "treg",
+    # Routed endpoints (treg.<capability>): the caller's identity fits no provider, or the
+    # ceiling they set is below the cheapest candidate, or every candidate failed.
+    "route_no_candidate": "caller",
+    "route_max_cost": "caller",
+    "route_failed": "upstream",
+    "route_caller_fault": "caller",
     "injection_failed": "treg",
     "ssrf_refused": "treg",
     "connect_failed": "upstream",
@@ -119,6 +128,7 @@ class OrgSnapshot:
     slug: str
     demo: bool
     public_demo: bool
+    platform_overflow_disabled: bool
     budget_dims: list | None
     primary_dim: str
     daily_cap_micro: int
@@ -172,6 +182,7 @@ class CallerSnapshot:
                 slug=org.slug,
                 demo=org.demo,
                 public_demo=org.public_demo,
+                platform_overflow_disabled=bool(getattr(org, "platform_overflow_disabled", False)),
                 budget_dims=list(org.budget_dims) if org.budget_dims is not None else None,
                 primary_dim=org.primary_dim,
                 daily_cap_micro=org.daily_cap_micro,

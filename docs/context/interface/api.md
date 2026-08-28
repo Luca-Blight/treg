@@ -85,6 +85,34 @@ only a real `http.disconnect`. If the client disconnects before the encoded body
 middleware skips decoding and replays each consumed partial-body message followed by that real
 disconnect.
 
+## `503 provider_capacity_unavailable` — treg's own account is out
+
+A metered (tier-4) call whose provider treg's own account cannot serve right now (a confirmed
+balance/quota signal, or the capacity sweep) is refused **before any hold** with a typed 503:
+`{"detail": {"error": "provider_capacity_unavailable", "provider", "endpoint_id", "resets_at" | null,
+"alternatives": [...], "message"}}`, `X-Treg-Error: 1`, no `X-Treg-Cost-Micro`, `refused_by="capacity"`
+on the audit row. The caller's own key for the provider is never affected (tiers 1/2 win first), and
+treg does not call an alternative on the caller's behalf — it names them. Not the pool-saturation 503
+(`treg_saturated`), which is a different exit. See `architecture/proxy-model.md` § Platform capacity.
+
+## `X-Treg-Served-Via` — this answer came through an overflow relay
+
+`GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default `true`); `false` opts the team out —
+such calls get the `503 provider_capacity_unavailable` below instead of a relay.
+
+`overflow:<aggregator>` on a metered call that treg served through a treg-owned aggregator account
+because its own account for the provider was out. Same request, same vendor body shape (routes are
+verified for that), the caller paid the aggregator's real price (`X-Treg-Cost-Micro`), and
+`X-Treg-Call-Id` is the parent call's. Absent on every direct call. Off by default
+(`TREG_OVERFLOW_MODE`). See `architecture/proxy-model.md` § Overflow.
+
+## `X-Treg-Smoothed` — the call waited for treg's own rate limit
+
+On a metered (tier-4) call only: `wait=<ms>` when the call was spaced behind other callers on the
+same platform key, `retry=1` when a burst-429 with a short `retry-after` was re-sent once on the same
+hold (body-less GET/HEAD only). Informational; the status and body are the provider's. See
+`architecture/proxy-model.md` § Burst smoothing.
+
 ## `X-Treg-Error` — whose refusal is this?
 `bootstrap_handlers._mark_treg_own_errors` tags treg's **own**
 refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as before — the status and body
@@ -290,7 +318,9 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Catalog discover → inspect** (open, same section): the two routes that complete the loop whose third
   step is `treg call`. `catalog_search` (`GET /catalog/search?q=&limit=` , default 25, capped 100) →
   `{query, count, total, results[], hints[]}`; a result is the endpoint view **plus** `{capability,
-  capability_description, platform, platform_label, score}`. Ranking is plain token containment
+  capability_description, platform, platform_label, score}`; a routed parent (`kind: routed`) rides in
+  whenever one of its children matched and carries `children_hidden` when its group was capped at 5
+  (`catalog_store.MAX_ROUTED_CHILDREN`; the full ranked list is `catalog_get`'s plan). Ranking is plain token containment
   (`catalog_store.search`, no deps, no embeddings): **most** query tokens must match — a query may miss
   one token in three, so a second word still narrows (1–2 words: all required) while an agent's
   seven-word sentence survives its filler. Function words, single letters and tokens matching >25%

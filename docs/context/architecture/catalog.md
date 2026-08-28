@@ -2,6 +2,16 @@
 title: Endpoint catalog — what you can DO with a connected key, and which provider should do it
 status: shipped
 sources:
+  - src/treg/catalog/contracts.yaml
+  - src/treg/catalog/adapters.yaml
+  - src/treg/catalog/examples/findymail.search.business-profile.json
+  - src/treg/domain/catalog/routing/__init__.py
+  - src/treg/domain/catalog/routing/contracts.py
+  - src/treg/domain/catalog/routing/paths.py
+  - src/treg/domain/catalog/routing/plan.py
+  - src/treg/domain/catalog/routing/synthetic.py
+  - src/treg/application/call/route.py
+  - tests/test_routing.py
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
   - scripts/catalog_ingest.py
@@ -940,9 +950,10 @@ Refresh is process-level singleflight. Concurrent misses join one shared Task, d
 already in flight are not queued again, and the Task batches the requested ids. Its
 `PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
 closes it as soon as the two queries finish. HTTP `/catalog/search`, both MCP catalog-search tools,
-and the prose pages that print observed stats (`/use-cases/*`, `/workflows` and `/workflows/*`)
-receive the same reader instance from bootstrap, so their request paths have no observation DB
-dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+routed planning in `application.call.route.build_plan`, and the prose pages that print observed stats
+(`/use-cases/*`, `/workflows` and `/workflows/*`) receive the same reader instance from bootstrap, so
+their request paths have no observation DB dependency, check out zero connections, and join the same
+refresh Task. A refresh failure keeps stale
 entries, backs off before retry, and never changes the Catalog response status; a failure with no
 cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
 counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
@@ -1082,6 +1093,137 @@ to treg's own key — so it cannot be side-stepped to spend our money (a URL-pas
 against the org's OWN tools and 404s without one). A team holding its own key for another provider
 can still call that provider by URL; that is their credential and their bill, and `DenyRule` —
 host-scoped, applied to every shape of call — is the tool for blocking it.
+
+### Routed groups in discovery — a search page is a list of JOBS (2026-08-28)
+
+Three rules, all in `group_routed` / `search`, shared by `/catalog/search`, MCP `catalog_search`
+and the CLI so the three surfaces cannot disagree:
+
+- **A matched child brings its routed parent.** `find leads` matched `leadsforge.*` on the
+  provider's NAME; the row an agent should see first for that job — `treg.people.search`, where
+  treg chooses among every provider — contained no word of the query. `search` now adds
+  `treg.<capability>` at the best child's score whenever a child matched. The token-filter tests
+  exempt these pulled-in rows: their own text need not contain the query.
+- **Vocabulary before ranking.** The same query first ranked `people.email.find` above
+  `people.search` because `find` is a token of the former's capability NAME (weight 3) and only of
+  the latter's summary (weight 2). The fix was to say in `capabilities.yaml` what the job is —
+  `people.search` is "lead lists and prospects (sales leads)" — not to bend the scorer; `aliases.yaml`
+  then only needs `lead → leads`, `prospect → leads, prospects`.
+- **A group shows its best `MAX_ROUTED_CHILDREN` (5) children.** One capability's 24 providers had
+  eaten the whole 25-row page. The parent is stamped `children_hidden`; the CLI prints
+  `+ N more providers — treg catalog get <parent>`, MCP says so in `routed`. To keep the page full
+  after collapsing, search ranks a band of 4× the page (≤ 100) and cuts to `limit` AFTER grouping.
+
+## Routing — first-party routed endpoints (`treg.<capability>`)
+
+The one place treg **models** an upstream API, and the explicit opt-in where the caller asks treg
+to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog stays verbatim relay.
+
+- **Contracts** — `contracts.yaml`: per capability, one-of *identity* variants (structural keys,
+  never provider names — `{full_name, domain}`, `{first_name, last_name, domain}`,
+  `{linkedin_url}`), `derive` rules so the two name shapes match the same adapters, a small
+  *output* core (`email` required; `confidence`, names, `verified` optional) and `miss` in
+  canonical terms. `raw` — the winning provider's body — is always returned and never documented
+  as stable.
+- **Adapters** — `adapters.yaml`, one per endpoint: `accepts` (identity variants), `in` (contract
+  field → `queryParams.x` / `body.x`), `const` (fixed provider params), `out` (core field →
+  expression over the body), `miss`. The expression language (`domain/catalog/routing/paths.py`)
+  is deliberately tiny: dotted paths with `[i]` (root `[0]`, `.` = the whole body), `coalesce`,
+  `/ N`, `==`/`!=` against literals, and named transforms (`split_first`, `split_last`, `join`,
+  `has_type`, `len`, `list`, `obj`, `fmt`, `csv`, `lower`/`upper`, `at_least`, `linkedin_handle`/
+  `linkedin_url`, `email_domain`, `host`, `dfs_location`, `seranking_source`, `tca_filter`).
+  `in_expr` builds provider params from expressions (URL-array bodies, DSL objects); `test_identity`
+  states the fixture's identity when `in` builds a value rather than copying one; `filters` carry
+  defaults and are always sent.
+- **Verified at load, or absent** — `routing/contracts.py::verify`: `in` must reproduce the
+  endpoint's own `test_request` and `out` must fill every required core field from its
+  `example_response` (an example that is itself a miss passes with the hit half unverified).
+  A failing adapter is not a candidate; the endpoint is still callable via `/call/` exactly as
+  before. `tests/test_routing.py` pins that every shipped adapter passes.
+- **The generated row** — `routing/synthetic.py`: every capability with ≥ 2 verified children gets
+  `treg.<capability>` (`provider: treg`, `kind: routed`, `POST /<capability>`, `input` = the
+  contract, `cost` = the children's range, `routed_children`). Never hand-written; not in any
+  provider file. `catalog_get` on it returns the contract and the ranked **plan** (the quote) —
+  nothing is reserved.
+- **Ranking** — `routing/plan.py`: own keys (tier 2) first at cost 0; then
+  `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
+  request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
+  is the measured hit rate when ≥ 20 decided samples exist, else `ok_rate`, else 1.0 (flagged
+  `unmeasured`). `build_plan` reads that evidence through bootstrap's shared process cache; cold or
+  unavailable observations degrade to unmeasured ranking while the cache refreshes off the request
+  path. `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
+  and providers with no key on the deployment are dropped and named in `dropped` (`needs {…}`
+  says which identity variant a dropped child wanted).
+- **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
+  resolved catalog row is `kind: routed`. Each attempt is a **full child `execute_call`** on a
+  `CallContext` whose `call_ref` is `{parent}:r{n}` — its hold id, ladder (tiers 1/2/4/overflow),
+  reserve, relay, settle, audit row and cancellation compensation are the ordinary ones. Vendor
+  4xx (not 402/408/429) = usually the caller's fault, but scrapers answer 400 for their own outages
+  (tikhub, live 2026-08-28), so the waterfall goes on ONLY to candidates that bill nothing for a
+  rejected request — per_success, free, the org's own key, or per_call ≤ 1¢ (`CHEAP_RETRY_MICRO`)
+  — never the same provider again, within the error bound; if every one rejects it, the caller
+  gets `route_caller_fault` naming each attempt. Our 5xx/503/429 or a vendor 5xx/429/402 = error →
+  next candidate, at most two extra, only for idempotent contracts. A treg-side
+  `tool_access_denied`, `policy_denied`, or `capability_pinned` refusal is local to that child and
+  follows the same error fallback. A platform child's vendor 401/403 also falls back because it
+  indicates treg's provider credential, not the routed caller's request. Balance and spend-cap
+  refusals remain terminal because another provider cannot change the org-wide decision. A 2xx
+  response whose body lacks a REQUIRED core field is a MISS, not a hit (dataforseo's `result: null`
+  under a 20000 envelope). A
+  MISS tries the next candidate — the waterfall is ON by default (decided
+  2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
+  free); `X-Treg-Route-Waterfall: 0` stops at the first miss. Every attempt is settled at its real
+  price and `X-Treg-Route-Max-Cost` (default $1) bounds the sum before each reserve (a candidate
+  that would breach it is `skipped`). Response: `{output, raw, _treg: {served_by, provider, tier,
+  outcome, tried[], charged_micro}}`, `X-Treg-Served-By`, `X-Treg-Providers-Tried`,
+  `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns
+  the idempotency label (a success, or a terminal failure after a paid child, replays without
+  touching a provider) and writes one audit row
+  (`credential_tier: routed`) beside the children's.
+- **Hit rate** — `CallRecord.hit` (nullable, alembic `0009`, last column) is the adapter's verdict
+  written at settle; `stats.observed` publishes `hit_rate`/`hit_samples` (floor 20) and, for
+  per-success endpoints, reads historical rows too (a 2xx with `cost_observed_micro == 0` is a miss).
+  The plan, `catalog_get` and the CLI's HIT column read it; a registered tool (tier 1) or stored key
+  (tier 2) for a provider ranks first at cost 0.
+- **R0 done (2026-08-28)**: the top-traffic untagged `.x.` endpoints carry capabilities now
+  (`google.serp.maps/news/local/ai_mode`, `google.keywords.trends` — each dataforseo + serpapi —
+  plus `companies.jobs.search`, `companies.domain.find`, `amazon.product.sellers/variants`,
+  `tiktok.video.captions`); untagged platform traffic fell from 12% to 1.4%, and 202 capabilities
+  with 2+ eligible providers cover 88% of calls.
+- **Ranking, specificity (2026-08-29)**: among candidates of the same tier, one that USES more of the
+  keys the caller actually sent outranks a cheaper one that uses fewer — `{company_domain, title}`
+  goes to a title-aware search, not a free domain-only one that would answer the whole company.
+  Only caller-supplied keys count (`rank(given=…)`), never keys reached through `derive`. Price
+  decides among equals.
+- **people.\* sweep (2026-08-29)**: people.search 6 → 16 children (aviato dsl/simple, companyenrich
+  scroll, crustdata, fiber-ai, leadsforge, leadmagic search + role-finder, findymail employees +
+  domain — the last retagged from email.find, it returns a list), people.enrich 9 → 14 (aviato bulk,
+  fiber-ai, tomba profile/combined, hunter combined-find), people.email.find 9 → 11 (fiber-ai turbo,
+  leadmagic personal), identity.resolve 3 → 4 (findymail reverse-email); five examples captured live.
+  Still out: apollo/coresignal people.search (no fixture; apollo's `person_titles[]` needs a
+  bracket-safe target), crustdata/diffbot people.enrich (truncated examples), the `*.bulk` jobs
+  (async), hunter multi-domain (masked rows).
+- **Filters reach providers, or say they did not (2026-08-29)**: `country` (ISO code) becomes a name
+  through `country_name` (`catalog/countries.json`, 249 rows generated from pycountry) for providers
+  that filter on a location NAME (icypeas); `location` is a free-text pass-through ("London, United
+  Kingdom", "Europe") for the same providers; a filter the caller sent that an adapter never mentions
+  is listed on the attempt as `ignored_filters` — silently unapplied was the worst outcome (the bench
+  had post-filtered in the agent because of it). Bench re-run, recruiting 30: same icypeas rows as the
+  hand-written policy, one automatic fall-through, region briefs rescued by the pass-through.
+- **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
+  and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
+  apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the
+  bench showed rescues hard B2B briefs and which the router does not do yet). `catalog get` lists
+  them under ALSO with the rest of the same-job endpoints that have no adapter; the search page's
+  "+N more" points there. The routed row's example body and `/access` dry-run use the identity
+  variant MOST children accept, and the dry-run tries every variant before saying "unservable".
+- **Coverage (2026-08-28)**: 74 routed capabilities = 80.9% of 30-day platform calls (88% was the
+  routable ceiling). The per-capability ledger — what shipped with which children, what is 🚫 and
+  why (one usable vendor, async task-post engines, identity-less feeds), and the 49 zero-traffic
+  rows still open — is `docs/CAPABILITY-EXPANSION.md` (git-excluded, Jason's working doc).
+- **Not built** (plan R4): "prefer routed" in the agent files after a shadow week; a proper
+  `kind: filters` / `Location` layer for the DSL/SQL providers (aviato dsl and pdl sql ride `obj`/
+  `fmt` today; crustdata/diffbot/coresignal/apollo do not); own-key-dry → treg-key fallback.
 
 ## Security
 
