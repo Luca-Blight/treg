@@ -11,561 +11,140 @@ scoped to the caller's org; `owner` (creator email) drives the member-vs-admin r
 
 from __future__ import annotations
 
-import asyncio
-import base64
-import gzip
 import hashlib
-import html as _html
-from functools import lru_cache
 import hmac
-import html as html_mod
-import json
-import logging
-import os
 import re
-import secrets as _secrets
-import shutil
-import tempfile
-import time
-import uuid
-import zlib
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
-
-from sqlalchemy import case, delete, func, or_, text, update
-
-import httpx
+from datetime import timedelta
+from functools import lru_cache
 from pathlib import Path
 
-from fastapi import APIRouter, Cookie, Depends, Form, Header, HTTPException, Query, Request
-from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
-from . import oauth_providers
-from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox
-from .config import get_settings, platform_setting_name
-from .bootstrap_http import (
-    _BODY_ENC_HEADER,
-    _BodyDecodeMiddleware,
-    _decode_request_body,
-    _LEGACY_HOSTS,
-    _LegacyHostRedirectMiddleware,
-    _REDIRECT_ALWAYS,
-    _REDIRECT_PATHS,
-    _SecurityHeadersMiddleware,
-)
-from .caller_metadata import (
-    TAG_DEFAULT,
-    _MAX_BUDGET_DIMS,
-    _META_KEY_RE,
-    _client_of,
-    _norm_client,
-)
+from . import audit, catalog_store, crypto, localrun, ratestore, runner, sandbox as demo_sandbox
+from .caller_metadata import _client_of
+from .config import get_settings
 from .db import get_session, session_maker
-from .domain.identity import session as sess
+from .domain.governance.teams import _unique_slug
 from .domain.identity.access import (
-    AGENT_DOMAIN,
-    PUBLIC_DEMO_DOMAIN,
     Caller,
-    _can_manage,
-    _is_agent_email,
-    _is_machine_email,
     _membership_by_token,
-    _norm_email,
-    _resolve_org,
-    _role_at_least,
     _require_can_register,
+    _role_at_least,
     _user_from_identity_token,
     _user_from_session,
-    require_identity,
     require_member,
-    require_superadmin,
 )
-from .domain.identity.mcp_oauth import (
-    REFRESH_TTL_S,
-    _ensure_grant,
-    _family_org,
-    _issue_refresh,
-    _refresh_is_live,
-    _revoke_refresh_family,
-)
-from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
-                     DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
-                     OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, Referral,
-                     RunRecord, Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
-from .bootstrap_handlers import _mark_treg_own_errors, _pool_saturated
+from .models import (CallRecord, CapabilityPin, LedgerEntry, Membership, Org, RunRecord, Secret,
+                     Tool, ToolRequest, User)
 from .routers import admin as admin_routes
+from .routers import auth as auth_routes
 from .routers import billing as billing_routes
 from .routers import call as call_routes
-from .routers import referrals as referral_routes
-from .routers import onboard as onboard_routes
-from .routers.call import (
-    _enforce_daily_cap,
-    _enforce_public_demo_ip_cap,
-    _parse_call_meta,
-    _refusal_kind,
-    _release_idempotent_claim,
-    _require_tool_use_http,
-    _stamp_call_exit,
-    call_tool,
-    catalog_endpoint_access,
-)
-from .routers.billing import (
-    AutoTopupIn,
-    TopupIn,
-    _billing_org,
-    _return_base,
-    billing_autotopup,
-    billing_get,
-    billing_history,
-    billing_portal,
-    billing_stripe_webhook,
-    billing_topup,
-    org_balance,
-)
-from .routers.referrals import mint_referral_code, my_referrals
-from .routers.onboard import (
-    OnboardIn,
-    SANDBOX_HIT_NS,
-    SANDBOX_RATE_MAX,
-    SANDBOX_RATE_WINDOW_S,
-    TeammateIn,
-    demo_sandbox_live,
-    demo_sandbox_mint,
-    demo_sandbox_skill,
-    landing_stripe_feed,
-    onboard_accept_teammate,
-    onboard_demo,
-    onboard_reset,
-    onboard_seed_tool,
-    onboard_skip,
-    skill_install,
-    skill_samples,
-    stripe_webhook,
-)
-from .routers.admin import (
-    BoolIn,
-    _ERROR_EVIDENCE_EXPIRED,
-    _ERROR_EVIDENCE_TTL_DAYS,
-    _purge_expired_error_evidence,
-    _is_last_active_superadmin,
-    _tally,
-    admin_calls,
-    admin_errors,
-    admin_health,
-    admin_delete_org,
-    admin_delete_user,
-    admin_org_detail,
-    admin_orgs,
-    admin_reconcile_drift,
-    admin_reconcile_repeats,
-    admin_reconcile_spend,
-    admin_referrals,
-    admin_stats,
-    admin_set_superadmin,
-    admin_suspend_org,
-    admin_suspend_user,
-    admin_tools,
-    admin_users,
-)
 from .routers import catalog as catalog_routes
-from .routers.catalog import (
-    _observed_or_empty,
-    _platform_rows,
-    _provider_display,
-    catalog_endpoint,
-    catalog_example,
-    catalog_platform,
-    catalog_platforms,
-    catalog_search,
+from .routers import connections as connection_routes
+from .routers import onboard as onboard_routes
+from .routers import orgs as org_routes
+from .routers import referrals as referral_routes
+from .routers import resources as resources_routes
+from .routers import web as web_routes
+from .routers.auth import _client_ip
+from .routers.auth_helpers import _same_origin
+from .routers.call import _enforce_daily_cap, _require_tool_use_http
+from .routers.orgs import _day_start_utc, _enforce_deny, _require_admin_of
+from .routers.resources import _allowed_server_bins
+from .routers.web import LOCAL_USER_EMAIL, _WEB_DIR
+from .timeutil import utcnow_naive as _utcnow_naive
+
+# ---- compatibility re-exports --------------------------------------------------------------
+# api.py WAS the whole server before the refactor, and some callers still address moved code
+# through this module: tests import helpers as `treg.api.<name>` (or patch them on the module),
+# and bootstrap's role startup manifests resolve "treg.api._backfill_provider_extra_tools" by
+# dotted string. Everything below exists only for those callers - new code imports from the real
+# home, and a name leaves this block when its last external reference does.
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError  # noqa: F401
+from . import ledger, oauth_providers  # noqa: F401
+from .application.call.evidence import (  # noqa: F401
+    _ERROR_CALLER_BODY_MAX,
+    _ERROR_MASKING_FAILED,
+    _ERROR_RESPONSE_MAX,
+    _decode_error_body,
+    _secret_renderings,
 )
-from .routers import auth as auth_routes
-from .routers.auth import (
+from .application.call.idempotency import (  # noqa: F401
+    _IDEM_SCOPE_SEP,
+    _request_fingerprint,
+    _scoped_idempotency_key,
+)
+from .application.call.intake import CallMeta  # noqa: F401
+from .application.call.reserve import _enforce_tag_budgets  # noqa: F401
+from .application.call.resolve import (  # noqa: F401
+    MarketplaceCall,
+    _PLATFORM_PAGE_DEFAULT,
+    _PLATFORM_PAGE_MAX,
+    _billed_endpoint_match,
+    _marketplace_pricing,
+    _marketplace_upstream,
+    _oauth_billed_estimate,
+    _platform_bindings,
+    _platform_estimate_micro,
+    _post_has_link,
+    _resolve_call,
+    _usd_to_micro,
+)
+from .application.call.settle import _observed_cost_micro, _platform_billable  # noqa: F401
+from .application.connect import _backfill_provider_extra_tools  # noqa: F401
+from .application.signup import _grant_signup_promo  # noqa: F401
+from .bootstrap_http import (  # noqa: F401
+    _BodyDecodeMiddleware,
+    _LegacyHostRedirectMiddleware,
+    _SecurityHeadersMiddleware,
+    _decode_request_body,
+)
+from .domain.identity.access import (  # noqa: F401
+    _resolve_org,
+    require_identity,
+    require_superadmin,
+)
+from .routers.admin import _ERROR_EVIDENCE_EXPIRED, _ERROR_EVIDENCE_TTL_DAYS  # noqa: F401
+from .routers.auth import (  # noqa: F401
     CLI_APPROVE_MAX_TRIES,
-    CLI_TOKEN_TTL,
     HANDSHAKE_TTL,
-    EMAIL_CODE_TTL,
     MAX_OTP_ATTEMPTS,
-    OTP_NS,
     OTP_START_MAX_PER_EMAIL,
     OTP_START_MAX_PER_IP,
-    OTP_START_NS,
-    OTP_START_WINDOW_S,
-    CliApproveIn,
-    EmailStartIn,
-    EmailVerifyIn,
-    GrantTeamIn,
-    OAuthClientRegistration,
-    _AUTH_HEAD,
-    _CONSENT_CSS,
-    _auth_page,
-    _authorize_request,
-    _consent_page,
-    _finish_oauth_login,
-    _intercom_user_hash,
-    _login_callback_base,
-    _LOGIN_CSS,
-    _LOGIN_ID_RE,
-    _LOGIN_JS,
-    _PAIR_ALPHABET,
     _cli_pending,
     _cli_results,
     _cli_states,
-    _client_ip,
-    _find_or_create_user,
     _effective_mcp_resource,
-    _live_invite_by_email_token,
-    _login_page_html,
-    _norm_pair_code,
-    _orgs_brief,
-    _oauth_error,
+    _login_callback_base,
     _prune_handshakes,
-    _refresh_grant,
-    _resolve_oauth_client,
     _same_mcp_resource,
     _wrong_resource,
-    AUTH_CODE_TTL_S,
-    auth_cli_token,
-    auth_cli_approve,
-    auth_cli_orgs,
-    auth_cli_poll,
-    auth_cli_start,
-    auth_email_start,
-    auth_email_verify,
-    auth_github,
-    auth_github_callback,
-    auth_google,
-    auth_google_callback,
-    auth_invite_signin,
-    auth_invite_signin_confirm,
-    auth_logout,
-    auth_me,
-    auth_revoke_tokens,
-    login_page,
-    oauth_authorization_server,
-    oauth_authorize,
-    oauth_authorize_approve,
-    oauth_grant_set_team,
-    oauth_grants,
-    oauth_protected_resource,
-    oauth_register,
-    oauth_revoke,
-    oauth_token,
-    openai_apps_challenge,
 )
-from .application.signup import (
-    _ad_attribution_from,
-    _grant_signup_promo,
-    _redeem_referral,
-    _stamp_utm,
-    _utm_attribution_from,
-)
-from .application.connect import (
-    CATALOG_STAMP_CAP,
-    _autoprovision_provider_tool,
-    _backfill_provider_extra_tools,
-    _dig,
-    _free_connection_name,
-    _enrich_resource_labels,
-    _owned_connection,
-    _provider_bindings,
-    _provider_tool_examples,
-    _record_connected_identity,
-    _upsert_provider_extra_tools,
-)
-from .routers import connections as connection_routes
-from .routers.connections import (
-    ExtraCredentialIn,
-    OAuthStartIn,
-    ResourceRefIn,
-    TokenConnectIn,
-    connection_resources,
-    connect_with_token,
-    get_health,
-    list_connections,
-    oauth_callback,
-    oauth_providers_list,
-    oauth_start,
-    oauth_status,
-    revoke_connection,
-    run_health,
-    set_connection_resource,
-    set_extra_credential,
-)
-from .domain.governance.teams import _make_org_membership, _slugify, _unique_slug
-from .domain.governance import budgets as budget_policy
-from .application.call.idempotency import (
-    IDEMPOTENCY_HEADER,
-    IDEMPOTENCY_WINDOW_S,
-    _IDEM_MAX_KEY,
-    _IDEM_SCOPE_SEP,
-    _claim_idempotent,
-    _idem_display,
-    _idempotency_key,
-    _replay_idempotent,
-    _request_fingerprint,
-    _scoped_idempotency_key,
-    _store_idempotent,
-)
-from .application.call.intake import (
-    META_HEADER,
-    _META_MAX_HEADER,
-    CallMeta,
-    _NO_META,
-    _tag_telemetry,
-)
-from .routers import orgs as org_routes
-from .routers.orgs import (
-    INVITE_TTL_DAYS,
-    AcceptIn,
-    AccessIn,
-    AgentIn,
-    CapIn,
-    DenyRuleIn,
-    InviteIn,
-    OrgIn,
-    OrgSettingsIn,
-    PROXY_METHODS,
-    ProjectIn,
-    RoleIn,
-    TagBudgetIn,
-    UserIn,
-    _LANDING_RE,
-    _ORG_SCOPED_MODELS,
-    _cascade_delete_org,
-    _count_owners,
-    _day_start_utc,
-    _deny_match,
-    _deny_view,
-    _drop_member_deny_rules,
-    _enforce_deny,
-    _known_access_names,
-    _known_tool_names,
-    _normalize_project_access,
-    _normalize_tool_access,
-    _org_deny_rules,
-    _agent_email,
-    _agent_name,
-    _public_demo_email,
-    _project_view,
-    _require_admin_of,
-    _require_owner_of,
-    _resolve_project,
-    _tag_budget_view,
-    _usage_rollup,
-    _used_today_by_user,
-    accept_invite,
-    accept_my_invite,
-    agent_checkin,
-    create_agent,
-    create_deny_rule,
-    create_invite,
-    create_org,
-    create_project,
-    create_public_token,
-    count_today,
-    delete_org,
-    delete_deny_rule,
-    delete_project,
-    delete_public_token,
-    delete_tag_budget,
-    get_org_settings,
-    leave_org,
-    list_invites,
-    list_agents,
-    list_cli_deny,
-    list_deny_rules,
-    list_members,
-    list_observed_agents,
-    list_orgs,
-    list_projects,
-    list_tag_budgets,
-    list_tag_keys,
-    my_usage,
-    my_invites,
-    org_usage,
-    register_user,
-    remove_member,
-    revoke_agent,
-    revoke_invite,
-    set_member_access,
-    set_member_cap,
-    set_member_role,
-    set_org_settings,
-    set_tag_budget,
-    set_tag_default,
-    usage_by_tag,
-)
-from .routers import resources as resources_routes
-from .routers.resources import (
-    BundleUpdate,
-    SecretIn,
-    SecretUpdate,
-    SkillAnalyzeIn,
-    SkillFileIn,
-    SkillImportIn,
-    SkillIn,
-    SkillSecretIn,
-    SkillToolIn,
-    ToolIn,
-    ToolUpdate,
-    _SKILL_UPLOAD_MAX_BYTES,
-    _SKILL_UPLOAD_MAX_FILES,
-    _SKILL_UPLOAD_MAX_TOTAL_BYTES,
-    _SECRET_DIR_RE,
-    _allowed_server_bins,
-    _bundle_allowed,
-    _bundle_view,
-    _check_upload_size,
-    _flat_binding,
-    _host_of,
-    _materialize_skill_files,
-    _normalize_scheme,
-    _register_skill_bundle,
-    _require_not_live_demo_secret,
-    _require_not_live_demo_tool,
-    _require_public_base_url,
-    _require_secret_ownership,
-    _secret_view,
-    _sanitize_bundle_files,
-    _scan_uploaded_skills,
-    _tool_view,
-    _validate_bindings,
-    _validate_bundle_id,
-    _validate_cli_profile,
-    _validate_cli_secrets,
-    _visible_secret_ids,
-    create_secret,
-    create_tool,
-    analyze_skill_folder,
-    delete_secret,
-    delete_bundle,
-    delete_tool,
-    get_bundle,
-    get_bundle_by_name,
-    get_tool_by_name,
-    import_skill_folder,
-    list_bundles,
-    list_secrets,
-    list_tools,
-    register_skill,
-    update_bundle,
-    update_secret,
-    update_tool,
-)
-from .application.call.resolve import (
-    MarketplaceCall,
-    _LIMIT_PARAMS,
-    _PLATFORM_PAGE_DEFAULT,
-    _PLATFORM_PAGE_MAX,
-    _VALID_PERCENT_ESCAPE_RE,
-    _billed_endpoint_match,
-    _billed_marketplace,
-    _body_limit,
-    _capability_alternatives,
-    _catalog_endpoint_for,
-    _credit_modifiers,
-    _enforce_capability_pin,
-    _enforce_catalog_status,
-    _input_count,
-    _json_object,
-    _marketplace_no_credential,
-    _marketplace_pricing,
-    _marketplace_secret,
-    _marketplace_upstream,
-    _may_have_body,
-    _oauth_billed_estimate,
-    _oauth_billed_provider,
-    _params_hash,
-    _platform_bindings,
-    _platform_estimate_micro,
-    _platform_offer,
-    _post_has_link,
-    _resolve_call,
-    _resolve_marketplace_call,
-    _truthy,
-    _usd_to_micro,
-)
-from .application.call.reserve import (
-    _enforce_platform_daily_cap,
-    _enforce_tag_budgets,
-    _enforce_trial_allowance,
-    _month_start_utc,
-    _platform_reserve,
-    _resolve_tag_budget,
-)
-from .application.call.evidence import (
-    _ERROR_BODY_SLICE,
-    _ERROR_CALLER_BODY_MAX,
-    _ERROR_MASKING_FAILED,
-    _ERROR_REQUEST_MAX,
-    _ERROR_RESPONSE_MAX,
-    _EVIDENCE_HEADERS,
-    _EVIDENCE_SECRET_RE,
-    _QUERY_CRED_RE,
-    _SENSITIVE_JSON_SECRET_KEYS,
-    _URL_USERINFO_RE,
-    _basic_credential_parts,
-    _caller_request_snippet,
-    _decode_error_body,
-    _error_response_evidence,
-    _redact_snippet,
-    _safe_secret_renderings,
-    _secret_renderings,
-)
-from .application.call.settle import (
-    _NOT_THE_CALLERS_FAULT,
-    _PLATFORM_BODY_MAX,
-    _brightdata_record_count,
-    _buffer_response,
-    _finish_cancelled_call,
-    _observed_cost_micro,
-    _peek_stream_head,
-    _platform_billable,
-    _platform_settle,
-    _record_first_call,
-)
-from .routers.auth_helpers import (
-    OAUTH_RETURN_COOKIE,
-    _is_https,
-    _remember_oauth_return,
-    _same_origin,
-    _take_oauth_return,
-)
-from .routers.signup_cookies import (
-    REFERRAL_COOKIE,
-    REFERRAL_COOKIE_MAX_AGE,
-    _remember_referral,
-    _take_referral,
-)
-
-from .routers import web as web_routes
-from .routers.web import (
-    LOCAL_USER_EMAIL,
-    _LOGO_DIR,
+from .routers.auth_helpers import _is_https  # noqa: F401
+from .routers.call import _parse_call_meta  # noqa: F401
+from .routers.catalog import _platform_rows  # noqa: F401
+from .routers.onboard import SANDBOX_RATE_MAX  # noqa: F401
+from .routers.orgs import _ORG_SCOPED_MODELS, _deny_match, count_today  # noqa: F401
+from .routers.signup_cookies import REFERRAL_COOKIE  # noqa: F401
+from .routers.web import (  # noqa: F401
+    _LOGO_DIR,   # bootstrap mounts the static dirs through this module
     _MEDIA_DIR,
     _TOUR_DIR,
     _VENDOR_DIR,
-    _WEB_DIR,
-    _esc_html,
-    _local_owner,
     _provider_rows,
     _related_link,
     _usd_short,
     _use_case_page_for,
     use_case_job_page,
 )
-from .timeutil import as_naive as _as_naive
-from .timeutil import utcnow_naive as _utcnow_naive
+from .timeutil import as_naive as _as_naive  # noqa: F401
 
 
 LOCAL_ORG_NAME = "personal"
@@ -625,29 +204,17 @@ async def _bootstrap_single_user() -> None:
           f"\n  Token      {shown}\n", flush=True)
 
 
-# Route definitions stay in this module until refactor stage 2. `bootstrap.create_app` consumes this
-# router after import and owns every concrete assembly decision around it.
+# The few routes still defined below await their post-stage-4 destinations; everything else is
+# spliced in from routers/. `bootstrap.create_app` consumes this router after import and owns
+# every concrete assembly decision around it.
 router = APIRouter()
 app = router  # temporary decorator target; replaced by the compatibility FastAPI app at EOF
 
 
-# The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
-# and .mcp.json in the wild points here with a Bearer token, and most HTTP clients STRIP the
-# Authorization header when a redirect crosses hosts (and some MCP clients follow no redirects at
-# all). So only browser-facing marketing pages redirect to the canonical host; everything else —
-# /call/, /mcp/, auth flows, webhooks, agent-fetched pages like /vendor-listing, install scripts
-# fetched by `curl | sh` without -L — is served in place on both hosts.
 async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse:
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
-
-
-
-
-
-
-
 
 
 _app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
@@ -716,10 +283,9 @@ async def providers_catalog() -> dict:
     return {"version": prov.CATALOG_VERSION, "providers": prov.CATALOG}
 
 
-# Register the moved Catalog routes at their original position.
+# Moved routers are spliced in at their pre-refactor positions: FastAPI resolves overlapping
+# paths by registration order, and the route snapshot holds this file to the original order.
 router.routes.extend(catalog_routes.public_router.routes)
-
-# Register the moved Catalog-page routes at their original position.
 router.routes.extend(web_routes.catalog_pages_router.routes)
 
 # ---- "the catalog doesn't have X" — tool requests -------------------------------------------
@@ -789,36 +355,15 @@ async def create_tool_request(
             "note": "logged — requests steer which provider gets keyed next"}
 
 
-# Register the moved social-login routes at their original position.
 router.routes.extend(auth_routes.social_router.routes)
-
-
-# Register the moved CLI pairing routes at their original position.
-router.routes.extend(auth_routes.cli_router.routes)
-
-
-# Register the moved session identity routes at their original position.
+router.routes.extend(auth_routes.cli_router.routes)         # CLI pairing
 router.routes.extend(auth_routes.session_router.routes)
-
-
-# Register the moved email OTP routes at their original position.
-router.routes.extend(auth_routes.email_router.routes)
-
-
+router.routes.extend(auth_routes.email_router.routes)       # email OTP
 router.routes.extend(auth_routes.invite_router.routes)
-
-
-# Register the moved site routes at their original position.
 router.routes.extend(web_routes.site_router.routes)
-
 router.routes.extend(auth_routes.oauth_server_router.routes)
-
-
-# Register the moved public-document routes at their original position.
 router.routes.extend(web_routes.public_docs_router.routes)
-
-# ---- caller auth (token = a Membership; open registration) --------------------------------
-router.routes.extend(auth_routes.token_router.routes)
+router.routes.extend(auth_routes.token_router.routes)       # caller auth: token = a Membership
 
 
 def _require_local_run(caller: Caller) -> None:
@@ -829,95 +374,22 @@ def _require_local_run(caller: Caller) -> None:
             "or ask an admin to enable local runs for your account"))
 
 
-# ---- schemas ------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-class GrantIn(BaseModel):
-    argv: list[str] = []  # the CLI args the member is about to run (deny-checked + audited)
-
-
-class RunReportIn(BaseModel):
-    audit_id: int      # the grant's audit row — proves this report follows a real grant
-    exit_code: int
-    verdict: str       # ok | credential_invalid | unknown_error (client matched stderr locally)
-
-
-
-
-
-
-
-
-
-
 router.routes.extend(org_routes.signup_router.routes)
-
-
-# ---- orgs, invites, members (multi-tenancy management) ------------------------------------
-
-
-
-
-
-
 router.routes.extend(auth_routes.grants_router.routes)
-
-
 router.routes.extend(org_routes.org_entry_router.routes)
-
-
 router.routes.extend(org_routes.invite_entry_router.routes)
-
-
 router.routes.extend(onboard_routes.onboard_entry_router.routes)
-
-
-# ---- per-user daily usage cap (usage-metering v1) -------------------------------------------
-
-
-
-
 router.routes.extend(onboard_routes.sandbox_router.routes)
-
-
 router.routes.extend(onboard_routes.onboard_teammate_router.routes)
-
-
 router.routes.extend(org_routes.invite_management_router.routes)
-
-
 router.routes.extend(org_routes.member_list_router.routes)
-
-
 router.routes.extend(org_routes.org_usage_router.routes)
-
-
 router.routes.extend(billing_routes.balance_router.routes)
-
-
 router.routes.extend(org_routes.tag_controls_router.routes)
-
-
 router.routes.extend(billing_routes.billing_router.routes)
-
-
 router.routes.extend(referral_routes.router.routes)
-
-
 router.routes.extend(billing_routes.webhook_router.routes)
-
-
 router.routes.extend(org_routes.member_management_router.routes)
-
-
 router.routes.extend(org_routes.machine_identity_router.routes)
 
 
@@ -925,15 +397,7 @@ router.routes.extend(org_routes.machine_identity_router.routes)
 router.routes.extend(org_routes.projects_router.routes)
 
 
-# ---- deny rules: org policy over what may be called ----------------------------------------
-
-
-
-
-
-
-
-
+# ---- capability pins: the team's provider choice, per capability ---------------------------
 class CapabilityPinIn(BaseModel):
     capability: str
     provider: str
@@ -1029,34 +493,7 @@ async def clear_capability_pin(
 
 
 router.routes.extend(org_routes.policy_router.routes)
-
-
 router.routes.extend(resources_routes.crud_router.routes)
-
-
-
-
-# ---- tools --------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # ---- local runs (`treg run`): grant + outcome report (docs/CLI-RUN-PLAN.md) -----------------
@@ -1096,8 +533,14 @@ def _redact_argv(argv: list[str]) -> str:
     return " ".join(_redact_argv_list(argv))[:500]
 
 
+class GrantIn(BaseModel):
+    argv: list[str] = []  # the CLI args the member is about to run (deny-checked + audited)
 
 
+class RunReportIn(BaseModel):
+    audit_id: int      # the grant's audit row — proves this report follows a real grant
+    exit_code: int
+    verdict: str       # ok | credential_invalid | unknown_error (client matched stderr locally)
 
 
 async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str,
@@ -1250,9 +693,10 @@ async def report_local_run(
     return {"ok": True, "marked_invalid": marked}
 
 
-# ---- skills (bundle composer): register a whole skill atomically --------------------------
-# ---- skills: analyze / import an uploaded folder (the dashboard mirror of `treg upload skills`) ----
+# ---- skills: register a whole skill atomically; analyze / import an uploaded folder --------
 router.routes.extend(resources_routes.skill_router.routes)
+
+
 # ---- audit read ---------------------------------------------------------------------------
 @app.get("/calls")
 async def list_calls(
@@ -1391,56 +835,10 @@ async def list_runs(
 
 
 # ---- OAuth connect flow (Phase C): mint the first token via browser consent --------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 router.routes.extend(connection_routes.oauth_router.routes)
-
-
-
-
-
-
 router.routes.extend(connection_routes.resources_router.routes)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 router.routes.extend(connection_routes.token_router.routes)
-
-
-
-
 router.routes.extend(connection_routes.management_router.routes)
-
-
-
-
 router.routes.extend(connection_routes.status_router.routes)
 
 
@@ -1448,54 +846,14 @@ router.routes.extend(connection_routes.status_router.routes)
 router.routes.extend(connection_routes.health_router.routes)
 
 
-
-
 # ---- super-admin: cross-tenant read + control (env token OR is_superadmin user) -----------
-
-
-# Register the moved admin read routes at their original position.
 router.routes.extend(admin_routes.reads_router.routes)
-
 router.routes.extend(admin_routes.mutations_router.routes)
-
-
 router.routes.extend(admin_routes.reports_router.routes)
 
-# ---- the proxy: call a tool without holding its credential --------------------------------
 
-
-
-# ---- tier-4 metering: reserve → relay → settle/release ------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# ---- the proxy: call a tool without holding its credential; tier-4 metering ----------------
 router.routes.extend(call_routes.router.routes)
-
-
 
 
 # ---- server-side CLI execution (Tier 0 `treg run`) ---------------------------------------
@@ -1561,11 +919,6 @@ async def run_tool_server(
         "duration_ms": result.duration_ms,
         "timed_out": result.timed_out,
     }
-
-
-# ---- view helpers (never leak secret values) ----------------------------------------------
-
-
 
 
 # Deployment and imports keep using `treg.api:app`; the concrete assembly now lives in bootstrap.
