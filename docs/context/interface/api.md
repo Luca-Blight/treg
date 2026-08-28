@@ -95,6 +95,14 @@ on the audit row. The caller's own key for the provider is never affected (tiers
 treg does not call an alternative on the caller's behalf — it names them. Not the pool-saturation 503
 (`treg_saturated`), which is a different exit. See `architecture/proxy-model.md` § Platform capacity.
 
+## `X-Treg-Served-Via` — this answer came through an overflow relay
+
+`overflow:<aggregator>` on a metered call that treg served through a treg-owned aggregator account
+because its own account for the provider was out. Same request, same vendor body shape (routes are
+verified for that), the caller paid the aggregator's real price (`X-Treg-Cost-Micro`), and
+`X-Treg-Call-Id` is the parent call's. Absent on every direct call. Off by default
+(`TREG_OVERFLOW_MODE`). See `architecture/proxy-model.md` § Overflow.
+
 ## `X-Treg-Smoothed` — the call waited for treg's own rate limit
 
 On a metered (tier-4) call only: `wait=<ms>` when the call was spaced behind other callers on the

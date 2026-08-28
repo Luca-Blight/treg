@@ -8,6 +8,7 @@ sources:
   - src/treg/application/call/__init__.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
+  - src/treg/application/call/overflow.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/reserve.py
@@ -100,7 +101,8 @@ The capacity domain (`treg.domain.capacity`, plan step B) is a leaf like identit
 It reads config and writes only its own tables and ratestore keys, from worker-profile commands
 (`treg-worker`, a separate console script so the light `treg` CLI never gains a DB import). The call
 application imports the capacity domain inward (`resolve` → `view`, `settle` → `signatures`/`marks`);
-the domain never imports back. The
+the domain never imports back; `application.call.overflow` composes the capacity domain, the
+aggregator envelopes and the money primitives, and the aggregator adapters stay pure envelope code. The
 aggregator envelopes live under `treg.infra.upstream.aggregators` and inherit the upstream contract
 (no HTTP adapters, no routers); the capacity domain's `verify` module may import them because they are
 pure envelope code, not a web framework.

@@ -1119,3 +1119,20 @@ class OverflowRoute(SQLModel, table=True):
     matched_at: datetime | None = Field(default=None)
     last_verified_at: datetime | None = Field(default=None)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class OverflowSpend(SQLModel, table=True):
+    """Per-aggregator, per-UTC-day overflow accounting: what the aggregator charged treg
+    (`cost_micro`) and the delta against what the caller would have paid direct (`delta_micro`,
+    may be negative). Written INSIDE the child's settle transaction (allowlist entry
+    `overflow_spend_in_settle`) and, in shadow mode, by the shadow probe — never anywhere else. The
+    $20/day/aggregator budget (`Settings.overflow_daily_budget_usd`) is checked against it before a
+    child hold is placed. Not money: balances move only through domain/money.
+    """
+
+    aggregator: str = Field(primary_key=True)
+    day: str = Field(primary_key=True)  # YYYY-MM-DD, UTC
+    calls: int = Field(default=0)
+    cost_micro: int = Field(default=0)
+    delta_micro: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=_now)

@@ -344,6 +344,46 @@ Both are visible: `X-Treg-Smoothed: wait=<ms>` and/or `retry=1` on the response 
 No audit column yet — `smoothed_ms` would be an ALTER on the hot `callrecord` table, a migration-class
 change kept out of this behaviour PR.
 
+## Overflow — the child cycle (plan step E; off by default)
+
+**Overflow = the same vendor endpoint, another account of ours.** When a tier-4 call fails on treg's
+own key for a treg-side reason — a balance/quota signature, a burst-429 smoothing could not absorb —
+and the worker has an enabled `OverflowRoute` for the endpoint, `application.call.overflow.
+maybe_overflow` runs a **child cycle** after the primary's settle released its hold:
+
+1. Route from the in-process route view (`domain.capacity.routes_view`, Orthogonal first), skipping
+   an aggregator marked unhealthy (`overflow:<name>` in the capacity view) or without a key; budget
+   check against `OverflowSpend` (`overflow_daily_budget_usd`, $20/aggregator/day) on a short session.
+2. **Child hold**, own id `{call_ref}:overflow`, through the ordinary `_platform_reserve` (tag
+   budgets, daily cap, trial allowance apply; an empty balance is the normal 402). Never the parent's
+   id: release-by-id is a conditional claim and `_finish_cancelled_call` releases both ids exactly once.
+3. One aggregator run with **no DB open**: `infra.upstream.aggregators.<name>.build` wraps the
+   caller's original query + buffered body; the key comes from `Settings.overflow_key_<name>` and is
+   never logged. Monid's async runs are polled (bounded).
+4. `parse` → vendor status + body + the real in-band cost. `_platform_settle(child,
+   observed_override=cost, overflow_spend=(aggregator, cost − treg's direct price))` charges **exactly
+   the aggregator's price, 0% markup**, and folds the day's spend delta into the same transaction —
+   the one allowlisted overflow write (`overflow_spend_in_settle`).
+5. The vendor's body goes back as the answer, `X-Treg-Served-Via: overflow:<name>`, `X-Treg-Cost-Micro`
+   the child's charge, `X-Treg-Call-Id` the parent's. Two audit rows share the `call_ref`: the primary
+   attempt with its real status and the child with `credential_tier="platform-overflow"`.
+
+When the resolver already knows the account is out (the exhausted view) **and** a route is on, the
+ladder skips the direct attempt entirely (`MarketplaceCall.skip_direct`): no parent hold, no vendor
+402, straight to the child — the plan's tier 4b.
+
+**An aggregator failure is data.** Its own 401/402/403 (or a vendor 402 relayed through it — seen live)
+releases the child hold, marks `overflow:<name>` unhealthy for 15 minutes, and answers the typed
+`provider_capacity` 503 with alternatives; a second aggregator is never tried on the same call. Its
+stricter-schema refusal (`contract`) releases the child and lets the vendor's own answer stand.
+
+**Shadow mode** (`TREG_OVERFLOW_MODE=shadow`): the aggregator is called, status / shape / cost logged
+and the probe's cost recorded in `OverflowSpend` (treg pays, budget-bounded) — the caller still gets
+the vendor's own error and is charged nothing. This is the week the plan requires before routes serve.
+
+Never on tiers 1/2, a caller-caused 4xx, a 401, a timeout, PUT/PATCH/DELETE, or a route the worker
+has not enabled. Org opt-out (`allow_platform_overflow`) lands with step F.
+
 ## treg's own headers never reach the upstream — by PREFIX, not by name
 
 `proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:

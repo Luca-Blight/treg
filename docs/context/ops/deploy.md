@@ -323,7 +323,8 @@ base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 
 `treg-capacity-sweep` every hour, with the DB URL, Fernet key and every `TREG_PLATFORM_KEY_*` pulled
 from the web service via `fromService` — so a new platform key is added in ONE place. Aggregator keys
 (`TREG_OVERFLOW_KEY_ORTHOGONAL` / `_MONID`) are dashboard-managed on the web service and flow the same
-way; they are declared in `config.py` but nothing serves through them yet.
+way. `TREG_OVERFLOW_MODE` (`off` default | `shadow` | `on`) and `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
+govern the overflow child cycle (`ops/capacity.md`); the keys serve nothing while the mode is `off`.
 
 ## A db.py change needs a Postgres-shaped deploy plan
 

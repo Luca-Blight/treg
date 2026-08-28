@@ -189,6 +189,11 @@ class Settings(BaseSettings):
     # Not platform_key_* on purpose: they are a credential RUNG (platform-overflow), not a provider.
     overflow_key_orthogonal: str = ""
     overflow_key_monid: str = ""
+    # off (default) | shadow | on. Shadow: on a tier-4 capacity failure, call the aggregator anyway,
+    # log status/shape/cost, still return the vendor's own error and charge the caller nothing —
+    # treg pays the probe, bounded by the daily budget. On: the child cycle serves the caller.
+    overflow_mode: str = "off"
+    overflow_daily_budget_usd: float = 20.0  # per aggregator, per UTC day; crossing it skips overflow
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
@@ -406,6 +411,13 @@ class Settings(BaseSettings):
     @property
     def platform_daily_cap_micro(self) -> int:
         return int(round(self.platform_daily_cap_usd * 1_000_000))
+
+    @property
+    def overflow_daily_budget_micro(self) -> int:
+        return int(round(self.overflow_daily_budget_usd * 1_000_000))
+
+    def overflow_key_for(self, aggregator: str) -> str | None:
+        return getattr(self, f"overflow_key_{aggregator}", "") or None
 
     @property
     def oauth_billed_set(self) -> frozenset[str]:

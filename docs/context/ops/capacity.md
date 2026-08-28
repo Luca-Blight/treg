@@ -1,6 +1,6 @@
 ---
 title: Provider capacity — knowing what treg's own vendor accounts have left
-status: shipped (steps B, B′, D, D′)
+status: shipped (steps B, B′, D, D′, E — overflow off by default, shadow week pending)
 sources:
   - src/treg/domain/capacity/__init__.py
   - src/treg/domain/capacity/collectors.py
@@ -13,6 +13,11 @@ sources:
   - src/treg/domain/capacity/marks.py
   - tests/test_capacity_protect.py
   - src/treg/infra/upstream/limiter.py
+  - src/treg/domain/capacity/overflow_spend.py
+  - src/treg/domain/capacity/routes_view.py
+  - src/treg/application/call/overflow.py
+  - alembic/versions/0004_overflow_spend.py
+  - tests/test_capacity_overflow.py
   - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
   - src/treg/infra/upstream/aggregators/__init__.py
@@ -157,8 +162,20 @@ smoothing. The provider's rate limit travels in the published latest state (`Lat
 from `CapacityPolicy.rate_limit`; a call-path mark carries it forward), so the request path never reads
 the policy table. `rate_pressure` alerting is step C.
 
+## Overflow, the child cycle (step E) — off by default
+
+`application/call/overflow.py` is documented in `architecture/proxy-model.md` § Overflow. Operating
+it: `TREG_OVERFLOW_MODE` = `off` (default) | `shadow` | `on`; `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
+per aggregator per UTC day, read from `OverflowSpend`; the aggregator keys `TREG_OVERFLOW_KEY_*` in
+the web service env (the cron pulls them). The route view (`routes_view.py`) is the call path's
+60 s copy of the enabled `OverflowRoute` rows; `overflow sync` / `overflow verify` are the only
+writers. **Rollout (plan §5):** run `shadow` for a week with routes enabled — every probe logs
+`overflow SHADOW <endpoint> via <aggregator>: … shape …` and lands a child audit row
+(`credential_tier=platform-overflow`, `error_response="treg overflow: shadow"`) — then switch to
+`on` (step F, which also adds the org opt-out and amends the charter).
+
 ## Not built yet (plan steps C–F)
 
-Forecasts and alerts (C, gated on the `money-funding-transactions` debt); the
-overflow child cycle through Orthogonal/Monid (E); enabling routes (F). Until F ships, the charter
-row "not built yet: routing/failover" stands and treg still relays a vendor's 402 unchanged.
+Forecasts and alerts (C, gated on the `money-funding-transactions` debt); enabling overflow in
+production with the org opt-out (F). Until F ships, `TREG_OVERFLOW_MODE` stays `off`, the charter row
+"not built yet: routing/failover" stands and treg still relays a vendor's 402 unchanged.

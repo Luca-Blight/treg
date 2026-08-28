@@ -11,7 +11,7 @@ import pytest
 
 from treg import bootstrap
 from treg.application import billing
-from treg.application.call import authorize, reserve, settle
+from treg.application.call import authorize, overflow, reserve, settle
 from treg.domain import money
 from treg.domain.capacity import marks as capacity_marks
 
@@ -41,7 +41,14 @@ _DATAPLANE_DERIVED_WRITES = {
     # table) AFTER the settle, so the next call is refused before a hold exists.
     "capacity_exhausted_mark": (
         (settle._note_capacity_signal, "capacity_marks.mark_exhausted"),
+        (overflow.maybe_overflow, "capacity_marks.mark_exhausted"),
         (capacity_marks.mark_exhausted, "ratestore.kv_put"),
+    ),
+    # Plan §4.3 step 5: the overflow child's settle folds the aggregator's daily spend delta into
+    # the SAME transaction; shadow mode records the probe's cost on its own short session.
+    "overflow_spend_in_settle": (
+        (settle._platform_settle, "overflow_spend_ledger.add_in_transaction"),
+        (overflow._record_shadow, "overflow_spend_ledger.add_in_transaction"),
     ),
 }
 _EXPECTED_DATAPLANE_WRITES = frozenset({
@@ -51,6 +58,7 @@ _EXPECTED_DATAPLANE_WRITES = frozenset({
     "first_call_adconversion_outbox",
     "lazy_stale_hold_reap",
     "capacity_exhausted_mark",
+    "overflow_spend_in_settle",
 })
 _DERIVED_WRITE_FILES = {
     _SRC / "application" / "billing.py": {"loop.create_task"},
@@ -58,7 +66,12 @@ _DERIVED_WRITE_FILES = {
         "publicdemo_policy.enforce_public_demo_ip_cap",
     },
     _SRC / "application" / "call" / "reserve.py": {"billing.maybe_schedule_autotopup"},
-    _SRC / "application" / "call" / "settle.py": {"adsconv.queue", "capacity_marks.mark_exhausted"},
+    _SRC / "application" / "call" / "settle.py": {
+        "adsconv.queue", "capacity_marks.mark_exhausted", "overflow_spend_ledger.add_in_transaction",
+    },
+    _SRC / "application" / "call" / "overflow.py": {
+        "capacity_marks.mark_exhausted", "overflow_spend_ledger.add_in_transaction",
+    },
     _SRC / "domain" / "capacity" / "marks.py": {"ratestore.kv_put"},
     _SRC / "domain" / "governance" / "publicdemo.py": {
         "ratestore.sweep", "ratestore.rate_check",
@@ -75,6 +88,10 @@ _EXPECTED_DERIVED_WRITE_SITES = {
      "billing.maybe_schedule_autotopup"),
     ("application/call/settle.py", "_record_first_call", "adsconv.queue"),
     ("application/call/settle.py", "_note_capacity_signal", "capacity_marks.mark_exhausted"),
+    ("application/call/settle.py", "_platform_settle", "overflow_spend_ledger.add_in_transaction"),
+    ("application/call/settle.py", "_close", "overflow_spend_ledger.add_in_transaction"),
+    ("application/call/overflow.py", "maybe_overflow", "capacity_marks.mark_exhausted"),
+    ("application/call/overflow.py", "_record_shadow", "overflow_spend_ledger.add_in_transaction"),
     ("domain/capacity/marks.py", "mark_exhausted", "ratestore.kv_put"),
     ("domain/governance/publicdemo.py", "enforce_public_demo_ip_cap", "ratestore.rate_check"),
     ("domain/governance/publicdemo.py", "enforce_public_demo_ip_cap", "ratestore.sweep"),

@@ -146,7 +146,12 @@ services:
         sync: false
       - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
         value: ""
-      # Overflow aggregator keys (plan §4.3) — declared, unused until overflow ships.
+      # Overflow (docs/context/ops/capacity.md): treg-owned aggregator accounts serving the SAME vendor
+      # endpoint when our own account is out. MODE is the switch: off (default) | shadow | on.
+      - key: TREG_OVERFLOW_MODE
+        value: "off"
+      - key: TREG_OVERFLOW_DAILY_BUDGET_USD
+        value: "20"
       - key: TREG_OVERFLOW_KEY_ORTHOGONAL
         sync: false
       - key: TREG_OVERFLOW_KEY_MONID

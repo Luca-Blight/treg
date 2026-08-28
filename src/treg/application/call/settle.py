@@ -12,6 +12,7 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from ... import adsconv, catalog_store, ledger
 from ...domain.capacity import marks as capacity_marks
+from ...domain.capacity import overflow_spend as overflow_spend_ledger
 from ...domain.capacity import signatures as capacity_signatures
 from ...db import session_maker
 from ...models import Org
@@ -335,6 +336,7 @@ async def _peek_stream_head(response: UpstreamResponse, limit: int) -> tuple[Ups
 async def _platform_settle(
     mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
     reason: str = "", finalized: Callable[[], None] | None = None,
+    observed_override: int | None = None, overflow_spend: tuple[str, int] | None = None,
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -350,7 +352,12 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
-    observed = _observed_cost_micro(mk, body, headers) if billable else None
+    # `observed_override`: the overflow child cycle knows its cost from the aggregator's envelope, not
+    # from the vendor body — the caller pays exactly that (plan §4.3 step 5), whatever the vendor's
+    # own billing shape. `overflow_spend` = (aggregator, delta vs treg's direct price): folded into
+    # the SAME settle transaction, the one allowlisted overflow write (`overflow_spend_in_settle`).
+    observed = ((observed_override if observed_override is not None
+                 else _observed_cost_micro(mk, body, headers)) if billable else None)
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
 
@@ -359,7 +366,12 @@ async def _platform_settle(
             if billable:
                 charged = await ledger.settle_in_transaction(db, call_id, observed, meta={
                     "provider": mk.provider, "status_code": status_code, "cost_type": mk.cost_type,
-                    "cost_source": "provider" if observed is not None else "estimate"})
+                    "cost_source": ("aggregator" if overflow_spend is not None
+                                    else "provider" if observed is not None else "estimate"),
+                    **({"served_via": f"overflow:{overflow_spend[0]}"} if overflow_spend else {})})
+                if overflow_spend is not None:
+                    await overflow_spend_ledger.add_in_transaction(
+                        db, overflow_spend[0], observed or 0, overflow_spend[1])
             else:
                 await ledger.release_in_transaction(
                     db, call_id, reason=reason or f"not_billable_{status_code}",
@@ -412,13 +424,17 @@ async def _finish_cancelled_call(
             mk.call_id = None
             try:
                 async with session_maker() as cleanup_db:
-                    await ledger.release_in_transaction(
-                        cleanup_db,
-                        call_ref,
-                        reason="call_cancelled",
-                        meta={"provider": mk.provider, "cost_type": mk.cost_type,
-                              "status_code": None},
-                    )
+                    # The parent hold AND the overflow child's (`{call_ref}:overflow`, plan §4.3
+                    # step 2): each release is a conditional claim, so a hold that never existed or
+                    # was already closed is a safe no-op, and both are released exactly once.
+                    for hold_id in (call_ref, f"{call_ref}:overflow"):
+                        await ledger.release_in_transaction(
+                            cleanup_db,
+                            hold_id,
+                            reason="call_cancelled",
+                            meta={"provider": mk.provider, "cost_type": mk.cost_type,
+                                  "status_code": None},
+                        )
                     await cleanup_db.commit()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
                 logging.getLogger("treg.ledger").error(

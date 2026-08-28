@@ -46,6 +46,7 @@ from .resolve import (
     resolve_call_target,
     resolve_marketplace_target,
 )
+from . import overflow as overflow_cycle
 from .settle import (
     _buffer_response,
     _finish_cancelled_call as finish_cancelled_call,
@@ -521,6 +522,44 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             read_body=request.body,
         ), request, call_ref)
 
+    if mk is not None and mk.skip_direct:
+        # The resolver knows treg's own account is out and an overflow route is on: no direct
+        # attempt, no parent hold — straight to the child cycle (plan §4 ladder, tier 4b). The DB
+        # phase ends here; the child places its own hold and the aggregator answers with none open.
+        await db.commit()
+        _audit(503, charged_micro=0, refused_by="capacity",
+               error_response="treg: own account exhausted — served via overflow" )
+        try:
+            outcome = await overflow_cycle.maybe_overflow(
+                mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=402,
+                headers=httpx.Headers(()), body=b"", method=request.method,
+                query_items=request.query_params.multi_items(), caller_body=caller_body,
+                client=upstream_client, audit_client=_client_name(request), force_trigger="exhausted")
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref)
+            raise
+        if outcome is None or not outcome.served or outcome.response is None:
+            request.state.call_cost_micro = 0
+            from .resolve import _provider_capacity_unavailable
+            raise (outcome.failure if outcome is not None and outcome.failure is not None
+                   else _provider_capacity_unavailable(
+                       _catalog_endpoint_for(mk.endpoint_id) or {"id": mk.endpoint_id},
+                       mk.provider, capacity_view.get(mk.provider)))
+        response, body, charged = outcome.response, outcome.body, outcome.charged_micro
+        if idem_key:
+            try:
+                await _store_idempotent(idem_key, caller, status_code=response.status, body=body,
+                                        media_type=_response_header(response, "content-type"),
+                                        charged_micro=charged, metered=True, call_ref=call_ref)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
+            request.state.idem_claim = None
+        _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
+        _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        _set_response_header(response, "X-Treg-Served-Via", f"overflow:{outcome.aggregator}")
+        return response
+
     # Metered — treg's own money is about to be spent (tier 4's platform key, or a registry OAuth
     # connect on a pay-per-use app), so take the money FIRST. Deliberately the last gate before the
     # network: everything above (ACL, deny rules, caps) can still refuse the call, and a refused
@@ -743,6 +782,30 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         _audit(response.status, observed_micro=observed, charged_micro=charged,
                duration_ms=duration_ms, response_bytes=len(body),
                error_request=err_request, error_response=err_response)
+        served_via = ""
+        if response.status >= 400 and mk.tier == "platform":
+            # Overflow (plan §4.3): the primary attempt is settled ($0) and audited above; a child
+            # cycle may now serve the SAME endpoint through an aggregator. Off by default; shadow
+            # mode returns the vendor's answer regardless.
+            try:
+                outcome = await overflow_cycle.maybe_overflow(
+                    mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=response.status,
+                    headers=httpx.Headers(response.raw_headers), body=body, method=request.method,
+                    query_items=request.query_params.multi_items(), caller_body=caller_body,
+                    client=upstream_client, audit_client=_client_name(request))
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
+            except CallFailure as exc:  # the child's own 402 (insufficient balance for the child hold)
+                request.state.call_cost_micro = 0
+                raise
+            if outcome is not None and outcome.failure is not None:
+                request.state.call_cost_micro = 0
+                raise outcome.failure
+            if outcome is not None and outcome.served and outcome.response is not None:
+                await response.close()
+                response, body, charged = outcome.response, outcome.body, outcome.charged_micro
+                served_via = f"overflow:{outcome.aggregator}"
         if idem_key:
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the
@@ -762,6 +825,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # `0` there would read as "free" rather than "not applicable".
         _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
         _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        if served_via:
+            _set_response_header(response, "X-Treg-Served-Via", served_via)
         if smoothed:
             _set_response_header(response, "X-Treg-Smoothed", " ".join(smoothed))
         return response

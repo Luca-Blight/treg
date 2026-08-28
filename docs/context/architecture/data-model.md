@@ -7,6 +7,7 @@ sources:
   - alembic/versions/0001_baseline_current_schema.py
   - alembic/versions/0002_capacity_policy_snapshot.py
   - alembic/versions/0003_overflow_route.py
+  - alembic/versions/0004_overflow_spend.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -209,6 +210,9 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
   DERIVED `enabled`. Filled by `treg-worker overflow sync` only (alembic `0003`); read-only for the call
   path. See `ops/capacity.md`.
+- **`OverflowSpend`** — per aggregator per UTC day: calls, the aggregator's charge, the delta against
+  treg's direct price. Written inside the overflow child's settle transaction (and by the shadow probe);
+  the $20/day budget reads it. Alembic `0004`. Not a balance.
 
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is
@@ -242,7 +246,7 @@ parameters compared with timestamp columns follow the same constraint as inserte
 
 ## Alembic baseline
 
-Revisions after the baseline (`0002` capacity tables, `0003` overflow routes) must be paired with the legacy startup path
+Revisions after the baseline (`0002` capacity tables, `0003` overflow routes, `0004` overflow spend) must be paired with the legacy startup path
 until stage 5; the parity test compares a fresh `init_db` schema with `alembic upgrade head`.
 
 

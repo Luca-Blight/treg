@@ -776,3 +776,12 @@ obligations) is what gets bought rather than built.
 after a tier-4 balance/quota signature. It touches no balance, hold or ledger row — it is a hint for the
 NEXT caller's resolution — and is listed in the dataplane write allowlist on its own
 (`capacity_exhausted_mark`), not under the money entries. See `ops/capacity.md`.
+
+## Overflow money
+
+The overflow child (`application.call.overflow`) is an ordinary metered cycle on its own hold
+(`{call_ref}:overflow`): `_platform_reserve` at the route's aggregator price, `_platform_settle` with
+`observed_override` = the aggregator's in-band charge — the caller pays exactly that, 0% markup —
+and `cost_source: "aggregator"` + `served_via` in the ledger `meta`, so `reconcile` needs no join.
+`OverflowSpend` (per aggregator per UTC day) is updated inside that same settle transaction; it is
+accounting for the $20/day budget, not a balance. Shadow mode places no hold and charges nothing.
