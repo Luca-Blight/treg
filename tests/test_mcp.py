@@ -347,6 +347,7 @@ async def test_every_tool_declares_what_it_can_do(clients):
     ann = {t.name: t.annotations for t in await server.list_tools()}
     assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools",
                         "catalog_request"}
+    assert all(a.title is None for a in ann.values())
     for name in ("catalog_search", "catalog_get", "balance", "my_tools"):
         a = ann[name]
         assert a and a.read_only_hint is True, name

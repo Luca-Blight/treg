@@ -182,7 +182,7 @@ async def test_v2_declares_exact_directory_contract():
         "catalog_search", "catalog_get", "catalog_call_read", "catalog_call_write", "balance",
         "catalog_request",
     ]
-    assert {name: tool.title for name, tool in tools.items()} == {
+    expected_titles = {
         "catalog_search": "Search Treg Catalog",
         "catalog_get": "Get Catalog Endpoint",
         "catalog_call_read": "Call a Read Endpoint",
@@ -190,6 +190,8 @@ async def test_v2_declares_exact_directory_contract():
         "balance": "Check Treg Balance",
         "catalog_request": "Request a Catalog Capability",
     }
+    assert {name: tool.title for name, tool in tools.items()} == expected_titles
+    assert {name: tool.annotations.title for name, tool in tools.items()} == expected_titles
     assert "my_tools" not in tools and "call" not in tools
     assert "method" not in tools["catalog_call_read"].input_schema["properties"]
     assert "method" not in tools["catalog_call_write"].input_schema["properties"]
@@ -277,11 +279,18 @@ async def test_v2_serializes_the_scanner_facing_contract(clients):
         assert initialized.status_code == 200
         listed = await _rpc(client, "tools/list", token=token)
     tools = {tool["name"]: tool for tool in listed.json()["result"]["tools"]}
-    assert set(tools) == {
-        "catalog_search", "catalog_get", "catalog_call_read", "catalog_call_write", "balance",
-        "catalog_request",
+    expected_titles = {
+        "catalog_search": "Search Treg Catalog",
+        "catalog_get": "Get Catalog Endpoint",
+        "catalog_call_read": "Call a Read Endpoint",
+        "catalog_call_write": "Call a Write Endpoint",
+        "balance": "Check Treg Balance",
+        "catalog_request": "Request a Catalog Capability",
     }
+    assert set(tools) == set(expected_titles)
+    assert {name: tool["annotations"]["title"] for name, tool in tools.items()} == expected_titles
     assert tools["catalog_call_read"]["annotations"] == {
+        "title": "Call a Read Endpoint",
         "readOnlyHint": True, "destructiveHint": False, "idempotentHint": False,
         "openWorldHint": True,
     }

@@ -3,7 +3,7 @@
 This runbook is the owner-facing release gate for Treg's catalog-only Claude connector. Do not
 submit until every required engineering and human check below has passed. Store no reviewer
 password, OAuth code, access token, refresh token, or provider secret in this repository or in test
-evidence.
+evidence. No reviewer passwords, OTPs, or tokens are committed or placed in ordinary submission notes.
 
 ## Directory fields
 
@@ -32,12 +32,16 @@ explicitly granted the corresponding label.
 - [ ] Obtain Owner access to a Claude.ai Team or Enterprise organization. A platform.claude.com API
   organization does not satisfy this requirement.
 - [ ] Approve the name, tagline, categories, catalog-only scope, data-handling answers, and logo.
-- [ ] Create a dedicated reviewer mailbox and a dedicated Treg team owned by it.
-- [ ] Give the reviewer team a populated account, a **$10.00 balance**, and the normal **$5.00 daily
-  cap**. Connect only the provider account(s) required for the acceptance calls.
-- [ ] Put temporary reviewer mailbox credentials only in Anthropic's secure submission portal.
-- [ ] After review, rotate the mailbox password, revoke temporary provider access, and revoke the
-  review OAuth grant.
+- [ ] Choose one reviewer-access option:
+  - **Default:** a reviewer signs up with any verified email. A new Treg team receives **$1.00 in
+    free credit**, requires no payment method, and can immediately use platform-provided catalog
+    endpoints.
+  - **Extended testing:** the reviewer sends Superdesign the exact verified Treg email used for
+    sign-in. Superdesign sends an email-bound invitation to `claude-connector-review-org`, which has
+    **$20.00 in review credit**. The invitation is bound to that email; it is not a universal or
+    shareable code.
+- [ ] After review, revoke the review OAuth grant and any temporary provider access used for
+  acceptance calls.
 
 ## Engineering evidence
 
@@ -58,8 +62,8 @@ Anthropic documents custom and directory connectors as using the same runtime. T
 submission.
 
 1. In Claude.ai, add `https://treg.to/mcp/v2/` as a custom connector.
-2. Sign in with the dedicated reviewer mailbox, select the reviewer team, and verify the displayed
-   identity, team, balance, and daily cap.
+2. Sign in with the verified reviewer email using the selected access option, select the resulting
+   team, and verify the displayed identity, team, balance, and daily cap.
 3. Ask Claude to search Treg for backlink endpoints for `example.com`, compare multiple priced
    options, and stop before making a provider call.
 4. Choose one platform-key-enabled GET/HEAD/OPTIONS endpoint priced below $0.01. Ask Claude to run

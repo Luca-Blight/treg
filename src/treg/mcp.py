@@ -985,16 +985,28 @@ async def my_tools(ctx: Context) -> MyToolsOut:
 # arbitrary team-tool paths.
 # --------------------------------------------------------------------------------------------
 
-_DIRECTORY_READS = ToolAnnotations(
+_DIRECTORY_SEARCH = ToolAnnotations(
+    title="Search Treg Catalog",
+    read_only_hint=True, destructive_hint=False, open_world_hint=False, idempotent_hint=True,
+)
+_DIRECTORY_GET = ToolAnnotations(
+    title="Get Catalog Endpoint",
     read_only_hint=True, destructive_hint=False, open_world_hint=False, idempotent_hint=True,
 )
 _DIRECTORY_OPEN_READ = ToolAnnotations(
+    title="Call a Read Endpoint",
     read_only_hint=True, destructive_hint=False, open_world_hint=True, idempotent_hint=False,
 )
 _DIRECTORY_WRITE = ToolAnnotations(
+    title="Call a Write Endpoint",
     read_only_hint=False, destructive_hint=True, open_world_hint=True, idempotent_hint=False,
 )
+_DIRECTORY_BALANCE = ToolAnnotations(
+    title="Check Treg Balance",
+    read_only_hint=True, destructive_hint=False, open_world_hint=False, idempotent_hint=True,
+)
 _DIRECTORY_ADDITIVE = ToolAnnotations(
+    title="Request a Catalog Capability",
     read_only_hint=False, destructive_hint=False, open_world_hint=False, idempotent_hint=False,
 )
 
@@ -1021,7 +1033,7 @@ directory_mcp = MCPServer(
         "Searches Treg's catalog by capability or task words and returns matching endpoint ids, "
         "providers, prices and measured reliability."
     ),
-    annotations=_DIRECTORY_READS,
+    annotations=_DIRECTORY_SEARCH,
     structured_output=True,
 )
 async def directory_catalog_search(query: str, limit: int = 8) -> SearchOut:
@@ -1035,7 +1047,7 @@ async def directory_catalog_search(query: str, limit: int = 8) -> SearchOut:
         "Returns one catalog endpoint's parameters, provider API documentation, price, example "
         "response and measured reliability, plus comparable providers for the same capability."
     ),
-    annotations=_DIRECTORY_READS,
+    annotations=_DIRECTORY_GET,
     structured_output=True,
 )
 async def directory_catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
@@ -1103,7 +1115,7 @@ async def directory_catalog_call_write(
     name="balance",
     title="Check Treg Balance",
     description="Returns the connected team's Treg balance, in-flight holds, team and identity.",
-    annotations=_DIRECTORY_READS,
+    annotations=_DIRECTORY_BALANCE,
     structured_output=True,
 )
 async def directory_balance(ctx: Context) -> BalanceOut:
