@@ -4618,3 +4618,128 @@ USE_CASE_PAGES["a-company-s-email-format"] = {
     "related": ("Find professional emails", "Verify an email before you send",
                 "Enrich a company from its domain", "Find people by role, company or location"),
 }
+
+
+USE_CASE_PAGES["mine-the-comments"] = {
+    "label": "Mine the comments",
+    "sentence": "Social listening API: export the comments on Instagram, YouTube, Reddit and LinkedIn posts as data",
+    "title": "Instagram comment export and social listening API | treg.to",
+    "lede": (
+        "Give your agent a post URL on Instagram, a video on YouTube, a thread on Reddit or a "
+        "post on LinkedIn and get the comments back as rows: author, text, likes, time, "
+        "replies. {n} provider rows across the four platforms answer through one treg.to key, "
+        "each at its own rate with $0.000 added, from a fraction of a cent per call, and on "
+        "YouTube the official API is free on the Google account you already have. This is the "
+        "raw material of social listening, not the dashboard: the rows come back and your "
+        "agent does the reading."),
+    "prompt": "Using treg, get every comment on these three Instagram posts and this YouTube "
+              "video, show me the price per platform first, then group the comments into "
+              "questions, complaints and praise, quote the three most upvoted in each group "
+              "with a link, and tell me how many comments you actually fetched per post.",
+    "prompt_why": [
+        ("Give the post, not the account", "Every row here takes one post, video or thread and returns its comments. Comments by one user across many posts is a different job and no row here does it."),
+        ("Ask for the price per platform", "The four platforms are priced separately and the units differ: per call, per result, per found. Four posts is a worst case before anything runs."),
+        ("Ask for the groups, not the dump", "Three thousand comments is not an answer. The forty that matter are, and that is what the agent is for."),
+        ("Ask how many it fetched", "Comments paginate. A provider that returns the first page and stops is a partial read that looks complete unless the count is on the table."),
+    ],
+    "result_noun": "comment",
+    "result_image": None,
+    "q_cheapest": "What do comments cost, per platform?",
+    "q_reliable": "Which comment API is the most reliable?",
+    "q_compare": "How do the platforms compare?",
+    "what_is_heading": "What is a social listening API?",
+    "what_is": (
+        "Strictly, it is the fetch step of social listening: a call that takes a post and "
+        "returns the public comments under it as structured rows, so software can read them "
+        "instead of a person scrolling. The listening suites sell the whole loop, monitoring, "
+        "alerts, sentiment and a dashboard, by the seat. These rows sell the one part that is "
+        "hard to build, getting the comments off the platform, per call, and leave the "
+        "reading to your agent. On YouTube the official Data API does this for any public "
+        "video on your own key. On Instagram the official API only reaches comments on posts "
+        "you manage, which is why the paid rows exist: they fetch comments on anyone's public "
+        "post. Reddit and LinkedIn have paid rows only."),
+    "notes": [
+        "The four platforms are not the same job, and the prices say so. YouTube is the cheap "
+        "one: TikHub at a tenth of a cent per successful call, and the official API free on "
+        "your own Google account for any public video, ten thousand quota units a day at one "
+        "unit per call. Instagram runs from TikHub, ScrapeCreators and Bright Data at fractions "
+        "of a cent, with the official row free but limited to comments on your own posts. "
+        "Reddit is priced like YouTube. LinkedIn is the dear one, from Aviato at two cents per "
+        "found, and TikHub's LinkedIn row carries no published price yet, so the table prints "
+        "none for it. All of it is the provider's own rate with $0.000 added.",
+        "Units differ across the rows, so read the unit before the number. ScrapeCreators is "
+        "per call, which on a post with a thousand comments means paginating and paying per "
+        "page; Bright Data is per record delivered, so a thousand comments is a thousand "
+        "records; TikHub and JustOneAPI are per successful call. The row labelled treg is the "
+        "routed endpoint: the explicit opt in where you ask treg.to to choose among the "
+        "providers for that platform, your own keys first, and it names the provider that "
+        "served and bills that provider's rate. Every other row is a direct call and the "
+        "choice is yours.",
+        "What no row here does: comments by one user across many posts, which is the question "
+        "the OSINT forums keep asking; comments on a private account; and any promise about "
+        "your own LinkedIn or Instagram login, because none of these rows use one. A "
+        "scraped LinkedIn post is public data fetched by the provider, and LinkedIn's terms "
+        "are LinkedIn's. Several rows on the page have not been called live through treg.to "
+        "yet and say unverified in the table: Bright Data on all three platforms, "
+        "ScrapeCreators on Reddit, TikHub on LinkedIn. Run one post before an agent runs a "
+        "thousand.",
+    ],
+    "faq": [
+        ("Can I get all the comments a particular user has left?",
+         "No. Every row takes a post and returns its comments. There is no row that takes a "
+         "username and returns everything they have written, on any of the four platforms, "
+         "and this page will not pretend one exists."),
+        ("Does the official Instagram API do this for free?",
+         "Only on posts you manage. The Instagram row here is free on your own connected "
+         "account and returns comments on your own posts. Comments on a competitor's post "
+         "need one of the paid rows, which fetch any public post at a fraction of a cent."),
+        ("Is this a replacement for a social listening tool?",
+         "For the fetch, yes, and for cents rather than a seat. For the rest, no: there is no "
+         "alerting, no dashboard and no case management here. The rows return comments, "
+         "your agent reads them, and you decide what to build on top."),
+        ("Will my account get banned?",
+         "Nothing here uses your account except the two official rows, which use it the way "
+         "the platform intends. The paid rows run on the provider's own infrastructure and "
+         "return public data; treg.to holds the provider keys and you never log in anywhere."),
+    ],
+    "voices_intro": (
+        "Of the ~210 Reddit and X posts read in August 2026 about seventy were on the job, and "
+        "eleven vendor clusters were excluded, including one coordinated push across seven X "
+        "accounts and one post with a word joiner hidden inside its words. These five are "
+        "people trying to read comments, not sell a tool."),
+    "voices": [
+        ("The comments of one user, not one post",
+         "Is there a way/tool to find all instagram comments of a particular user?",
+         "r/OSINT, 17 points", "https://www.reddit.com/r/OSINT/comments/zp45ym/is_there_a_waytool_to_find_all_instagram_comments/",
+         "Not through any row on this page, and not through any provider in the catalog. The "
+         "rows go post to comments. Saying so plainly is worth more than a page that lets an "
+         "agent try and fail."),
+        ("Five hundred comments, without a subscription",
+         "Looking for a free open-source tool to scrape Instagram comments (approx. 500)",
+         "r/osinttools, 6 points", "https://www.reddit.com/r/osinttools/comments/1txogbf/looking_for_a_free_opensource_tool_to_scrape/",
+         "Not free, but close: five hundred Instagram comments is a handful of pages at a "
+         "fraction of a cent each, from a prepaid balance that starts with a dollar of credit "
+         "and no card. The open source route works until the platform changes; the paid row "
+         "is somebody else's job to keep working."),
+        ("The fear is the ban, not the fetch",
+         "How can I do a cron job that scrape likes and comments on Instagram without get banned",
+         "r/DataHoarder", "https://www.reddit.com/r/DataHoarder/comments/1qcdcg0/how_can_i_do_a_cron_job_that_scrape_likes_and/",
+         "By not using your account. The paid rows here fetch public posts on the provider's "
+         "side, so there is no session of yours to flag. What they cannot reach is a private "
+         "account, and no row should be expected to."),
+        ("Three thousand comments, forty that matter",
+         "a video with 3,000 comments might have 40 that are actually useful to me and the rest is noise",
+         "r/claude, 3 points", "https://www.reddit.com/r/claude/comments/1ragfjd/im_building_a_youtube_comment_filtering_tool_with/",
+         "That is the whole design of the prompt on this page: fetch cheaply, then have the "
+         "agent group and quote. The fetch is the commodity; the filtering is where the "
+         "reader's own judgement, and the model, earn their keep."),
+        ("People do not say what a dashboard can count",
+         "People won't say 'this product lacks value.' They'll say 'idk man feels overpriced for what it is'",
+         "r/AIAgentsStack, 24 points", "https://www.reddit.com/r/AIAgentsStack/comments/1q57jgj/anyone_else_realizing_social_listening_is_way/",
+         "Which is the case for raw comments over a sentiment score. A keyword dashboard "
+         "misses that sentence; an agent reading the rows does not. The rows are the cheap "
+         "part, and they are what this page sells."),
+    ],
+    "related": ("A video's comments", "Search posts by keyword",
+                "Find creators by keyword", "Posts under a hashtag"),
+}
