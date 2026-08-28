@@ -97,3 +97,59 @@ contracts:
       biography: {type: str}
     miss: "username == null"
     idempotent: true
+
+  # ---- batch 2: people, lookup-shaped (2026-08-28) --------------------------------------------
+  people.phone.find:
+    summary: "Find someone's phone number — treg picks the provider (own keys first, then cheapest per hit) and names the one that served"
+    identity:
+      - {linkedin_url: url}
+      - {email: str}
+      - {full_name: str, domain: str}
+      - {first_name: str, last_name: str, domain: str}
+    derive:
+      full_name: "join(first_name, last_name)"
+      first_name: "split_first(full_name)"
+      last_name: "split_last(full_name)"
+    filters: {}
+    output:
+      phone: {type: str, required: true, note: "as the provider formats it; E.164 when it offers one"}
+      line_type: {type: str}
+      country_code: {type: str}
+    miss: "phone == null"
+    idempotent: true
+
+  people.email.verify:
+    summary: "Verify an email address — treg picks the provider (own keys first, then cheapest) and names the one that served"
+    identity:
+      - {email: str}
+    filters: {}
+    output:
+      valid: {type: bool, required: true, note: "the provider says the mailbox accepts mail"}
+      status: {type: str, note: "the provider's own verdict word (valid | invalid | accept_all | unknown | …)"}
+      score: {type: int}
+    miss: "status == null"
+    idempotent: true
+
+  people.enrich:
+    summary: "Enrich a person from an email, a LinkedIn URL or a name + company domain — treg picks the provider and names the one that served"
+    identity:
+      - {email: str}
+      - {linkedin_url: url}
+      - {full_name: str, domain: str}
+      - {first_name: str, last_name: str, domain: str}
+    derive:
+      full_name: "join(first_name, last_name)"
+      first_name: "split_first(full_name)"
+      last_name: "split_last(full_name)"
+    filters: {}
+    output:
+      full_name: {type: str, required: true}
+      first_name: {type: str}
+      last_name: {type: str}
+      title: {type: str}
+      company: {type: str}
+      company_domain: {type: str}
+      linkedin_url: {type: str}
+      location: {type: str}
+    miss: "full_name == null"
+    idempotent: true

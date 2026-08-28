@@ -47,6 +47,11 @@ class Adapter:
             v = identity.get(field_name)
             if v is None:
                 continue
+            if target.startswith("pathParams."):
+                # `/v1/email-verifier/{email}`: the call path fills placeholders from the query
+                # (`_marketplace_upstream` consumes them), so a path param travels as a query value.
+                query[target.split(".", 1)[1]] = str(v)
+                continue
             P.set_path(doc, target, v if target.startswith("body.") else str(v))
         for target, v in self.const.items():
             P.set_path(doc, target, v)
@@ -125,7 +130,8 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
     tr = endpoint.get("test_request") or {}
     # Reconstruct the identity from the test request through the adapter's own `in` map.
     ident: dict[str, Any] = {}
-    doc = {"queryParams": tr.get("queryParams") or {}, "body": tr.get("body") or {}}
+    doc = {"queryParams": tr.get("queryParams") or {}, "body": tr.get("body") or {},
+           "pathParams": tr.get("pathParams") or {}}
     for field_name, target in adapter.in_map.items():
         v = P.get_path(doc, target)
         if v not in (None, ""):
@@ -134,6 +140,9 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
     if variant is None or adapter_accepts(adapter, ident) is None:
         return False, "test_request does not express an accepted identity variant"
     q, b = adapter.to_upstream(ident)
+    for k, v in (tr.get("pathParams") or {}).items():
+        if k in {t.split(".", 1)[1] for t in adapter.in_map.values() if t.startswith("pathParams.")} and str(q.get(k)) != str(v):
+            return False, f"in: pathParams.{k} → {q.get(k)!r}, test_request has {v!r}"
     for k, v in (tr.get("queryParams") or {}).items():
         if k in {t.split(".", 1)[1] for t in adapter.in_map.values() if t.startswith("queryParams.")} and str(q.get(k)) != str(v):
             return False, f"in: queryParams.{k} → {q.get(k)!r}, test_request has {v!r}"

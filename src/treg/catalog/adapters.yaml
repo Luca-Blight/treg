@@ -210,3 +210,95 @@ adapters:
           nickname: data.creator_info.nickname, followers: data.creator_info.follower_count,
           likes: data.creator_info.like_count}
     miss: "data.creator_info.unique_id == null"
+
+  # ---- people.phone.find --------------------------------------------------------------------
+  tomba.people.phone.find:
+    accepts: [[email], [linkedin_url]]
+    in:  {email: queryParams.email, linkedin_url: queryParams.linkedin}
+    out: {phone: "coalesce(data.e164_format, data.intl_format)", line_type: data.line_type, country_code: data.country_code}
+    miss: "data.e164_format == null"
+  leadsforge.people.phone.find:
+    accepts: [[first_name, last_name, domain], [full_name, domain], [linkedin_url]]
+    in:  {first_name: body.firstName, last_name: body.lastName, domain: body.companyDomain, linkedin_url: body.linkedinURL}
+    out: {phone: phoneNumber}
+    miss: "phoneNumber == null"
+  leadmagic.people.phone.find:
+    accepts: [[linkedin_url], [email]]
+    in:  {linkedin_url: body.profile_url, email: body.work_email}
+    out: {phone: mobile_number, line_type: "'mobile'"}
+    miss: "mobile_number == null"
+  findymail.search.phone:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.linkedin_url}
+    out: {phone: phone, line_type: line_type}
+    miss: "phone == null"
+  aviato.people.phone.find:
+    accepts: [[linkedin_url], [email]]
+    in:  {linkedin_url: queryParams.linkedinURL, email: queryParams.email}
+    out: {phone: "phones[0].phoneNumber"}
+    miss: "phones == []"
+
+  # ---- people.email.verify ------------------------------------------------------------------
+  leadmagic.people.email.verify:
+    accepts: [[email]]
+    in:  {email: body.email}
+    out: {valid: "email_status == 'valid'", status: email_status}
+    miss: "email_status == null"
+  tomba.people.email.verify:
+    accepts: [[email]]
+    in:  {email: pathParams.email}
+    out: {valid: "data.email.status == 'valid'", status: data.email.status, score: data.email.score}
+    miss: "data.email.status == null"
+  hunter.people.email.verify:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {valid: "data.status == 'valid'", status: data.status, score: data.score}
+    miss: "data.status == null"
+
+  # ---- people.enrich ------------------------------------------------------------------------
+  tomba.people.enrich:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {full_name: data.full_name, first_name: data.first_name, last_name: data.last_name, title: data.position,
+          company: data.company, company_domain: data.website_url, linkedin_url: data.linkedin, location: data.country}
+    miss: "data.full_name == null"
+  hunter.people.enrich:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {full_name: data.name.fullName, first_name: data.name.givenName, last_name: data.name.familyName,
+          title: data.employment.title, company: data.employment.name, company_domain: data.employment.domain,
+          linkedin_url: data.linkedin.handle, location: "coalesce(data.location, data.geo.country)"}
+    miss: "data.name.fullName == null"
+  # hunter.x.combined-find: no adapter — its captured example truncates data.person.name, so `out`
+  # cannot be fixture-verified; hunter.people.enrich covers the same identity.
+  leadmagic.people.enrich:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.profile_url}
+    out: {full_name: full_name, first_name: first_name, last_name: last_name, title: professional_title,
+          company: company_name, company_domain: company_website, linkedin_url: profile_url, location: location}
+    miss: "full_name == null"
+  icypeas.people.enrich:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {full_name: "join(result.firstname, result.lastname)", first_name: result.firstname, last_name: result.lastname,
+          title: result.headline, company: "result.worksFor[0].name", linkedin_url: result.url,
+          location: result.address.addressLocality}
+    miss: "result == null"
+  pdl.people.enrich:
+    accepts: [[email], [linkedin_url], [full_name, domain]]
+    in:  {email: queryParams.email, linkedin_url: queryParams.profile, full_name: queryParams.name, domain: queryParams.company}
+    out: {full_name: data.full_name, first_name: data.first_name, last_name: data.last_name, title: data.job_title,
+          company: data.job_company_name, company_domain: data.job_company_website, linkedin_url: data.linkedin_url,
+          location: data.location_name}
+    miss: "data.full_name == null"
+  companyenrich.people.lookup:
+    accepts: [[email]]
+    in:  {email: body.email}
+    out: {full_name: name, first_name: first_name, last_name: last_name, title: position,
+          linkedin_url: socials.linkedin_url, location: location.address}
+    miss: "name == null"
+  aviato.people.enrich:
+    accepts: [[linkedin_url], [email]]
+    in:  {linkedin_url: queryParams.linkedinURL, email: queryParams.email}
+    out: {full_name: fullName, linkedin_url: URLs.linkedin}
+    miss: "fullName == null"
