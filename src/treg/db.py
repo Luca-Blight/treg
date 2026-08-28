@@ -613,11 +613,29 @@ def _rebuild_user_table(conn) -> None:
 
 
 async def reset_db() -> None:
-    """Drop + recreate all tables. Test-only: gives each test a clean registry."""
+    """Give each test a clean registry, preserving an existing Postgres schema."""
     from . import models  # noqa: F401
 
     await _engine.dispose()
     async with _engine.begin() as conn:
+        if "sqlite" in _db_url:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+            await conn.run_sync(SQLModel.metadata.create_all)
+            return
+
+        expected = {table.name for table in SQLModel.metadata.sorted_tables}
+        existing = await conn.run_sync(lambda sync_conn: set(inspect(sync_conn).get_table_names()))
+        if expected.issubset(existing):
+            # Rebuilding dozens of tables and indexes at every test boundary floods a containerized
+            # Postgres with DDL and WAL. Hosted-runner storage can then stall an unrelated commit for
+            # minutes. TRUNCATE keeps the production-shaped schema while rows and identities reset.
+            quote = conn.dialect.identifier_preparer.quote
+            tables = ", ".join(quote(name) for name in sorted(expected))
+            await conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+            return
+
+        # Schema-specific tests may deliberately remove tables. Rebuild the complete current shape
+        # when that happens; ordinary test boundaries take the TRUNCATE path above.
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
 

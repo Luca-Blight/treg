@@ -18,6 +18,8 @@ from httpx import AsyncClient
 from sqlalchemy import update
 
 from treg import api as A
+from treg.application.call import service as call_service
+from treg.routers import call as call_routes
 from treg import crypto
 from treg.config import get_settings
 from treg.db import session_maker
@@ -102,7 +104,7 @@ async def test_read_settles_per_resource_returned(clients: AsyncClient, billed_o
     """Asked for 10, got 2: the hold is the estimate (10 × $0.005) but the charge is the response
     (2 × $0.005) — X bills per resource returned and so do we."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(200, b'{"data": [{}, {}]}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(200, b'{"data": [{}, {}]}'))
     before = await _balance(clients)
     r = await clients.get(f"/call/{POSTS}?id=42&max_results=10")
     assert r.status_code == 200, r.text
@@ -119,7 +121,7 @@ async def test_read_settles_per_resource_returned(clients: AsyncClient, billed_o
 
 async def test_empty_page_settles_at_zero(clients: AsyncClient, billed_on, monkeypatch):
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(200, b'{"data": []}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(200, b'{"data": []}'))
     before = await _balance(clients)
     r = await clients.get(f"/call/{POSTS}?id=42&max_results=10")
     assert r.status_code == 200, r.text
@@ -129,7 +131,7 @@ async def test_empty_page_settles_at_zero(clients: AsyncClient, billed_on, monke
 
 async def test_upstream_5xx_releases_the_hold(clients: AsyncClient, billed_on, monkeypatch):
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(503, b"upstream sad"))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(503, b"upstream sad"))
     before = await _balance(clients)
     r = await clients.get(f"/call/{POSTS}?id=42&max_results=10")
     assert r.status_code == 503
@@ -145,7 +147,7 @@ async def test_url_passthrough_is_priced_off_the_matched_endpoint(
     """Calling the URL directly must not be a discount door: /2/users/me lands on the curated
     profile read and bills its per_result $0.010."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(200, b'{"data": {"id": "1"}}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(200, b'{"data": {"id": "1"}}'))
     r = await clients.get("/call/https://api.x.com/2/users/me")
     assert r.status_code == 200, r.text
     assert int(r.headers["x-treg-cost-micro"]) == PROFILE_MICRO
@@ -159,7 +161,7 @@ async def test_unmatched_passthrough_gets_the_default_read_rate(
     """A route the catalog doesn't know still costs treg money — the provider-level default
     ($0.005/result) covers it, settled against the resources that actually came back."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(200, b'{"data": [{}, {}, {}]}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(200, b'{"data": [{}, {}, {}]}'))
     r = await clients.get("/call/https://api.x.com/2/nonexistent/route?max_results=50")
     assert r.status_code == 200, r.text
     assert int(r.headers["x-treg-cost-micro"]) == 3 * POST_MICRO
@@ -170,7 +172,7 @@ async def test_unmatched_passthrough_gets_the_default_read_rate(
 # ---- writes ------------------------------------------------------------------------------------
 async def test_post_create_is_per_call(clients: AsyncClient, billed_on, monkeypatch):
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(201, b'{"data": {"id": "1", "text": "hi"}}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(201, b'{"data": {"id": "1", "text": "hi"}}'))
     r = await clients.post("/call/x.x.post.create",
                            json={"text": "Shipping something new today."})
     assert r.status_code == 201, r.text
@@ -181,7 +183,7 @@ async def test_post_with_url_prices_13x(clients: AsyncClient, billed_on, monkeyp
     """$0.015 → $0.20 when the text carries a URL — the single biggest mispricing risk, sniffed
     from the body at estimate time."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _stub_relay(201, b'{"data": {"id": "1"}}'))
+    monkeypatch.setattr(call_service, "relay", _stub_relay(201, b'{"data": {"id": "1"}}'))
     r = await clients.post("/call/x.x.post.create",
                            json={"text": "read this: https://example.com/post"})
     assert r.status_code == 201, r.text
@@ -222,12 +224,15 @@ def test_billed_endpoint_match_prefers_exact_over_template():
 def _stub_relay(status_code: int, body: bytes):
     """A relay stand-in returning a fixed upstream outcome (same shape as
     test_marketplace_call._fake_relay — duplicated to keep the two files importable alone)."""
-    from fastapi.responses import StreamingResponse
+    from treg.application.call.types import UpstreamResponse
 
     async def _relay(request, upstream_url, tool, secrets, client, drop_params=None, force_identity=False):
         async def _stream():
             yield body
 
-        return StreamingResponse(_stream(), status_code=status_code)
+        async def _close():
+            return None
+
+        return UpstreamResponse(status_code, (), _stream(), _close)
 
     return _relay

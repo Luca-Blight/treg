@@ -45,6 +45,9 @@ sources:
   - src/treg/catalog/google-tag-manager.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
+  - src/treg/domain/catalog/__init__.py
+  - src/treg/domain/catalog/store.py
+  - src/treg/domain/catalog/stats.py
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
@@ -902,7 +905,7 @@ the core file's paths are relative to it (`/serp/google/organic/live/regular`). 
 two spellings — every DataForSEO route curated in core is also present in the extended file under
 a different id. Fixing that belongs in `catalog_ingest.py` and needs a regeneration.
 
-## Choosing between providers (`endpoint_stats.py`)
+## Choosing between providers (`domain/catalog/stats.py`)
 
 307 capabilities are served by more than one provider, and prices inside one capability differ by up
 to **261×**. So "which provider" is a real decision, made on every call.

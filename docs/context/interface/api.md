@@ -4,9 +4,21 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/bootstrap_handlers.py
   - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
+  - src/treg/client_identity.py
   - src/treg/application/auth.py
+  - src/treg/application/call/authorize.py
+  - src/treg/application/call/idempotency.py
+  - src/treg/application/call/intake.py
+  - src/treg/application/call/resolve.py
+  - src/treg/application/call/reserve.py
+  - src/treg/application/call/settle.py
+  - src/treg/application/call/evidence.py
+  - src/treg/application/call/service.py
+  - src/treg/application/call/types.py
+  - src/treg/infra/upstream/relay.py
   - src/treg/application/connect.py
   - src/treg/application/onboard.py
   - src/treg/application/referrals.py
@@ -16,6 +28,7 @@ sources:
   - src/treg/routers/auth.py
   - src/treg/routers/auth_helpers.py
   - src/treg/routers/billing.py
+  - src/treg/routers/call.py
   - src/treg/routers/catalog.py
   - src/treg/routers/connections.py
   - src/treg/routers/onboard.py
@@ -26,10 +39,14 @@ sources:
   - src/treg/routers/web.py
   - src/treg/domain/identity/access.py
   - src/treg/domain/governance/teams.py
+  - src/treg/domain/governance/access.py
+  - src/treg/domain/governance/budgets.py
+  - src/treg/domain/governance/publicdemo.py
+  - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
   - src/treg/timeutil.py
-  - src/treg/catalog_store.py
+  - src/treg/domain/catalog/store.py
   - src/treg/email.py
   - src/treg/runner.py
   - src/treg/ratestore.py
@@ -69,12 +86,13 @@ middleware skips decoding and replays each consumed partial-body message followe
 disconnect.
 
 ## `X-Treg-Error` — whose refusal is this?
-`_mark_treg_own_errors` (an `@app.exception_handler(StarletteHTTPException)`) tags treg's **own**
+`bootstrap_handlers._mark_treg_own_errors` tags treg's **own**
 refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as before — the status and body
 are untouched, and a client that ignores the header sees what it always saw. Without it a caller cannot
 tell treg's 404 ("no tool registered for that host") from the vendor's own 404: both are a status and
 some JSON. The [local proxy](../architecture/local-proxy.md) needs that distinction to explain a failure
-without ever rewriting a real vendor response.
+without ever rewriting a real vendor response. `application.call` failures carry a mechanism `kind`
+and separately mapped `blame`; the compatibility header remains the literal `1`.
 
 Resolution refusals are actionable: a named miss that resembles one of the caller's usable own tools
 returns a structured `detail` with `hint` and `did_you_mean`, including after a real catalog endpoint
@@ -461,7 +479,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   stripe tool is a real wire); `demo_sandbox_skill` (`GET /demo/sandbox/skill`) exports what the visitor
   built. `skill_samples` (`GET /skills/samples`, open) + `skill_install`
   (`GET /skills/{name}/install.sh?token=`) host sample skills. `call_tool` short-circuits **sandbox**
-  orgs to `sandbox.synthesize` (real injection, no network). Caps via `_enforce_sandbox_cap`. Full
+  orgs to `sandbox.synthesize` (real injection, no network). Caps via
+`domain.governance.sandbox.enforce_sandbox_cap`. Full
   behavior: [landing-sandbox](landing-sandbox.md).
   - **The one live wire (real Stripe demo).** When `demo_stripe_key` is set, a sandbox call to the exact
     seeded `stripe` tool (fingerprint-matched by `demo_sandbox.is_live_tool`, GET/POST only) is relayed
@@ -485,7 +504,9 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   (every mutation is frozen no matter what routes are added later), and `require_identity` refuses the
   token entirely (it must never act as a user — mint identity tokens, create orgs, accept invites). Its
   `/call` traffic is metered per client IP (`_enforce_public_demo_ip_cap`, `PUBLIC_DEMO_HIT_NS`,
-  ~10 calls/min/IP) since one token stands in for thousands of strangers.
+  ~10 calls/min/IP) since one token stands in for thousands of strangers. The limiter and its
+  constants share the `domain.governance.publicdemo` owner; the API commits its ratestore write before
+  translating a semantic exhaustion result to 429.
 - **Skills / bundles:** `register_skill` (`POST /skills`) composes a `Bundle` + its secrets + tools
   atomically, resolving each binding's `secret` local-name to the created secret id; the shared core is
   `_register_skill_bundle` (also used by the folder importer). `list_bundles`, `get_bundle`,
@@ -574,9 +595,10 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
-- **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
-  catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
-  per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
+- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) captures a framework-neutral
+  `CallInput` → `application.call.service.execute_call` → `application.call.resolve` → (on a dotted 404,
+  catalog lookup + retirement gate + credential ladder) → `application.call.authorize` (tool/project ACL,
+  deny, per-user cap, then public-demo rate cap) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
   connection** → `relay()` → `audit.record_call`. A pool that has no slot within 5 s answers
   `503 {"treg_saturated": true}` + `Retry-After: 2` (`_pool_saturated`, the handler for

@@ -7,12 +7,17 @@ sources:
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
   - src/treg/application/signup.py
+  - src/treg/domain/governance/access.py
+  - src/treg/domain/governance/budgets.py
+  - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
+  - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/access.py
   - src/treg/domain/identity/session.py
   - src/treg/routers/auth.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
+  - src/treg/domain/tools/bundles.py
   - src/treg/db.py
   - tests/test_router_dependencies.py
 related:
@@ -66,7 +71,7 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   (creator email) is kept for audit + the member role gate. `Tool.name` is unique **per `(org_id, name)`**
   (`UniqueConstraint("org_id", "name")`), so two orgs may reuse a name.
 
-## Enforcement (`domain.identity.access`, consumed by `api.py` and routers)
+## Enforcement (`domain.identity.access` and `domain.governance.access`)
 - **`require_member`** resolves `X-Treg-Token` → a `Membership` → a `Caller` (`membership, user, org`,
   with `org_id`/`email`/`role` properties). 401 if the token matches no membership.
 - **`_role_at_least` + `_can_manage`**: admin/owner may manage any resource in the org; a member only
@@ -84,7 +89,8 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   to NULL** so a fully-checked member keeps auto-getting new tools. It's an **explicit allow-list**: a
   *customized* member does NOT auto-get a newly-registered tool (the dashboard toasts a reminder). `Invite`
   carries `tool_access`/`local_run_enabled` (validated at `create_invite`) → copied onto the membership at
-  both accept doors. `list_members` returns both fields.
+  both accept doors. `list_members` returns both fields. ACL refusal details originate as
+  `AccessPolicyError`; call, run, and resource HTTP surfaces translate them to the same 403 response.
 - **Agents (`create_agent` / `list_agents` / `revoke_agent`, `/orgs/{id}/agents`, admin+).** Mints a
   member identity for a machine caller, reusing the `create_public_token` recipe (re-POST the same name
   **rotates** — the old token dies there; revoke deletes the membership). Three invariants, each closing

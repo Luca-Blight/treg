@@ -15,6 +15,7 @@ sources:
   - src/treg/analytics.py
   - src/treg/ratestore.py
   - src/treg/application/auth.py
+  - tests/test_postgres_reset.py
 related:
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
@@ -215,8 +216,11 @@ columns (A17–A20) — guarded by a column-existence check, so it is idempotent
 **Postgres BOOLEAN default fix:** boolean columns added here use `DEFAULT false`, never `DEFAULT 0` —
 Postgres rejects an integer default on a `BOOLEAN` column (SQLite accepts both, so the test suite alone
 cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BOOLEAN NOT NULL DEFAULT
-false`. `reset_db()` is test-only (dispose the loop-bound pool, then drop +
-recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
+false`. `reset_db()` is test-only: it disposes the loop-bound pool, then recreates the SQLite schema
+or truncates every application table with identities reset on Postgres. Avoiding per-test Postgres
+DDL keeps the hosted-runner database from accumulating schema WAL until an unrelated commit stalls.
+Schema-specific tests that remove tables still trigger a full rebuild. `get_session()` is the FastAPI
+dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout.
 Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as_naive`, re-exported

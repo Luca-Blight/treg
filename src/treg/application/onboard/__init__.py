@@ -14,6 +14,7 @@ from ...config import get_settings
 from ...db import session_maker
 from ...domain.identity.access import _norm_email
 from ...models import Invite, Org, User
+from ...sandbox_identity import visitor_name
 
 
 # These aliases preserve demo.reset's relative model import; without them the package move breaks resolution.
@@ -93,10 +94,8 @@ async def accept_teammate(*, org_id: int, email: str) -> dict:
 
 
 async def mint_sandbox(*, client_ip: str) -> dict:
-    from ... import sandbox as sandbox_runtime
     from . import sandbox as landing_sandbox
 
-    landing_sandbox.visitor_name = sandbox_runtime.visitor_name
     async with session_maker() as db:
         await ratestore.sweep(db, SANDBOX_HIT_NS)
         allowed = await ratestore.rate_check(
@@ -117,7 +116,7 @@ def sandbox_live_facts(org: Org) -> dict:
     if not sandbox_runtime.is_sandbox(org):
         raise SandboxError("sandbox_only_live")
     return {"live": bool(get_settings().demo_stripe_key),
-            "visitor": sandbox_runtime.visitor_name(org.slug)}
+            "visitor": visitor_name(org.slug)}
 
 
 async def accept_stripe_event(

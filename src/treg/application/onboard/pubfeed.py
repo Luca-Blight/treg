@@ -22,6 +22,8 @@ import time
 from collections import deque
 from collections.abc import AsyncIterator
 
+from ...sandbox_identity import ADJECTIVES, ANIMALS, visitor_name
+
 FEED_MAX = 20               # replayed to a fresh subscriber
 KEEPALIVE_S = 25            # SSE comment ping so proxies don't reap the idle stream
 SIG_TOLERANCE_S = 300       # reject webhook timestamps older than this (replay guard)
@@ -35,23 +37,12 @@ _subscribers: set[asyncio.Queue] = set()
 # ONLY when both words come from these exact lists (numbers ≤999). Anything else falls back to a
 # name DERIVED from the charge id — so every row gets a friendly identity and hand-typed text can
 # never reach the page. Keep these lists in sync with LIVE_ADJ/LIVE_ANIMAL in web/landing.html.
-ADJECTIVES = (
-    "swift", "brave", "calm", "clever", "cosmic", "daring", "eager", "fuzzy",
-    "gentle", "golden", "happy", "jolly", "lucky", "mellow", "mighty", "neon",
-    "nifty", "plucky", "proud", "quick", "shiny", "snappy", "solar", "sunny",
-)
-ANIMALS = (
-    "otter", "fox", "lynx", "panda", "koala", "falcon", "heron", "badger",
-    "dolphin", "gecko", "ibis", "jaguar", "kiwi", "lemur", "marmot", "narwhal",
-    "ocelot", "puffin", "quokka", "raven", "seal", "tapir", "walrus", "wombat",
-)
 
 
 def _derived_name(charge_id: str) -> str:
     """A deterministic wordlist name from the charge id — the safe fallback for any charge whose
     description wasn't (or was tampered to not be) one of ours."""
-    h = int(hashlib.sha256(charge_id.encode()).hexdigest(), 16)
-    return f"{ADJECTIVES[h % len(ADJECTIVES)]}-{ANIMALS[(h // 100) % len(ANIMALS)]}-{h % 1000}"
+    return visitor_name(charge_id)
 
 
 def _is_wordlist_name(s) -> bool:

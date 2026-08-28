@@ -3,6 +3,7 @@ title: Landing sandbox studio — anonymous try-it, hosted skills, CLI installer
 status: shipped
 sources:
   - src/treg/sandbox.py
+  - src/treg/sandbox_identity.py
   - src/treg/pubfeed.py
   - src/treg/application/onboard/pubfeed.py
   - src/treg/application/onboard/sandbox.py
@@ -69,7 +70,7 @@ The visitor holds that token and calls the **same product endpoints** the dashbo
 `POST /secrets`, `POST /tools`, `/call/*` — so it is a genuine registry, not a mock.
 
 ## Safety: sandbox calls never touch the network (except the one live wire)
-`call_tool` in `api.py` checks `demo_sandbox.is_sandbox(caller.org)` and, for a sandbox, short-circuits to
+`application.call.service` checks `demo_sandbox.is_sandbox(caller.org)` and, for a sandbox, short-circuits to
 `sandbox.synthesize(...)` instead of `relay()`. `synthesize` runs the **real** `injectors.inject` to
 compute exactly what treg would send upstream (the injected header/query), then returns a **labelled
 dummy** response — brand-shaped via `SAMPLE_BODIES` (Stripe charge list / PostHog events). So the
@@ -80,7 +81,7 @@ sandbox token from reaching any tool it didn't register.
 ## The one live wire (real Stripe test charges)
 There is a single deliberate exception, gated on env `TREG_DEMO_STRIPE_KEY` (`settings.demo_stripe_key`,
 a Stripe **restricted test key** limited to Charges). When it is set, a sandbox call to the exact seeded
-stripe tool relays for real. `call_tool` matches the tool with `demo_sandbox.is_live_tool(tool)` — a strict
+stripe tool relays for real. The call use case matches the tool with `demo_sandbox.is_live_tool(tool)` — a strict
 fingerprint (`LIVE_HOST == "api.stripe.com"` and `base_url.rstrip("/") == LIVE_BASE
 == "https://api.stripe.com/v1/charges"`) — and, for `GET`/`POST` only, calls `_relay_live_demo(...)`. That
 helper is intentionally narrower than `relay()`: form-encoded only, the `Authorization: Bearer` header is
@@ -90,8 +91,8 @@ feed is always ours. Because the match is exact, editing the tool (base_url, bin
 stop matching and **fall through to `synthesize`** — there is no key in the sandbox org to exfiltrate.
 Two guards keep the demo intact: `_require_not_live_demo_tool` / `_require_not_live_demo_secret` refuse edits
 or deletes of the seeded `stripe` tool and its `STRIPE_KEY` while the wire is on (visitor-created tools stay
-fully editable). `visitor_name` and `is_live_tool` live in `sandbox.py`; the wordlists (`ADJECTIVES`/
-`ANIMALS`) are imported from `pubfeed.py` (leaf module, no import cycle). `mint()` returns the visitor name;
+fully editable). `is_live_tool` lives in `sandbox.py`; `visitor_name` and its wordlists (`ADJECTIVES`/
+`ANIMALS`) live in the neutral `sandbox_identity.py` leaf. `mint()` returns the visitor name;
 `POST /demo/sandbox` adds `"live"` and `GET /demo/sandbox/live` (`demo_sandbox_live`) reports `{live, visitor}`
 for a reused sandbox (the browser keeps one across reloads via `localStorage`, so it may predate the mint that
 carried these facts). The front-end live pane (`liveSnippets`, the `SBX` state) shows the visitor a copyable

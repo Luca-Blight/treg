@@ -17,6 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
 from . import adsconv, analytics, audit
+from . import bootstrap_handlers
 from .bootstrap_http import (
     _BodyDecodeMiddleware,
     _LegacyHostRedirectMiddleware,
@@ -24,6 +25,7 @@ from .bootstrap_http import (
 )
 from .config import get_settings
 from .db import init_db, session_maker
+from .routers import call as call_routes
 
 
 AppRole = Literal["all", "dataplane", "control"]
@@ -458,8 +460,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
     app.add_middleware(_SecurityHeadersMiddleware)
     app.add_middleware(_BodyDecodeMiddleware)
     app.add_exception_handler(OverflowError, api_module._id_out_of_range)
-    app.add_exception_handler(PoolTimeoutError, api_module._pool_saturated)
-    app.add_exception_handler(StarletteHTTPException, api_module._mark_treg_own_errors)
+    bootstrap_handlers._stamp_call_exit = call_routes._stamp_call_exit
+    app.add_exception_handler(PoolTimeoutError, bootstrap_handlers._pool_saturated)
+    app.add_exception_handler(StarletteHTTPException, bootstrap_handlers._mark_treg_own_errors)
 
     _include_role_routes(app, api_module, role)
     _install_head_and_openapi(app)

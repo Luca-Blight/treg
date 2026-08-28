@@ -11,12 +11,14 @@ import asyncio
 
 import httpx
 import pytest
-from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from treg import api as A, ledger
+from treg.application.call import service as call_service
+from treg.application.call.types import GatewayFailed
+from treg.routers import call as call_routes
 from treg.api import app
 from treg.db import session_maker
 from treg.models import Hold, IdempotentCall, LedgerEntry
@@ -225,7 +227,7 @@ async def test_repeated_cancellation_cannot_interrupt_compensation(
     original_http = app.state.http
     original_commit = AsyncSession.commit
     original_delete = AsyncSession.delete
-    original_release = ledger.release
+    original_release = ledger.release_in_transaction
     cleanup_commit_reached = asyncio.Event()
     allow_cleanup_commit = asyncio.Event()
     claim_commit_reached = asyncio.Event()
@@ -250,7 +252,7 @@ async def test_repeated_cancellation_cannot_interrupt_compensation(
             await allow_claim_commit.wait()
         await original_commit(db)
 
-    monkeypatch.setattr(ledger, "release", _tag_cancelled_release)
+    monkeypatch.setattr(ledger, "release_in_transaction", _tag_cancelled_release)
     monkeypatch.setattr(AsyncSession, "delete", _tag_claim_delete)
     monkeypatch.setattr(AsyncSession, "commit", _gate_cleanup_commit)
     app.state.http = tracked
@@ -310,7 +312,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
         await never_resolve.wait()
         return await original_resolve(*args, **kwargs)
 
-    monkeypatch.setattr(A, "_resolve_call", _blocked_resolve)
+    monkeypatch.setattr(call_service, "_resolve_call", _blocked_resolve)
     task = asyncio.create_task(clients.get(
         f"/call/{EP}?aweme_id=pre-reserve",
         headers={"Idempotency-Key": key},
@@ -328,7 +330,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
             await asyncio.gather(task, return_exceptions=True)
 
     assert await _idempotency_claim(key) is None
-    monkeypatch.setattr(A, "_resolve_call", original_resolve)
+    monkeypatch.setattr(call_service, "_resolve_call", original_resolve)
     retry = await clients.get(
         f"/call/{EP}?aweme_id=pre-reserve",
         headers={"Idempotency-Key": key},
@@ -339,7 +341,8 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
 @pytest.mark.parametrize(
     ("failure", "first_reason"),
     [
-        (HTTPException(status_code=502, detail="upstream failed"), "call_failed_502"),
+        (GatewayFailed(
+            "connect_failed", status_code=502, detail="upstream failed"), "call_failed_502"),
         (RuntimeError("call path crashed"), "call_crashed"),
     ],
     ids=["call-failed", "call-crashed"],
@@ -352,7 +355,7 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
     release_commit_reached = asyncio.Event()
     never_finish_first_release = asyncio.Event()
     original_commit = AsyncSession.commit
-    original_release = ledger.release
+    original_release = ledger.release_in_transaction
     gated = False
     call_id: str | None = None
 
@@ -374,8 +377,8 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
             await never_finish_first_release.wait()
         await original_commit(db)
 
-    monkeypatch.setattr(A, "relay", _fail_relay)
-    monkeypatch.setattr(ledger, "release", _tag_first_release)
+    monkeypatch.setattr(call_service, "relay", _fail_relay)
+    monkeypatch.setattr(ledger, "release_in_transaction", _tag_first_release)
     monkeypatch.setattr(AsyncSession, "commit", _gate_first_release)
     task = asyncio.create_task(clients.get(
         f"/call/{EP}?aweme_id=failure-release",

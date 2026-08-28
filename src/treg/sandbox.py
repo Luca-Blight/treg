@@ -19,13 +19,12 @@ them distinct from the onboarding demo teams (also `demo`, but team-named). Self
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 
 from . import crypto, injectors
 from .models import Org, Secret, Tool
-from .pubfeed import ADJECTIVES as _ADJ, ANIMALS as _ANIMALS  # wordlists shared with the live feed (leaf module, no cycle)
+from .sandbox_identity import visitor_name
 
 # ---- the ONE live wire ----------------------------------------------------------------------
 # The seeded stripe tool above is special: when TREG_DEMO_STRIPE_KEY is configured, a sandbox call
@@ -41,13 +40,6 @@ def is_live_tool(tool: Tool) -> bool:
     """Does this sandbox tool match the seeded live-wire fingerprint exactly?"""
     return tool.host == LIVE_HOST and (tool.base_url or "").rstrip("/") == LIVE_BASE
 
-
-def visitor_name(slug: str) -> str:
-    """Deterministic adjective-animal-nn identity for a sandbox org, derived from its slug. The
-    server injects it into every live charge as `metadata[visitor]`, overriding anything the
-    caller sent — so the name on the landing feed is always server-chosen."""
-    h = int(hashlib.sha256((slug or "").encode()).hexdigest(), 16)
-    return f"{_ADJ[h % len(_ADJ)]}-{_ANIMALS[(h // 100) % len(_ANIMALS)]}-{h % 1000}"
 
 # Brand-shaped dummy payloads so "what the API received" feels like the real endpoint (keyed by host).
 SAMPLE_BODIES = {
@@ -102,11 +94,6 @@ def synthesize(method: str, upstream_url: str, tool: Tool, secrets: dict[int, Se
 
 
 
-
-from .application.onboard import sandbox as _sandbox_management
-
-# Mint and the call path share one visitor identity generator until Stage 4b assigns a neutral owner.
-_sandbox_management.visitor_name = visitor_name
 
 from .application.onboard.sandbox import (
     DEFAULTS,

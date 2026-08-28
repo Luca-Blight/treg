@@ -325,6 +325,37 @@ async def test_reserve_reaps_stale_holds_first(c: AsyncClient):
     assert await _assert_invariant(org_id) == promo - 1_000
 
 
+async def test_reaped_refund_survives_a_following_application_owned_402(c: AsyncClient):
+    """Lazy reap is its own committed phase, not part of the new reservation transaction."""
+    from datetime import timedelta
+
+    org_id, _ = await _org(c)
+    promo = get_settings().promo_grant_micro
+    failed_call_id = "reserve-after-reap-402"
+    async with session_maker() as db:
+        stranded = await ledger.reserve(db, org_id, "e.crashed", promo)
+        row = await db.get(Hold, stranded)
+        row.created_at = row.created_at - timedelta(seconds=ledger.hold_ttl_s() + 5)
+        db.add(row)
+        await db.commit()
+
+    async with session_maker() as db:
+        with pytest.raises(ledger.InsufficientBalance):
+            await ledger.reserve_in_transaction(
+                db, org_id, "e.too-expensive", promo + 1, call_id=failed_call_id)
+        await db.rollback()
+
+    assert await _assert_invariant(org_id) == promo
+    async with session_maker() as db:
+        assert await ledger.open_holds_of(db, org_id) == []
+        entries = await ledger.entries_of(db, org_id)
+    releases = [entry for entry in entries if entry.kind == "release"]
+    assert len(releases) == 1
+    assert releases[0].call_id == stranded
+    assert releases[0].meta["reason"] == "stale_hold_reaped"
+    assert not [entry for entry in entries if entry.call_id == failed_call_id]
+
+
 # ---- margin ------------------------------------------------------------------------------------
 async def test_margin_is_applied_at_reserve_and_settle(c: AsyncClient, monkeypatch):
     """Margin lives in the ledger (not the call sites) and is recorded on every entry, so a later
