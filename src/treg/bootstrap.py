@@ -16,7 +16,7 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
-from . import adsconv, analytics, audit
+from . import adsconv, analytics, archive, audit
 from . import bootstrap_handlers
 from .bootstrap_http import (
     _BodyDecodeMiddleware,
@@ -241,6 +241,10 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/admin/reconcile/drift', ('GET',), 'admin_reconcile_drift'),
     ('/admin/reconcile/spend', ('GET',), 'admin_reconcile_spend'),
     ('/admin/reconcile/repeats', ('GET',), 'admin_reconcile_repeats'),
+    ('/admin/archive', ('GET',), 'admin_archive'),
+    ('/admin/archive/keys', ('GET',), 'admin_archive_keys'),
+    ('/admin/archive/body', ('GET',), 'admin_archive_body'),
+    ('/admin/archive/panel', ('GET',), 'admin_archive_panel'),
     ('/admin/referrals', ('GET',), 'admin_referrals'),
     ('/catalog/endpoints/{endpoint_id}/access', ('GET',), 'catalog_endpoint_access'),
     ('/run', ('POST',), 'run_tool_server'),
@@ -422,6 +426,14 @@ def _lifespan(api_module, role: AppRole):
             if ROLE_BACKGROUND_TASKS[role] and adsconv.enabled()
             else None
         )
+        # The archive's refresh worker (docs/context/architecture/archive.md): serve mode only,
+        # and a zero daily cap disables it without touching serving. Same discipline as the ads
+        # task — in-process, cancelled on shutdown, a bad pass never kills the loop.
+        archive_task = (
+            asyncio.create_task(archive.refresh_worker(app.state.http))
+            if ROLE_BACKGROUND_TASKS[role] and archive.worker_enabled()
+            else None
+        )
         endpoint_observations = app.state.endpoint_observation_reader
         mcp_reader_bound = role != "control" and _mcp is not None
         if mcp_reader_bound:
@@ -438,11 +450,14 @@ def _lifespan(api_module, role: AppRole):
         finally:
             if ads_task is not None:
                 ads_task.cancel()
+            if archive_task is not None:
+                archive_task.cancel()
             if mcp_reader_bound:
                 _mcp.clear_endpoint_observation_reader(endpoint_observations)
             await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()
+            await archive.drain()
             await app.state.http.aclose()
 
     return lifespan

@@ -660,6 +660,9 @@ async def list_calls(
             "endpoint_id": c.endpoint_id,
             "provider": c.provider,
             "credential_tier": c.credential_tier,
+            # The archive answered instead of the vendor; the money columns are still identical to
+            # a live call on purpose (docs/context/architecture/archive.md).
+            "cached": c.cached,
             "cost_estimated_micro": c.cost_estimated_micro,
             "cost_observed_micro": c.cost_observed_micro,
             "cost_charged_micro": c.cost_charged_micro,

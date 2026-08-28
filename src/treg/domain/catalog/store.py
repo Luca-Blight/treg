@@ -239,9 +239,16 @@ def _parse(directory: Path) -> Catalog:
                            ("docs", (doc.get("source") or {}).get("docs"))):
             if value and not meta.get(key):
                 meta[key] = str(value)
+        # The provider's cache policy (docs/context/architecture/archive.md): one licence judgment
+        # at the file header covers every endpoint below it; an endpoint's own `cache:` overrides.
+        # Kept as the dict/provenance form, not stringified — archive.policy reads `mode` from it.
+        if doc.get("cache") and not meta.get("cache"):
+            meta["cache"] = doc["cache"]
         for raw in doc.get("endpoints") or []:
             if not isinstance(raw, dict) or not raw.get("id"):
                 continue
+            if "cache" not in raw and meta.get("cache") is not None:
+                raw = {**raw, "cache": meta["cache"]}
             ep = _normalize(raw, provider, directory)
             if ep["id"] in by_id:  # first file wins; ids are unique by validator contract
                 continue
@@ -416,6 +423,9 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # Absent `tier` means core: the curated first wave predates the split, and treating an
         # unmarked endpoint as extended would hide it from the platform view entirely.
         "tier": raw.get("tier") or "core",
+        # The archive's per-endpoint cache policy (absent ⇒ forbidden — see archive.policy);
+        # inherited from the file header unless the endpoint declares its own.
+        "cache": raw.get("cache"),
         "verified": str(verified) if verified else None,
         # {status, means} — a status the provider uses for "asked and answered: no result" (PDL
         # 404s a person it has no record of). Only endpoints with evidenced miss semantics carry
