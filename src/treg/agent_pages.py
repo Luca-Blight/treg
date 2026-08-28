@@ -4627,7 +4627,7 @@ USE_CASE_PAGES["mine-the-comments"] = {
     "lede": (
         "Give your agent a post URL on Instagram, a video on YouTube, a thread on Reddit or a "
         "post on LinkedIn and get the comments back as rows: author, text, likes, time, "
-        "replies. {n} provider rows across the four platforms answer through one treg.to key, "
+        "replies. {n} providers across the four platforms answer through one treg.to key, "
         "each at its own rate with $0.000 added, from a fraction of a cent per call, and on "
         "YouTube the official API is free on the Google account you already have. This is the "
         "raw material of social listening, not the dashboard: the rows come back and your "
@@ -4742,4 +4742,134 @@ USE_CASE_PAGES["mine-the-comments"] = {
     ],
     "related": ("A video's comments", "Search posts by keyword",
                 "Find creators by keyword", "Posts under a hashtag"),
+}
+
+
+USE_CASE_PAGES["build-a-company-list-by-industry-size-or-tech"] = {
+    "label": "Build a company list by industry, size or tech",
+    "sentence": "Companies by industry: build a company list by industry, size, location or tech stack through one key",
+    "title": "Company list by industry, size or tech: {n} APIs | treg.to",
+    "lede": (
+        "Describe the companies you want, by industry, headcount, country, revenue, funding or "
+        "the technology they run, and get a list back as rows with a domain on each. {n} "
+        "providers answer through one treg.to key, from Apollo and Crunchbase to the smaller "
+        "databases nobody has heard of, each at its own rate with $0.000 added and most of "
+        "them priced per company returned, so the size of the page is the price. Three rows "
+        "are free, and a free row that returns ids is not the same as a free row that returns "
+        "companies; the notes say which is which."),
+    "prompt": "Using treg, build me a list of 200 B2B software companies in Germany with 50 to "
+              "500 employees, show me the price for 200 rows from each provider first, run the "
+              "two cheapest, dedupe on domain, and tell me how many rows each one returned and "
+              "how many overlapped.",
+    "prompt_why": [
+        ("Say the filters in plain words", "Every row here filters on industry, size and location, and most on tech or funding. The agent maps your words to each provider's field names."),
+        ("Ask for the price for N rows, not per row", "Most rows bill per company returned, Apollo bills per page, Tomba bills per fifty. The same 200 rows costs a different amount on every row."),
+        ("Run two and compare the overlap", "No provider has every company. Two cheap lists deduped on domain is the honest way to find out which one covers your market."),
+        ("Dedupe on domain, not name", "The same company arrives as three spellings of its name and one domain. The domain is the key for everything downstream."),
+    ],
+    "result_noun": "company",
+    "result_image": None,
+    "q_cheapest": "Which company search API is cheapest?",
+    "q_reliable": "Which company database is the most reliable?",
+    "q_compare": "How do the company databases compare?",
+    "what_is_heading": "What is a company list by industry?",
+    "what_is": (
+        "It is the output of a company search call: you send filters, industry, headcount "
+        "band, country, revenue, funding stage, technology in use, and the provider returns "
+        "the companies in its database that match, with a domain, a name and whatever "
+        "firmographics it holds. It is the first step of account based prospecting and of "
+        "most market sizing, and every provider on this page sells the same shape of answer "
+        "from a different database. The differences that matter are coverage, which is "
+        "where a company actually gets indexed, how stale the headcount and industry are, "
+        "and the billing unit, which decides what a two hundred row list costs before you "
+        "know whether it is any good."),
+    "notes": [
+        "The billing unit is the whole story, and it varies. Most rows bill per company "
+        "returned, so the page size is the price: Icypeas at a few hundredths of a cent, The "
+        "Companies API, Aviato, Lusha, Crustdata, CompanyEnrich and Fiber AI at fractions of "
+        "a cent, LeadMagic and Diffbot around three cents, PredictLeads four, and People Data "
+        "Labs at thirty eight cents a record, two hundred times the cheapest. Apollo bills "
+        "per page rather than per company, so a full page is cheaper than a small one, the "
+        "opposite of everyone else. Tomba bills one credit per fifty companies revealed. "
+        "Crunchbase, Ocean.io and Findymail publish no dollar rate, so the table prints none. "
+        "All of it is the provider's own rate with $0.000 added.",
+        "Three rows are free and they are not interchangeable. Hunter Discover returns "
+        "companies with their email counts and consumes no credits. Coresignal's search is "
+        "free because it returns ids only; the cost lands on the collect step that turns an "
+        "id into a company. Akta's row is a name or domain to id lookup, not a filtered "
+        "search. The Companies API has a `simplified=true` switch that makes the whole call "
+        "free at the price of fewer fields, which is the cheapest honest way to count a "
+        "market before paying for rows. The row labelled treg is the routed endpoint: the "
+        "explicit opt in where you ask treg.to to choose among these providers, your own "
+        "keys first, and it names the one that served and bills that provider's rate.",
+        "Nobody on this page publishes a number for how stale their data is, and the one "
+        "practitioner test in the research measured the drift at about a fifth of records "
+        "having changed title or employer while the email still resolved. Treat every "
+        "headcount and industry field as a claim from the month it was indexed. The rows "
+        "that were called live through treg.to carry a verified date in the table; Apollo, "
+        "Coresignal, Crunchbase, Fiber AI, Findymail, Hunter and The Companies API are "
+        "documented but not yet verified through treg.to, so run one page before an agent "
+        "runs a thousand.",
+    ],
+    "faq": [
+        ("Which provider has the best company data?",
+         "The research behind this page found no independent benchmark, and every accuracy "
+         "figure in circulation was written by the vendor selling it. Run the same filter "
+         "through two or three cheap rows, dedupe on domain, and count. Two hundred rows from "
+         "three providers costs less than a dollar on most of them."),
+        ("Why does the same list cost so much more on one provider?",
+         "Because the billing units differ. Per company, per page and per fifty are not the "
+         "same thing, and one provider charges thirty eight cents a record where another "
+         "charges a few hundredths of a cent. Ask the agent to print the price for your list "
+         "size on every row before it runs."),
+        ("Can I count the matches before paying for the rows?",
+         "On some rows, yes. The Companies API's simplified mode is free, Coresignal's search "
+         "returns ids for nothing, and several providers have a count call on its own page. "
+         "A count first is the cheapest way to check that your filters mean what you think."),
+        ("Is this the Apollo API or the Crunchbase API?",
+         "Both are rows on this page, called through one treg.to key at their own rates. "
+         "Crunchbase is covered by its licence rather than priced per call, so the table "
+         "prints no dollar figure for it, and Apollo bills per page rather than per company."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~210 Reddit and X posts read in "
+        "August 2026 about ten were on the job, and a template farm of eight near identical "
+        "review posts across eight invented subreddits was excluded, along with a post that "
+        "hid word joiners inside its bracket tags. These five are practitioners, and they "
+        "are mostly talking about what goes wrong after the list arrives."),
+    "voices": [
+        ("Accuracy drifts once nobody is checking",
+         "even the best b2b data enrichment tools for crm accuracy drift once they go live and nobody double checks",
+         "r/SmallBusiness_US, 3 points", "https://www.reddit.com/r/SmallBusiness_US/comments/1vx3uub/even_the_best_b2b_data_enrichment_tools_for_crm/",
+         "No provider here publishes a freshness number, and this page will not invent one. "
+         "What per call pricing changes is the cost of checking: re-pull a sample of your "
+         "list every quarter for cents and measure the drift yourself."),
+        ("Four vendors, one ICP, bounce rates from 2% to 19%",
+         "Verified 4 B2B data vendors against the same ICP. Bounce rates ranged from 2% to 19%",
+         "r/Coldemailing", "https://www.reddit.com/r/Coldemailing/comments/1vezuay/verified_4_b2b_data_vendors_against_the_same_icp/",
+         "That test is the method this page recommends, and per call pricing is what makes it "
+         "affordable: the same filter through several rows, deduped on domain, then verified. "
+         "The spread that poster found is the reason not to trust any single row, this "
+         "page's cheapest included."),
+        ("Ninety five percent accurate, of what?",
+         "I got tired of vendor pages claiming '95%+ accuracy' with no definition of what accuracy means",
+         "r/Coldemailing", "https://www.reddit.com/r/Coldemailing/comments/1vezuay/verified_4_b2b_data_vendors_against_the_same_icp/",
+         "So there is no accuracy column here. The table carries the rate, the billing unit, "
+         "the fields each row accepts and whether it has been called live through treg.to. "
+         "Accuracy on your market is something you measure, not something a vendor states."),
+        ("Which of these is a database and which is a scraper",
+         "Tried searching online but getting overwhelmed with options and not sure which ones are legit vs just data scrapers",
+         "r/b2bmarketing", "https://www.reddit.com/r/b2bmarketing/comments/1r08jcy/need_recommendations_for_b2b_contact_data/",
+         "That is what a comparison with real rates is for. Every row here is a named "
+         "provider with a documented endpoint and a published or observed price, and the "
+         "difference between them is on the table rather than in a review somebody paid for."),
+        ("Crunchbase without the scraping workaround",
+         "Turns out Crunchbase has a bunch of restrictions, so I tried a couple methods to scrape leads efficiently",
+         "r/weezly", "https://www.reddit.com/r/weezly/comments/1n38bo0/how_i_scraped_thousands_of_crunchbase_leads_free/",
+         "Crunchbase's own search API is a row on this page, called through treg.to on a "
+         "licence rather than per call. It is not the cheapest route to a list, and a "
+         "different row will be for most filters, but it is the legitimate one."),
+    ],
+    "related": ("Enrich a company from its domain", "Find people by role, company or location",
+                "Count the matches before you pay for rows", "Find companies that use a given technology"),
 }
