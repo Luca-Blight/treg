@@ -120,6 +120,22 @@ async def test_tier1_registered_tool_wins(clients: AsyncClient):
     assert (await _telemetry(clients))["tool_name"] == "our-tikhub"
 
 
+async def test_catalog_only_route_cannot_be_shadowed_by_same_named_team_tool(clients: AsyncClient):
+    """The directory route resolves the curated id directly; legacy `/call` still gives an exact
+    same-named team tool precedence, preserving both contracts at once."""
+    sid = (await clients.post("/secrets", json={"name": "own-key", "value": "OWN"})).json()["id"]
+    await clients.post("/tools", json={"name": EP, "base_url": "http://upstream", "secret_id": sid})
+    await clients.post("/secrets", json={"name": "tikhub", "value": "CATALOG"})
+
+    legacy = await clients.get(f"/call/{EP}?aweme_id=7")
+    directory = await clients.get(f"/catalog/call/{EP}?aweme_id=7")
+
+    assert legacy.status_code == 200 and legacy.json()["auth"] == "Bearer OWN"
+    assert directory.status_code == 200
+    assert directory.json()["auth"] == "Bearer CATALOG"
+    assert directory.json()["raw_path"] == EP_PATH
+
+
 async def test_tier3_no_credential_is_an_actionable_404(clients: AsyncClient):
     """With tier 4 OFF (the default — no provider allow-listed), the ladder still dead-ends here."""
     r = await clients.get(f"/call/{EP}?aweme_id=7")

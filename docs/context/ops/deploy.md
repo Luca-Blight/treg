@@ -9,6 +9,7 @@ sources:
   - src/treg/db.py
   - src/treg/email.py
   - src/treg/audit.py
+  - scripts/dev-local.sh
   - render.yaml
 related:
   - architecture/data-model.md
@@ -144,6 +145,14 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
 - `proxy_ssrf_check` (`TREG_PROXY_SSRF_CHECK`) — the **call-time SSRF guard** on the proxy: resolve the
   upstream host and refuse an internal/private target. **On by default**; only the test suite disables it
   (its upstream is an in-process ASGI transport, not real DNS).
+- `claude_connector_enabled` (`TREG_CLAUDE_CONNECTOR_ENABLED`) — enables the catalog-only Claude
+  connector at `/mcp/v2/`. The default is false. Keep it false during normal deployment. Set it to
+  true for a controlled test window. Set it back to false to disable V2 without changing the existing
+  `/mcp/` connector.
+- `connect_demo_enabled` (`TREG_CONNECT_DEMO_ENABLED`) — enables the developer OAuth test page and
+  callback at `/connect-demo`. The default is false, and both routes return 404 when it is false. The
+  local development script enables it. Staging can enable it explicitly for controlled tests; leave
+  it false in production.
 - `intercom_app_id` / `intercom_secret` (`TREG_INTERCOM_APP_ID` / `TREG_INTERCOM_SECRET`) — support
   chat via the **Intercom Messenger** (treg's own workspace). Empty app_id = the widget is OFF
   everywhere — `/meta`

@@ -601,6 +601,15 @@
       "GET",
       "HEAD"
     ],
+    "name": "claude_connector_page",
+    "path": "/connectors/claude"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "adtrack_js",
     "path": "/adtrack.js"
   },
@@ -689,6 +698,15 @@
     ],
     "name": "oauth_protected_resource",
     "path": "/.well-known/oauth-protected-resource"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "oauth_protected_resource_v2",
+    "path": "/.well-known/oauth-protected-resource/mcp/v2"
   },
   {
     "kind": "APIRoute",
@@ -1836,10 +1854,30 @@
   {
     "kind": "APIRoute",
     "methods": [
+      "DELETE",
+      "GET",
+      "HEAD",
+      "OPTIONS",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "name": "call_catalog_endpoint",
+    "path": "/catalog/call/{rest:path}"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
       "POST"
     ],
     "name": "run_tool_server",
     "path": "/run"
+  },
+  {
+    "kind": "Mount",
+    "methods": [],
+    "name": null,
+    "path": "/mcp/v2"
   },
   {
     "kind": "Mount",

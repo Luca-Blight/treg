@@ -30,8 +30,9 @@ related:
 attaches concern routers at compatibility-sensitive registration points, and calls the factory once at
 EOF so the deployed `treg.api:app` import path remains the default `all` role.
 
-The factory owns concrete assembly: the three pure-ASGI middleware registrations, five exception handlers,
-static mounts, optional MCP mount and lifespan, GET-to-HEAD widening, the OpenAPI wrapper that hides
+The factory owns concrete assembly: the three core pure-ASGI middleware registrations, the optional
+V2 path normalizer, five exception handlers, static mounts, optional MCP mounts and lifespans,
+GET-to-HEAD widening, the OpenAPI wrapper that hides
 implied HEAD operations, shared HTTP client creation, startup work, shutdown drains, and the Ads
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
@@ -62,9 +63,9 @@ Every created app exposes `app.state.role_manifest` with explicit `routes`, `bac
 
 | Role | HTTP routes and mounts | Background tasks | Startup checks |
 |---|---|---|---|
-| `all` | The complete existing surface, including `/run`, static files, and `/mcp` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, MCP lifespan |
-| `dataplane` | `/call/{rest:path}`, the `/mcp` mount, and its RFC 9728 resource-metadata route; no `/run`, static files, docs, or OpenAPI | None | DB init, provider-tool backfill, HTTP client, MCP lifespan |
-| `control` | Everything except the calling surface (`/call/{rest:path}`, `/mcp`, and its resource metadata); includes `/run` and static files | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client |
+| `all` | The complete surface, including `/run`, static files, `/mcp`, and the flagged `/mcp/v2` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, enabled MCP lifespans |
+| `dataplane` | `/call/{rest:path}`, `/catalog/call/{rest:path}`, MCP mounts, and their resource metadata; no `/run`, static files, docs, or OpenAPI | None | DB init, provider-tool backfill, HTTP client, enabled MCP lifespans |
+| `control` | Everything except the calling surfaces; includes OAuth issuance, `/run`, and static files | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client |
 
 MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
 dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the
@@ -76,6 +77,14 @@ tokens, while both roles share its signing-key validation through `domain.identi
 owner. App creation fails on an unclassified, stale, duplicate, or multiply-owned key, so adding a
 route cannot silently expand the dataplane. Role separation is preparatory in stage 1; only the
 `all` role is deployed.
+
+`TREG_CLAUDE_CONNECTOR_ENABLED=true` adds `/mcp/v2` and starts its lifespan. When the flag is false
+or missing, only the team `/mcp` mount starts. The nested V2 mount is registered first so the
+parent `/mcp` mount cannot consume it.
+
+When V2 is enabled, `NormalizeDirectoryMCPPath` rewrites the exact `/mcp/v2` path to `/mcp/v2/`
+before route matching. Claude can remove the final slash from a custom-connector URL. Both spellings
+must stay on the V2 transport and OAuth audience.
 
 ## Route cloning
 
