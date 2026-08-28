@@ -232,19 +232,29 @@ async def clients():
 @pytest.fixture(autouse=True)
 def _reset_call_path_caches():
     """The call path keeps in-process copies of ratestore state (the capacity view: 'provider X is
-    exhausted' for 60 s) and per-provider rate buckets. `reset_db()` wipes the tables, not process
-    memory — so a test that relays a vendor 402 would otherwise leave the NEXT test's tier-4 call
-    refused with a 503 it never asked for (CI, xdist worker gw3, 2026-08-28)."""
-    from treg.domain.capacity.routes_view import view as routes_view
-    from treg.domain.capacity.view import view as capacity_view
-    from treg.infra.upstream.limiter import limiter
-    capacity_view.invalidate(); capacity_view._states = {}
-    routes_view.invalidate(); routes_view._routes = []
-    limiter.reset()
+    exhausted' for 60 s), the overflow route view and per-provider rate buckets. `reset_db()` wipes
+    the tables, not process memory — so a test that relays a vendor 402 would otherwise leave the
+    NEXT test's tier-4 call refused with a 503 it never asked for (CI, xdist worker gw3, 2026-08-28).
+    Each cache is optional: the modules land in successive PRs of the capacity stack."""
+    def _clear() -> None:
+        try:
+            from treg.domain.capacity.view import view as capacity_view
+            capacity_view.invalidate(); capacity_view._states = {}
+        except ImportError:
+            pass
+        try:
+            from treg.domain.capacity.routes_view import view as routes_view
+            routes_view.invalidate(); routes_view._routes = []
+        except ImportError:
+            pass
+        try:
+            from treg.infra.upstream.limiter import limiter
+            limiter.reset()
+        except ImportError:
+            pass
+    _clear()
     yield
-    capacity_view.invalidate(); capacity_view._states = {}
-    routes_view.invalidate(); routes_view._routes = []
-    limiter.reset()
+    _clear()
 
 
 @pytest.fixture(autouse=True)
