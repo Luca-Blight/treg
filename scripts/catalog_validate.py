@@ -348,7 +348,7 @@ def main(argv: list[str]) -> int:
 
     only = set(argv)
     all_files = sorted(p for p in CATALOG.glob("*.yaml")
-                       if p.name not in ("capabilities.yaml", "fx.yaml", "aliases.yaml"))
+                       if p.name not in ("capabilities.yaml", "fx.yaml", "aliases.yaml", "contracts.yaml", "adapters.yaml"))
     # Successors can appear later in the same file or in another provider. Build the reference map
     # before validating any row; a one-pass lookup would make validity depend on filename order.
     endpoint_status: dict[str, str] = {}

@@ -117,7 +117,7 @@ free of the balance rather than duplicating them. An endpoint treg has no publis
 serve one capability, `treg catalog search` shows them side by side with prices; **choosing is
 yours** — treg does not silently pick or fail over between providers for you. (When treg's own
 account for a provider is out it may serve the *same* endpoint through a treg-owned relay account,
-disclosed on the response; a team can opt out.)
+disclosed on the response; a team can opt out.) The exception you opt into: `treg.<capability>` routed endpoints, where treg picks the provider for you and names it.
 
 ```bash
 treg balance          # credit left, calls in flight, recent spend

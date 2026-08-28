@@ -270,6 +270,19 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
                 if key in doc:
                     return int(rate * 1_000_000 + 0.5) if doc[key] else 0
         return None
+    # GENERIC miss rule: a `per_success` endpoint bills only when it found something, and the
+    # routing adapter (catalog/adapters.yaml, fixture-verified at load) already knows what "nothing"
+    # looks like in this provider's body. Before this, tomba / findymail / leadsforge misses settled
+    # at the estimate — a whole credit for a miss the catalog and the provider both call free
+    # (found live by the first routed waterfall, 2026-08-28: three of five misses were charged).
+    if mk.cost_type == "per_success" and isinstance(doc, dict):
+        adapter = catalog_store.load().adapters.get(mk.endpoint_id)
+        if adapter is not None and adapter.verified:
+            try:
+                if adapter.is_miss(doc):
+                    return 0
+            except Exception:  # noqa: BLE001 — a predicate that cannot decide settles at the estimate
+                pass
     return None
 
 

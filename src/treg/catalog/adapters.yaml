@@ -1,0 +1,69 @@
+# ADAPTERS — one per endpoint, data-first: how a contract request becomes this provider's request
+# (`in`), how the provider's body becomes the contract's core output (`out`), and what a miss
+# looks like (`miss`). A tiny expression language, evaluated by domain/catalog/routing/paths.py:
+#   paths        data.email · emails[0].email · output.profile.emails[0].email
+#   coalesce     coalesce(a.b, c.d)
+#   arithmetic   data.score / 100
+#   predicates   x == null · x != null · x == [] · x == 'literal'
+#   named        split_first(full_name) · join(a, b) · has_type(emails, 'work')
+# `accepts` lists the contract identity variants (by their keys) this endpoint can serve.
+#
+# Every adapter is VERIFIED at catalog load against the endpoint's `test_request` (in) and its
+# captured `example_response` (out): one that cannot round-trip its fixture does not become a
+# router candidate — the endpoint stays callable via /call/ exactly as before. See
+# domain/catalog/routing/adapters.py::verify.
+
+adapters:
+  # ---- people.email.find --------------------------------------------------------------------
+  hunter.people.email.find:
+    accepts: [[full_name, domain], [first_name, last_name, domain]]
+    in:  {full_name: queryParams.full_name, domain: queryParams.domain}
+    out: {email: data.email, confidence: "data.score / 100", first_name: data.first_name,
+          last_name: data.last_name, verified: "data.verification.status == 'valid'"}
+    miss: "data.email == null"
+  leadmagic.people.email.find:
+    accepts: [[full_name, domain], [first_name, last_name, domain]]
+    in:  {full_name: body.full_name, domain: body.domain}
+    out: {email: email, first_name: first_name, last_name: last_name, verified: "status == 'valid'"}
+    miss: "email == null"
+  leadsforge.people.email.find:
+    accepts: [[first_name, last_name, domain], [full_name, domain], [linkedin_url]]
+    in:  {first_name: body.firstName, last_name: body.lastName, domain: body.companyDomain,
+          linkedin_url: body.linkedinURL}
+    out: {email: email, verified: "status == 'succeeded'"}
+    miss: "email == null"
+  findymail.search.name:
+    accepts: [[full_name, domain], [first_name, last_name, domain]]
+    in:  {full_name: body.name, domain: body.domain}
+    out: {email: contact.email, first_name: "split_first(contact.name)", last_name: "split_last(contact.name)"}
+    miss: "contact.email == null"
+  findymail.search.business-profile:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.linkedin_url}
+    out: {email: contact.email, first_name: "split_first(contact.name)", last_name: "split_last(contact.name)"}
+    miss: "contact.email == null"
+  tomba.people.email.find:
+    accepts: [[full_name, domain], [first_name, last_name, domain]]
+    in:  {full_name: queryParams.full_name, domain: queryParams.domain}
+    out: {email: data.email, confidence: "data.score / 100", first_name: data.first_name,
+          last_name: data.last_name, verified: "data.verification.status == 'valid'"}
+    miss: "data.email == null"
+  tomba.people.email.find.linkedin:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {email: data.email, confidence: "data.score / 100", first_name: data.first_name,
+          last_name: data.last_name, verified: "data.verification.status == 'valid'"}
+    miss: "data.email == null"
+  aviato.people.email.find:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.linkedinURL}
+    const: {queryParams.type: work}
+    out: {email: "emails[0].email"}
+    miss: "emails == []"
+  fiber-ai.people.contacts.reveal:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.linkedinUrl}
+    const: {body.enrichmentType: {getWorkEmails: true, getPersonalEmails: false, getPhoneNumbers: false},
+            body.validateEmails: true}
+    out: {email: "output.profile.emails[0].email", verified: "output.profile.success == true"}
+    miss: "output.profile.emails == []"

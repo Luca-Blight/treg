@@ -1,0 +1,55 @@
+"""The generated `treg.<capability>` catalog rows — never hand-written (plan §5)."""
+
+from __future__ import annotations
+
+from .contracts import Adapter, Contract
+
+ROUTED_KIND = "routed"
+ROUTED_PROVIDER = "treg"
+
+
+def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str, Adapter], cost_view) -> dict | None:
+    """One row per capability with ≥ 2 verified-adapter children. Price = the children's range."""
+    kids = [e for e in children if adapters.get(e["id"]) and adapters[e["id"]].verified and not e.get("status")]
+    if len(kids) < 2:
+        return None
+    prices = sorted(p for p in ((cost_view(e.get("cost"), e["provider"]) or {}).get("usd") for e in kids) if p is not None)
+    lo, hi = (prices[0], prices[-1]) if prices else (None, None)
+    body = {}
+    for variant in contract.identity:
+        for k in variant:
+            body.setdefault(k, {"type": contract.identity_types.get(k, "str"), "required": False,
+                                "note": "identity — supply exactly one variant: " + " | ".join("+".join(v) for v in contract.identity)})
+    cap = contract.capability
+    return {
+        "id": f"{ROUTED_PROVIDER}.{cap}",
+        "provider": ROUTED_PROVIDER,
+        "capability": cap,
+        "platform": cap.split(".")[0],
+        "domain": "routed",
+        "scope": "",
+        "kind": ROUTED_KIND,
+        "method": "POST",
+        "path": f"/{cap}",
+        "name": f"{cap} — routed: best of {len(kids)} providers, own keys first",
+        "summary": contract.summary,
+        "input": {"bodyType": "json", "body": body,
+                  "note": ("Routing options ride as headers, never in the body: X-Treg-Route-Waterfall: 1 "
+                           "(keep trying providers on a miss), X-Treg-Route-Max-Cost: 0.10 (USD ceiling for "
+                           "the whole call), X-Treg-Route-Prefer / X-Treg-Route-Exclude: <provider>. The "
+                           "response is {output, raw, _treg: {served_by, tried}}; X-Treg-Served-By names the child.")},
+        "test_request": {"body": {k: v for k, v in zip(contract.identity[0], ("Patrick Collison", "stripe.com", "https://www.linkedin.com/in/patrickcollison"))}}
+                        if contract.identity else {},
+        "cost": {"type": "per_success", "value": lo, "currency": "USD", "per": 1, "unit": "call",
+                 "source": "inferred", "confidence": "documented", "checked": None,
+                 "note": (f"the children's range ${lo:g}–${hi:g} per hit; you pay exactly the child that served, 0% markup"
+                          if lo is not None else "children unpriced")},
+        "cost_range_usd": [lo, hi],
+        "tier": "core",
+        "verified": None,
+        "miss": {"status": 200, "means": f"output.{contract.miss}"},
+        "status": "", "status_note": "", "platform_blocked": "", "superseded_by": "",
+        "docs_url": "",
+        "example_file": None,
+        "routed_children": [e["id"] for e in kids],
+    }

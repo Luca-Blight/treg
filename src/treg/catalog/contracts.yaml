@@ -1,0 +1,34 @@
+# Capability CONTRACTS — the canonical request/response shape of a first-party routed endpoint
+# (`treg.<capability>`), docs/context/architecture/catalog.md § Routing.
+#
+# A contract is deliberately small: one-of IDENTITY variants (which keys name the subject — never
+# provider names), a few shared filters, and a small OUTPUT core every adapter must fill when the
+# provider has it. Everything else the provider returns rides in `raw`, which is always present.
+# `miss` says, in canonical terms, what "asked and answered: nothing" looks like — it drives the
+# opt-in waterfall and the hit-rate statistics.
+#
+# Only capabilities listed here get a routed endpoint; the endpoint is GENERATED at catalog load
+# from the children whose adapters (adapters.yaml) round-trip their fixtures — never hand-written.
+
+contracts:
+  people.email.find:
+    summary: "Find someone's work email — treg picks the provider (own keys first, then cheapest per hit) and tells you which one served"
+    identity:
+      - {full_name: str, domain: str}
+      - {first_name: str, last_name: str, domain: str}
+      - {linkedin_url: url}
+    # `full_name` ⇄ `first_name`+`last_name` are derived from each other, so the two name variants
+    # match the same adapters; `linkedin_url` is a different subject and never crosses.
+    derive:
+      full_name: "join(first_name, last_name)"
+      first_name: "split_first(full_name)"
+      last_name: "split_last(full_name)"
+    filters: {}
+    output:
+      email: {type: str, required: true}
+      confidence: {type: float, note: "0..1 — provider scales mapped; the original rides in raw"}
+      first_name: {type: str}
+      last_name: {type: str}
+      verified: {type: bool, note: "the provider says it checked the mailbox"}
+    miss: "email == null"
+    idempotent: true            # a lookup — error-fallback to the next provider is safe

@@ -144,6 +144,12 @@ Notes:
     own account for a provider is out it may serve the **same endpoint** through a treg-owned relay
     (`X-Treg-Served-Via: overflow:<name>`, real price, same shape); a team opts out with
     `treg org overflow off`.
+  - **Routed endpoints** (`treg.<capability>`, e.g. `treg.people.email.find`) are where you can
+    ask treg to choose: POST the identity (`{full_name, domain}` | `{first_name, last_name, domain}` |
+    `{linkedin_url}`); treg runs the best child (own keys first, then cheapest per hit), falls back
+    on provider errors, and returns `{output, raw, _treg.served_by, _treg.tried}` +
+    `X-Treg-Served-By`. Miss-fallback (the waterfall) is opt-in: `X-Treg-Route-Waterfall: 1` with
+    `X-Treg-Route-Max-Cost: 0.10`. `catalog_get treg.people.email.find` shows the plan and prices.
 - An endpoint with no published price is refused rather than served free; connect your own key.
 
 ## Retrying a call without paying twice

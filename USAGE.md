@@ -184,6 +184,26 @@ treg-owned aggregator account — same request, same response shape, the relay's
 `X-Treg-Served-Via: overflow:<name>` on the response. `treg org overflow off` opts your team out (calls
 then get the 503 above); `treg org overflow` shows the setting. Own keys are never relayed.
 
+### Routed endpoints — let treg choose the provider
+
+`treg.<capability>` endpoints (today `treg.people.email.find`) are generated from the providers of one
+capability whose adapters passed verification. Call one like any endpoint:
+
+```bash
+treg call treg.people.email.find --body '{"full_name": "Patrick Collison", "domain": "stripe.com"}'
+treg call treg.people.email.find --body '{"linkedin_url": "https://www.linkedin.com/in/patrickcollison"}' \
+  --header "X-Treg-Route-Waterfall: 1" --header "X-Treg-Route-Max-Cost: 0.10"
+treg catalog get treg.people.email.find      # the ranked plan with prices — spends nothing
+```
+
+treg runs the best child — your own keys first, then the cheapest expected cost per hit — and
+returns `{output, raw, _treg: {served_by, tried, charged_micro}}` plus `X-Treg-Served-By` and
+`X-Treg-Providers-Tried`. A provider error falls back to the next candidate (at most two extra); a
+vendor 4xx is your request's fault and stops. A **miss** stops unless you opt into the waterfall
+(`X-Treg-Route-Waterfall: 1`), which keeps trying providers within `X-Treg-Route-Max-Cost` and
+settles every attempt at its real price. `X-Treg-Route-Prefer` / `X-Treg-Route-Exclude` name
+providers. Vendor endpoints are still relayed verbatim; only `treg.*` rows model an API.
+
 ## Calling
 
 | Command | Options | What it does |

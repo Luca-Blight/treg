@@ -239,11 +239,35 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
+    routing = None
+    if ep.get("kind") == "routed":
+        # The QUOTE (routing plan §3.5): the contract and the ranked children on treg's key, priced
+        # at a one-row lookup. Own keys rank first at call time (this route is open, so it cannot
+        # know the caller's); nothing is reserved here.
+        from ..domain.catalog.routing.plan import Candidate, cost_at, rank
+        contract = cat.contracts.get(ep["capability"])
+        kids = [cat.by_id[i] for i in ep.get("routed_children") or [] if i in cat.by_id]
+        cands = []
+        for k in kids:
+            st = stats.get(k["id"]) or {}
+            ad = cat.adapters.get(k["id"])
+            cands.append(Candidate(k, ad, ad.accepts[0] if ad and ad.accepts else (), "platform",
+                                   cost_at(cat.cost_view(k.get("cost"), k["provider"]), {}), None,
+                                   st.get("ok_rate"), st.get("p50_ms"), st.get("last_ok_days")))
+        routing = {
+            "contract": {"identity": [list(v) for v in contract.identity], "output": contract.output,
+                         "miss": contract.miss, "derive": contract.derive} if contract else None,
+            "plan": [c.view() | {"accepts": [list(v) for v in c.adapter.accepts]} for c in rank(cands)],
+            "options": {"X-Treg-Route-Waterfall": "1 = keep trying on a miss (opt-in; multiplies cost)",
+                        "X-Treg-Route-Max-Cost": "USD ceiling for the whole call",
+                        "X-Treg-Route-Prefer": "provider[,provider]", "X-Treg-Route-Exclude": "provider[,provider]"},
+        }
     return {
-        "endpoint": view,
+        "endpoint": view | ({"routed_children": ep.get("routed_children")} if ep.get("kind") == "routed" else {}),
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
                      **cat.provider_meta.get(ep["provider"], {})},
         "siblings": siblings,
+        **({"routing": routing} if routing is not None else {}),
         "call_template": catalog_store.call_template(ep),
         "example_response": example,
         "hints": [f"{catalog_store.call_template(ep)}   # run it — key injected server-side"]

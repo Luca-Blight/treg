@@ -47,6 +47,7 @@ from .resolve import (
     resolve_marketplace_target,
 )
 from . import overflow as overflow_cycle
+from . import route as routed
 from .settle import (
     _buffer_response,
     _finish_cancelled_call as finish_cancelled_call,
@@ -207,6 +208,16 @@ async def _closed() -> None:
     return None
 
 
+async def _drain(response: UpstreamResponse) -> bytes:
+    """Read a small buffered response and re-arm it so it can still be returned."""
+    chunks = []
+    async for chunk in response.body_stream:
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    response.body_stream = _one_chunk(body)
+    return body
+
+
 def _bytes_response(
     content: bytes, status_code: int = 200, media_type: str = "",
     headers: dict[str, str] | None = None,
@@ -320,6 +331,41 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             if (isinstance(exc.detail, dict)
                     and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
                 own_tool_miss = exc.detail
+    if ep is not None and ep.get("kind") == "routed":
+        # A first-party routed endpoint (treg.<capability>): the router picks children and runs
+        # each through THIS use case again (child contexts, own hold ids), then assembles one
+        # answer. The parent owns the idempotency label and the X-Treg-* stamping below.
+        try:
+            body_bytes = await _await_before_reserve(request.body(), request, call_ref)
+            response, charged = await routed.run_routed(
+                request.context, ep, body_bytes, request.headers.get, upstream_client, execute_call,
+                audit_client=_client_name(request))
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, None, call_ref)
+            raise
+        except CallFailure as exc:
+            request.state.call_audited = True
+            audit.record_call(
+                org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
+                method=request.method, path=rest, status_code=exc.status_code,
+                client=_client_name(request), refused_by=_refusal_kind(exc.status_code),
+                telemetry={"call_ref": call_ref, "endpoint_id": ep["id"], "provider": "treg",
+                           "credential_tier": "routed", **_tag_telemetry(meta)})
+            raise
+        request.state.call_audited = True
+        request.state.call_cost_micro = charged
+        if idem_key:
+            try:
+                await _store_idempotent(idem_key, caller, status_code=response.status,
+                                        body=await _drain(response), media_type="application/json",
+                                        charged_micro=charged, metered=True, call_ref=call_ref)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, None, call_ref)
+                raise
+            request.state.idem_claim = None
+        _set_response_header(response, "X-Treg-Cost-Micro", str(charged))
+        _set_response_header(response, "X-Treg-Call-Id", call_ref)
+        return response
     if ep is not None:
         try:
             mk = await _await_before_reserve(resolve_marketplace_target(

@@ -30,6 +30,8 @@ EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
 ALIASES_FILE = "aliases.yaml"
+CONTRACTS_FILE = "contracts.yaml"   # capability contracts (routing)
+ADAPTERS_FILE = "adapters.yaml"     # per-endpoint adapters (routing)
 
 # What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
 #   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
@@ -38,7 +40,9 @@ ALIASES_FILE = "aliases.yaml"
 #   utility — helpers with no data of their own (token generators, enum/location lookups, decrypt).
 # `data`+`action` are the browse surface; `account`+`utility` are "management endpoints" — served in
 # the endpoint list with `kind` set, but kept OUT of the census counts and the default platform view.
-KINDS = ("data", "action", "account", "utility")
+#   routed  — a GENERATED first-party endpoint (`treg.<capability>`) that picks among the children
+#             of one capability (domain/catalog/routing); never hand-written.
+KINDS = ("data", "action", "account", "utility", "routed")
 DEFAULT_KIND = "data"
 HIDDEN_KINDS = frozenset({"account", "utility"})  # served, but never inflate the browse counts
 
@@ -98,6 +102,8 @@ class Catalog:
     _search_fields: list | None = field(default=None, init=False, repr=False, compare=False)
     by_id: dict[str, dict] = field(default_factory=dict)
     provider_meta: dict[str, dict] = field(default_factory=dict)  # service -> {limits, pricing_url, docs}
+    contracts: dict = field(default_factory=dict)   # capability -> routing.Contract
+    adapters: dict = field(default_factory=dict)    # endpoint id -> routing.Adapter (verified flag set)
 
     def for_capability(self, capability: str) -> list[dict]:
         return [e for e in self.endpoints if capability and e["capability"] == capability]
@@ -162,6 +168,8 @@ class Catalog:
         # never an offer treg may spend against, even if its historical price remains complete.
         if endpoint.get("status"):
             return False
+        if endpoint.get("kind") == "routed":
+            return bool(endpoint.get("routed_children"))
         # Blocked on treg's own plan: the route works, the price is real, and the shared key
         # still cannot serve it — a documented upstream "your subscription does not include this
         # endpoint". Discovery keeps the row (a caller's own key may serve it); the offer doesn't.
@@ -222,7 +230,7 @@ def _parse(directory: Path) -> Catalog:
     # `<service>.yaml`, and both land under the same provider (curation splits a provider's
     # core operations from the long tail across two files).
     for path in sorted(directory.glob("*.yaml")):
-        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE):
+        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE, CONTRACTS_FILE, ADAPTERS_FILE):
             continue
         doc = _read_yaml(path)
         provider = doc.get("provider") or path.name.split(".")[0]
@@ -255,6 +263,9 @@ def _parse(directory: Path) -> Catalog:
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
+    # Routing: contracts + adapters, each adapter verified against its endpoint's fixtures, then one
+    # GENERATED `treg.<capability>` row per capability with ≥ 2 verified children (routing/synthetic).
+    contracts, adapters = _load_routing(directory, by_id)
     aliases = {
         str(k).lower(): [str(v).lower() for v in (vals if isinstance(vals, list) else [vals])]
         for k, vals in (_read_yaml(directory / ALIASES_FILE).get("aliases") or {}).items()
@@ -284,10 +295,36 @@ def _parse(directory: Path) -> Catalog:
                        for meter, v in (meters or {}).items()}
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
-    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
-                   shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
-                   capabilities=capabilities, endpoints=endpoints, by_id=by_id,
-                   provider_meta=provider_meta, aliases=aliases)
+    cat = Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
+                  shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
+                  capabilities=capabilities, endpoints=endpoints, by_id=by_id,
+                  provider_meta=provider_meta, aliases=aliases, contracts=contracts, adapters=adapters)
+    from .routing.synthetic import routed_endpoint
+    for cap, contract in contracts.items():
+        row = routed_endpoint(contract, cat.for_capability(cap), adapters, cat.cost_view)
+        if row is not None and row["id"] not in by_id:
+            by_id[row["id"]] = row
+            endpoints.append(row)
+    return cat
+
+
+def _load_routing(directory: Path, by_id: dict[str, dict]):
+    from .routing.contracts import load_routing
+
+    def _example(ep: dict):
+        name = ep.get("example_file")
+        if not name:
+            return None
+        try:
+            return json.loads((directory / EXAMPLES_DIRNAME / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+    try:
+        return load_routing(directory, by_id, _read_yaml, _example)
+    except Exception:  # noqa: BLE001 — a broken routing file must not take the catalog down
+        import logging
+        logging.getLogger("treg.catalog").warning("routing files failed to load", exc_info=True)
+        return {}, {}
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it

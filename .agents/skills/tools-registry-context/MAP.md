@@ -59,6 +59,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/application/call/overflow.py` | architecture/import-boundaries.md, ops/capacity.md |
 | `src/treg/application/call/reserve.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/resolve.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
+| `src/treg/application/call/route.py` | architecture/catalog.md, architecture/import-boundaries.md |
 | `src/treg/application/call/service.py` | architecture/import-boundaries.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/settle.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/types.py` | architecture/import-boundaries.md, architecture/proxy-model.md, interface/api.md |
@@ -76,9 +77,11 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/bootstrap_handlers.py` | architecture/composition.md, interface/api.md |
 | `src/treg/bootstrap_http.py` | architecture/composition.md, interface/api.md |
 | `src/treg/caller_metadata.py` | architecture/multi-tenancy.md, interface/api.md |
+| `src/treg/catalog/adapters.yaml` | architecture/catalog.md |
 | `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
 | `src/treg/catalog/aviato.yaml` | architecture/catalog.md |
 | `src/treg/catalog/capabilities.yaml` | interface/catalog-review-proposal.md |
+| `src/treg/catalog/contracts.yaml` | architecture/catalog.md |
 | `src/treg/catalog/crustdata.yaml` | architecture/catalog.md |
 | `src/treg/catalog/examples/aviato.companies.acquisitions.json` | architecture/catalog.md |
 | `src/treg/catalog/examples/aviato.companies.employees.json` | architecture/catalog.md |
@@ -138,6 +141,11 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/domain/capacity/verify.py` | ops/capacity.md |
 | `src/treg/domain/capacity/view.py` | ops/capacity.md |
 | `src/treg/domain/catalog/__init__.py` | architecture/catalog.md |
+| `src/treg/domain/catalog/routing/__init__.py` | architecture/catalog.md, architecture/import-boundaries.md |
+| `src/treg/domain/catalog/routing/contracts.py` | architecture/catalog.md |
+| `src/treg/domain/catalog/routing/paths.py` | architecture/catalog.md |
+| `src/treg/domain/catalog/routing/plan.py` | architecture/catalog.md |
+| `src/treg/domain/catalog/routing/synthetic.py` | architecture/catalog.md |
 | `src/treg/domain/catalog/stats.py` | architecture/catalog.md |
 | `src/treg/domain/catalog/store.py` | architecture/catalog.md, interface/api.md, interface/catalog-review-proposal.md |
 | `src/treg/domain/connections/__init__.py` | architecture/auth-secrets.md |
@@ -250,6 +258,7 @@ Regenerate via `scripts/build-map.py`.
 | `tests/test_passthrough.py` | architecture/proxy-model.md |
 | `tests/test_postgres_reset.py` | architecture/data-model.md |
 | `tests/test_router_dependencies.py` | architecture/multi-tenancy.md |
+| `tests/test_routing.py` | architecture/catalog.md |
 | `tests/test_tag_billing.py` | architecture/proxy-model.md |
 | `tests/test_tag_billing_adversarial.py` | architecture/proxy-model.md |
 
@@ -259,10 +268,10 @@ Regenerate via `scripts/build-map.py`.
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `signup.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `__init__.py`, `bindings.py`, `bundles.py`, `test_oauth_refresh.py` |
-| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_ingest.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `google-tag-manager.yaml`, `google-tag-manager.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `__init__.py`, `store.py`, `stats.py`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
+| `architecture/catalog.md` | `contracts.yaml`, `adapters.yaml`, `__init__.py`, `contracts.py`, `paths.py`, `plan.py`, `synthetic.py`, `route.py`, `test_routing.py`, `catalog-drift.yml`, `catalog_drift.py`, `catalog_ingest.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `google-tag-manager.yaml`, `google-tag-manager.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `__init__.py`, `store.py`, `stats.py`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `connect.py`, `mcp_oauth.py`, `session.py`, `admin.py`, `auth.py`, `billing.py`, `call.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `web.py`, `dump_surface.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `0002_capacity_policy_snapshot.py`, `0003_overflow_route.py`, `0004_overflow_spend.py`, `0005_org_platform_overflow_disabled.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py` |
-| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `authorize.py`, `idempotency.py`, `overflow.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `__init__.py`, `__init__.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `__init__.py`, `__init__.py`, `__init__.py`, `__init__.py`, `injectors.py`, `relay.py`, `__init__.py`, `limiter.py`, `test_call_architecture.py`, `test_import_lightness.py` |
+| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `authorize.py`, `idempotency.py`, `overflow.py`, `route.py`, `__init__.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `__init__.py`, `__init__.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `__init__.py`, `__init__.py`, `__init__.py`, `__init__.py`, `injectors.py`, `relay.py`, `__init__.py`, `limiter.py`, `test_call_architecture.py`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `claude-connector.html`, `connect-demo.html`, `CLAUDE-CONNECTOR-SUBMISSION.md`, `test_mcp.py`, `test_mcp_directory.py`, `test_marketplace_call.py` |

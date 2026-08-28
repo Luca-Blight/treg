@@ -294,6 +294,15 @@ also rejects numeric IP encodings — decimal/hex/octal/short forms like `213070
 
 > Why relay instead of modeling the upstream: [foundation/charter.md](../foundation/charter.md).
 
+## Routed endpoints — the resolve stage short-circuit
+
+A catalog row with `kind: routed` (`treg.<capability>`, generated — `architecture/catalog.md`
+§ Routing) never reaches the credential ladder itself. `service._execute_call` hands it to
+`application/call/route.py`, which builds the plan and runs each child endpoint through **this same
+use case** as a child `CallContext` (`call_ref` `{parent}:r{n}`), so every rule below — ladder,
+reserve, relay faithfulness, capacity, overflow, settle, audit, cancellation — applies per child
+unchanged. The parent only assembles `{output, raw, _treg}` and owns the idempotency label.
+
 ## Platform capacity: refuse before reserve (plan step D)
 
 Tier 4 spends treg's own vendor account, and that account can be empty. `_resolve_marketplace_call`

@@ -2,6 +2,16 @@
 title: Endpoint catalog — what you can DO with a connected key, and which provider should do it
 status: shipped
 sources:
+  - src/treg/catalog/contracts.yaml
+  - src/treg/catalog/adapters.yaml
+  - src/treg/catalog/examples/findymail.search.business-profile.json
+  - src/treg/domain/catalog/routing/__init__.py
+  - src/treg/domain/catalog/routing/contracts.py
+  - src/treg/domain/catalog/routing/paths.py
+  - src/treg/domain/catalog/routing/plan.py
+  - src/treg/domain/catalog/routing/synthetic.py
+  - src/treg/application/call/route.py
+  - tests/test_routing.py
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
   - scripts/catalog_ingest.py
@@ -1060,6 +1070,56 @@ to treg's own key — so it cannot be side-stepped to spend our money (a URL-pas
 against the org's OWN tools and 404s without one). A team holding its own key for another provider
 can still call that provider by URL; that is their credential and their bill, and `DenyRule` —
 host-scoped, applied to every shape of call — is the tool for blocking it.
+
+## Routing — first-party routed endpoints (`treg.<capability>`)
+
+The one place treg **models** an upstream API, and the explicit opt-in where the caller asks treg
+to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog stays verbatim relay.
+
+- **Contracts** — `contracts.yaml`: per capability, one-of *identity* variants (structural keys,
+  never provider names — `{full_name, domain}`, `{first_name, last_name, domain}`,
+  `{linkedin_url}`), `derive` rules so the two name shapes match the same adapters, a small
+  *output* core (`email` required; `confidence`, names, `verified` optional) and `miss` in
+  canonical terms. `raw` — the winning provider's body — is always returned and never documented
+  as stable.
+- **Adapters** — `adapters.yaml`, one per endpoint: `accepts` (identity variants), `in` (contract
+  field → `queryParams.x` / `body.x`), `const` (fixed provider params), `out` (core field →
+  expression over the body), `miss`. The expression language (`domain/catalog/routing/paths.py`)
+  is deliberately tiny: dotted paths with `[i]`, `coalesce`, `/ N`, `==`/`!=` against literals,
+  and named transforms (`split_first`, `split_last`, `join`, `has_type`).
+- **Verified at load, or absent** — `routing/contracts.py::verify`: `in` must reproduce the
+  endpoint's own `test_request` and `out` must fill every required core field from its
+  `example_response` (an example that is itself a miss passes with the hit half unverified).
+  A failing adapter is not a candidate; the endpoint is still callable via `/call/` exactly as
+  before. `tests/test_routing.py` pins that every shipped adapter passes.
+- **The generated row** — `routing/synthetic.py`: every capability with ≥ 2 verified children gets
+  `treg.<capability>` (`provider: treg`, `kind: routed`, `POST /<capability>`, `input` = the
+  contract, `cost` = the children's range, `routed_children`). Never hand-written; not in any
+  provider file. `catalog_get` on it returns the contract and the ranked **plan** (the quote) —
+  nothing is reserved.
+- **Ranking** — `routing/plan.py`: own keys (tier 2) first at cost 0; then
+  `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
+  request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
+  is the measured hit rate when ≥ 50 samples exist, else `ok_rate`, else 1.0 (flagged
+  `unmeasured`). `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
+  are dropped and named in `dropped`. No hit-rate counter exists yet — it needs an audit column
+  (a hot-table migration), so today the formula collapses to price order with confidence flags.
+- **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
+  resolved catalog row is `kind: routed`. Each attempt is a **full child `execute_call`** on a
+  `CallContext` whose `call_ref` is `{parent}:r{n}` — its hold id, ladder (tiers 1/2/4/overflow),
+  reserve, relay, settle, audit row and cancellation compensation are the ordinary ones. Vendor
+  4xx (not 402/408/429) = caller fault → stop (`route_caller_fault`, the vendor's status). Our
+  5xx/503/429 or a vendor 5xx/429/402 = error → next candidate, at most two extra, only for
+  idempotent contracts. A MISS stops unless `X-Treg-Route-Waterfall: 1`; every attempt is settled
+  at its real price and `X-Treg-Route-Max-Cost` bounds the sum before each reserve (a candidate
+  that would breach it is `skipped`). Response: `{output, raw, _treg: {served_by, provider, tier,
+  outcome, tried[], charged_micro}}`, `X-Treg-Served-By`, `X-Treg-Providers-Tried`,
+  `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns
+  the idempotency label (a replay never touches a provider) and writes one audit row
+  (`credential_tier: routed`) beside the children's.
+- **Not built** (plan R0/R4): tagging the untagged `.x.` tail, "prefer routed" in the agent files
+  after a shadow week, the `hit_rate` counter, `people.search` (`kind: filters`) and the `Location`
+  table. Only `people.email.find` ships a contract today.
 
 ## Security
 
