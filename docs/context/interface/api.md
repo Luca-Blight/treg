@@ -801,4 +801,7 @@ because a cookie is attacker-supplied and this value reaches a query.
 Redemption happens at **first team creation**, in both org-creating doors (`POST /orgs` and the
 legacy `POST /users`), immediately after `_grant_signup_promo` and with the same swallow-and-log
 posture: a referral is a marketing nicety and a signup is not. It must never be why someone cannot
-make a team.
+make a team. A failed grant recovers by rolling the session back, which expires every object it
+tracks - so both doors read their response fields *before* granting, and the redemption revives an
+expired `user`/`org` with `db.refresh` before touching them. The recovery path costs the team its
+credit, never the signup response or the referral attribution.

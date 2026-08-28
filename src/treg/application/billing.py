@@ -773,6 +773,8 @@ async def attempt_auto_topup(db: AsyncSession, org_id: int) -> dict:
         # Credit here rather than waiting for the webhook: unlike a browser redirect, this succeeded
         # status came back on OUR request to Stripe, so it is server-authoritative. The webhook's
         # later delivery of the same PaymentIntent id is a no-op (ledger.topup is idempotent on it).
+        # topup only STAGES - the commit below lands credit + failure-counter reset in one
+        # transaction.
         credited = cents_to_micro(pi.get("amount_received") or pi.get("amount") or 0)
         await ledger.topup(db, org_id, credited, pi["id"], meta={"auto": True, "source": "stripe"})
         org = await db.get(Org, org_id)
@@ -925,6 +927,10 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     block_id = block.id  # captured now: a later rollback (the ad-conversion except below) expires
                         # every object this session is tracking, `block` included, and reading an
                         # expired attribute outside an awaited call raises MissingGreenlet.
+    # THE durability line, and the credit's ONLY commit (ledger.topup stages): committed before
+    # anything else in this handler can fail - every later rollback (bonus, adsconv, qualify,
+    # sweep) rolls back to here.
+    await db.commit()
     fresh = not already
     bonus_micro, bonus_pct = 0, 0
     if fresh and not auto:
@@ -939,6 +945,7 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                 await ledger.grant(db, org_id, amount_micro=bonus_micro, kind="bonus", once=False,
                                    meta={"source": "topup_bonus", "payment_intent": pi_id,
                                          "pct": bonus_pct, "topup_block_id": block_id})
+                await db.commit()
             except Exception as e:  # noqa: BLE001
                 await db.rollback()
                 bonus_micro, bonus_pct = 0, 0

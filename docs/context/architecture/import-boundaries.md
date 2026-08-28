@@ -80,6 +80,10 @@ Two runtime contracts keep that boundary executable. `treg.application.call` can
 API, bootstrap, routers, FastAPI, or Starlette. `treg.infra.upstream` cannot import those HTTP adapters
 or frameworks. Direct imports of the application-owned request and response DTOs remain the port shared
 by the use case and relay. Mutation tests inject representative forbidden edges and assert detection.
+The same test module also pins the money transaction boundary: all five `domain/money` primitives
+(the reserve/settle/release staged bodies plus `grant` and `topup`) are scanned for `db.commit` /
+`db.rollback` and must stage only, with a mutation self-check that an injected commit is detected;
+the lazy stale-hold reap keeps its documented independent committing boundary.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

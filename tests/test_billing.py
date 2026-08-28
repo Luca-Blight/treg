@@ -333,6 +333,7 @@ async def test_history_links_each_purchase_to_its_invoice(c: AsyncClient, monkey
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
         await ledger.topup(db, org_id, 25_000_000, "pi_auto", meta={"auto": True, "source": "stripe"})
+        await db.commit()
 
     monkeypatch.setattr(billing, "_sdk", _docs_sdk(
         [_charge("pi_manual", invoice="in_1"), _charge("pi_auto")], [_invoice("in_1")]))
@@ -368,6 +369,7 @@ async def test_history_survives_a_stripe_outage(c: AsyncClient, monkeypatch):
     await _set_org(org_id, stripe_customer_id="cus_test_1")
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+        await db.commit()
 
     async def boom(fn, /, **kw):
         raise stripe.APIConnectionError("stripe is down")
@@ -386,6 +388,7 @@ async def test_history_never_moves_money(c: AsyncClient, monkeypatch):
     await _set_org(org_id, stripe_customer_id="cus_test_1")
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+        await db.commit()
     monkeypatch.setattr(billing, "_sdk", _docs_sdk([_charge("pi_manual", invoice="in_1")], [_invoice("in_1")]))
     before = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
     await c.get("/billing/history", headers=_h(owner))
@@ -683,6 +686,7 @@ async def test_monthly_spend_counts_only_automatic_topups(c: AsyncClient, monkey
     async with session_maker() as db:
         await ledger.topup(db, org_id, 50_000_000, "pi_manual", meta={"auto": False})
         await ledger.topup(db, org_id, 10_000_000, "pi_auto", meta={"auto": True})
+        await db.commit()
         assert await billing.monthly_autotopup_spend(db, org_id) == 10_000_000
 
 
@@ -932,9 +936,13 @@ async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeyp
     by SQLAlchemy in "pending rollback" state. `_on_payment_succeeded` immediately reuses the same
     `db` for `_set_default_pm`'s `db.get(Org, ...)`; without a rollback in the except block, that
     raises PendingRollbackError, which 500s the webhook and makes Stripe retry a payment
-    `ledger.topup()` had ALREADY durably credited. The webhook must still return 200, the credit
+    the credit commit had ALREADY made durable. The webhook must still return 200, the credit
     must still stand, and the rest of the request (saving the default payment method) must still
-    complete."""
+    complete.
+
+    The failing commit is targeted by CONTENT, not by ordinal: the first commit after the real
+    `adsconv.queue` staged the `paid` conversion IS the ad-conversion commit inside `_credit`'s
+    try block, whatever the commit count before it happens to be."""
     from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
 
     monkeypatch.setattr(adsconv, "enabled", lambda: True)
@@ -946,12 +954,22 @@ async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeyp
         db.add(org)
         await db.commit()
 
+    real_queue = adsconv.queue
+    state = {"queued_paid": False, "failed": False}
+
+    async def tracking_queue(db, org, action, **kw):
+        result = await real_queue(db, org, action, **kw)
+        if action == adsconv.ACTION_PAID:
+            state["queued_paid"] = True
+        return result
+
+    monkeypatch.setattr(billing.adsconv, "queue", tracking_queue)
+
     real_commit = SAAsyncSession.commit
-    calls = {"n": 0}
 
     async def flaky_commit(self):
-        calls["n"] += 1
-        if calls["n"] == 2:  # the ad-conversion commit inside _credit's try block, not the topup one
+        if state["queued_paid"] and not state["failed"]:
+            state["failed"] = True  # exactly once: the ad-conversion commit in _credit's try block
             raise RuntimeError("simulated serialization failure")
         return await real_commit(self)
 
@@ -961,7 +979,7 @@ async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeyp
     r = await _deliver(c, event)
     assert r.status_code == 200, r.text  # NOT a 500 — Stripe must not be told to retry this
     assert r.json()["credited"] is True
-    assert calls["n"] >= 3, "the flaky commit was never reached, or the request stopped early"
+    assert state["failed"], "the flaky commit was never reached, or the request stopped early"
 
     body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
     # The payment is credited regardless of the ad-conversion commit's fate.

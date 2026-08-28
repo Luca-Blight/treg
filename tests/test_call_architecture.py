@@ -189,6 +189,12 @@ def test_dataplane_write_allowlist_rejects_an_unlisted_mutation() -> None:
         money._release_in_transaction,
         money.settle_in_transaction,
         money.release_in_transaction,
+        # The funding primitives are their own real bodies - no committing wrapper exists to hide
+        # behind, so listing them here scans the actual logic (the lesson from the wrapper-keyed
+        # version above). Their savepoint (`begin_nested`) is invisible to this scanner on purpose:
+        # it confines a lost idempotency race, it does not end the caller's transaction.
+        money.grant,
+        money.topup,
     ],
 )
 def test_call_money_transaction_primitives_never_commit(owner) -> None:
