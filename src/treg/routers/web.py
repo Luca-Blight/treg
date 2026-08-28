@@ -2130,10 +2130,13 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         # The title leads with the pricing intent: Search Console shows "{provider} api pricing" is
         # what reaches these pages ("linkedin api pricing", "1688 api pricing" — the site's one
         # non-brand click), and the number is the part no vendor page prints.
-        title = (f"{display} API pricing per call: from {cheapest} | treg.to" if cheapest
+        # `cheapest` already names its unit ("$0.00245/result"), so the title does not say "per
+        # call" beside it — a per-result price is not a per-call one.
+        title = (f"{display} API pricing: from {cheapest}, no signup | treg.to" if cheapest
                  else f"{display} API pricing per call, no signup | treg.to")
         if len(title) > _TITLE_MAX:
-            title = f"{display} API pricing per call | treg.to"
+            title = (f"{display} API pricing: from {cheapest} | treg.to" if cheapest
+                     else f"{display} API pricing per call | treg.to")
         desc = (f"{display} API pricing, per call, with no {display} signup: {len(eps)} tools "
                 f"{'from ' + cheapest + ' ' if cheapest else ''}through one treg.to key or MCP server"
                 f"{' — ' + measured if measured else ''}. Use it from Claude Code, ChatGPT or any agent.")

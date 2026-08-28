@@ -433,7 +433,7 @@ async def test_compare_titles_carry_the_cheapest_price(clients: AsyncClient):
 async def test_provider_title_leads_with_pricing(clients: AsyncClient):
     html = (await clients.get("/tools/hunter")).text
     title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
-    assert title.startswith("Hunter API pricing per call"), title
+    assert title.startswith("Hunter API pricing") and "$" in title, title
     assert len(title) <= 65, title
 
 
