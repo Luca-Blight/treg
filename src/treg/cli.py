@@ -4581,10 +4581,11 @@ def _print_catalog_endpoint(e: dict, connected: set = frozenset(), idw: int = 46
     # agent could not actually choose (2026-08-28).
     mark = "●" if e["provider"] in connected else " "
     if e.get("kind") == "routed":
-        print(f"  ▸ {_clip(e['id'], idw):<{idw}} {'ROUTED':<7} {_cost_label(e.get('cost')):<16} {mark}  "
+        print(f"  ▸ {_clip(e['id'], idw):<{idw}} {'ROUTED':<7} {_cost_usd(e.get('cost')):<16} {mark}  "
               f"treg picks among {len(e.get('routed_children') or [])} providers below — own keys first, then cheapest per hit")
         return
-    print(f"    {_clip(e['id'], idw):<{idw}} {e['method']:<7} {_cost_label(e.get('cost')):<16} {mark}  {e['provider']}")
+    # unified USD only (`_cost_usd`); the provider's own credits/CNY live in `treg catalog get`
+    print(f"    {_clip(e['id'], idw):<{idw}} {e['method']:<7} {_cost_usd(e.get('cost')):<16} {mark}  {_clip(e.get('name') or e.get('summary') or '', 60)}")
 
 
 def _cost_usd(cost: dict | None) -> str:
@@ -4633,22 +4634,22 @@ def _catalog_search(query: str, args, cfg) -> None:
     idw = min(max(len(e["id"]) for e in rows), 46)
     print(f"\n{body['total']} matches for \"{query}\"" + (f" — showing {len(rows)}" if body["total"] > len(rows) else ""))
     connected = _connected_providers(cfg)
-    print(f"\n  {'ENDPOINT':<{idw}} {'PLATFORM':<11} {'PROVIDER':<11} {'COST':<16} ●  SUMMARY")
+    # No PLATFORM/PROVIDER columns: the id spells both (`hunter.people.email.find`), and the width
+    # is better spent on the summary an agent actually reads.
+    print(f"\n  {'ENDPOINT':<{idw}} {'COST':<16} ●  SUMMARY")
     # The server groups a capability that has a ROUTED row: the parent first, its children right
     # under it. Draw that as a hierarchy — "let treg choose" leads, the specific providers indent.
     routed_caps = {e["capability"] for e in rows if e.get("kind") == "routed"}
     for e in rows:
         if e.get("kind") == "routed":
-            print(f"▸ {_clip(e['id'], idw):<{idw}} {_clip(e['platform'], 11):<11} {'ROUTED':<11} "
-                  f"{_clip(_cost_usd(e.get('cost')), 16):<16} {'●' if e['provider'] in connected else ' '}  "
-                  f"{_clip(e.get('summary', ''), 54)}")
+            print(f"▸ {_clip(e['id'], idw):<{idw}} {_clip(_cost_usd(e.get('cost')), 16):<16} "
+                  f"{'●' if e['provider'] in connected else ' '}  ROUTED — {_clip(e.get('summary', ''), 70)}")
             _dim(f"    treg picks among {len(e.get('routed_children') or [])} providers (own keys first, then cheapest "
                  f"per hit) and names the one that served. To choose the provider yourself, call a child id:")
             continue
         indent = "    " if e.get("capability") in routed_caps else "  "
-        print(f"{indent}{_clip(e['id'], idw):<{idw}} {_clip(e['platform'], 11):<11} {_clip(e['provider'], 11):<11} "
-              f"{_clip(_cost_usd(e.get('cost')), 16):<16} {'●' if e['provider'] in connected else ' '}  "
-              f"{_clip(e.get('summary', ''), 54)}")
+        print(f"{indent}{_clip(e['id'], idw):<{idw}} {_clip(_cost_usd(e.get('cost')), 16):<16} "
+              f"{'●' if e['provider'] in connected else ' '}  {_clip(e.get('summary', ''), 78)}")
     _dim(f"\ntreg catalog get {rows[0]['id']}   # params, cost, example response")
 
 
