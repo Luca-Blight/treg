@@ -8,11 +8,19 @@ useDefault = true
 
 [allowlist]
 description = "Fake, non-secret placeholders used by tests and the demo sandbox"
+regexTarget = "line"
 regexes = [
   '''sk_live_DEMO0000PLACEHOLDER''',      # src/treg/sandbox.py — demo starter (credential to nothing)
   '''phx_DEMO0000PLACEHOLDER''',          # src/treg/sandbox.py — demo starter (credential to nothing)
   '''sk_live_ABCDEFGHIJKLMNOP1234''',     # tests/test_localrun.py — proves output redaction masks a key
   '''sk_test_123''',                      # tests/*.py — generic fake test key
+  # IndexNow site keys are PUBLIC BY DESIGN: the protocol requires publishing the key at
+  # https://<site>/<key>.txt, so anyone can read it — proving site ownership is its whole job.
+  # The scanner reads every fetched branch, so the seo branch carrying treg's key as a constant
+  # turned the WHOLE repository's CI red. Shape-anchored to the IndexNow names/context only — a
+  # random new high-entropy constant elsewhere still fails the scan.
+  '''INDEXNOW_KEY\s*=''',
+  '''KEY\s*=\s*"[A-Za-z0-9-]{8,64}"\s*#\s*must match INDEXNOW_KEY''',
   # (sk_live_9f2a7c41… lived here for tests/test_error_capture.py. That test now reuses the
   # sk_live_ABCDEFGHIJKLMNOP1234 placeholder two lines up — one entry serving both tests that need a
   # key-shaped string — and the old value is purged from history, so the entry had nothing to guard.)
