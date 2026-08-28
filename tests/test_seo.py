@@ -404,12 +404,35 @@ async def test_favicon_is_the_mono_mark(clients: AsyncClient):
 # the three hubs, /catalog names them in its crawlable prerender, a provider page names the jobs
 # it serves, and a job page names the workflows that chain it.
 
+HUBS = ('href="/use-cases"', 'href="/workflows"', 'href="/agents/claude-code"')
+
+
 async def test_every_surface_links_the_three_hubs(clients: AsyncClient):
-    for path in ("/", "/catalog", "/tools/hunter", "/use-cases/verify-an-email"):
+    for path in ("/", "/catalog", "/tools/hunter", "/use-cases/verify-an-email",
+                 "/workflows/find-and-verify-a-lead-list", "/agents/grok-bot"):
         html = (await clients.get(path)).text
-        for hub in ('href="/use-cases"', 'href="/workflows"'):
+        for hub in HUBS:
             assert hub in html, f"{path} does not link {hub}"
-    assert 'href="/agents/claude-code"' in (await clients.get("/tools/hunter")).text
+
+
+async def test_hub_links_stay_off_a_self_hosted_registry(monkeypatch):
+    """The job, workflow and agent pages exist on treg.to only (`_hosted`), so a self-hosted
+    registry's footer and catalog must not point at three 404s. The IndexNow key file is generic
+    and stays available everywhere."""
+    from httpx import ASGITransport
+    from treg.api import app
+    from treg.routers.web import INDEXNOW_KEY
+    monkeypatch.setenv("TREG_PUBLIC_URL", "https://registry.example.internal")
+    get_settings.cache_clear()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            for path in ("/", "/catalog", "/tools/hunter"):
+                html = (await c.get(path)).text
+                for hub in HUBS:
+                    assert hub not in html, f"{path} links {hub} off-host"
+            assert (await c.get(f"/{INDEXNOW_KEY}.txt")).status_code == 200
+    finally:
+        get_settings.cache_clear()
 
 
 async def test_provider_page_names_the_jobs_it_serves(clients: AsyncClient):

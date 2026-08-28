@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Push every URL in the live sitemap to IndexNow, and ping Google with the sitemap.
+"""Push every URL in the live sitemap to IndexNow.
 
 IndexNow is one POST for up to 10,000 URLs; Bing, Yandex, Seznam and Naver share the feed, so one
-submission reaches all of them. Google does not take IndexNow — it gets the sitemap ping, and the
-Search Console sitemap resubmission is done through the catalog (`google-search-console.x.webmasters-
-sitemaps-submit`) because it needs the property owner's OAuth.
+submission reaches all of them. Google does not take IndexNow and retired its sitemap ping; its
+resubmission goes through Search Console via the catalog (`google-search-console.x.webmasters-
+sitemaps-submit`), which needs the property owner's OAuth.
 
 Run after a deploy that adds or retitles pages:
 
@@ -56,14 +56,11 @@ def main() -> int:
         print(f"IndexNow rejected the batch: HTTP {e.code} {e.read().decode()[:200]}", file=sys.stderr)
         return 1
 
-    ping = f"https://www.google.com/ping?sitemap={base}/sitemap.xml"
-    try:
-        with urllib.request.urlopen(ping, timeout=30) as r:
-            print(f"Google sitemap ping: HTTP {r.status}")
-    except urllib.error.HTTPError as e:  # noqa: PERF203
-        # Google retired the ping endpoint for some properties; the Search Console resubmission
-        # is the reliable path and is done separately.
-        print(f"Google sitemap ping: HTTP {e.code} (use the Search Console sitemaps API)")
+    # Google retired its sitemap ping endpoint (June 2023); the only supported path is Search
+    # Console, which needs the property owner's OAuth. Through the catalog:
+    #   treg call google-search-console.x.webmasters-sitemaps-submit --method PUT \
+    #     --query siteUrl=sc-domain:treg.to --query feedpath=https://treg.to/sitemap.xml
+    print("Google: resubmit through Search Console (google-search-console.x.webmasters-sitemaps-submit)")
     return 0
 
 

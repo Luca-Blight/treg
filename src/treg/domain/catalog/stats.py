@@ -171,7 +171,7 @@ async def observed(
             # be tested against `decided`, not total traffic: four 422s plus one 405 previously
             # published the outcome of that ONE decided call as 0%, violating both the evidence
             # and privacy reasons for having the floor.
-            out[ep_id] = {"samples": n, "ok_rate": None,
+            out[ep_id] = {"samples": n, "decided": decided, "ok_rate": None,
                           "p50_ms": None, "p95_ms": None, "last_ok_days": None,
                           "hit_rate": hit_rate, "hit_samples": hit_decided}
             continue
@@ -179,6 +179,9 @@ async def observed(
         enough_latency = len(ms) >= MIN_SAMPLES
         out[ep_id] = {
             "samples": n,
+            # `decided` is the denominator of ok_rate (2xx + 5xx). Anything aggregating rates
+            # across endpoints must weight by this, not by `samples`, which still counts 4xx.
+            "decided": decided,
             "ok_rate": round(ok / decided, 4) if decided else None,
             # A rate may rest on five decided calls while only one succeeded. Calling that single
             # duration p50 AND p95 dresses one observation up as a distribution, so latency has
@@ -189,7 +192,7 @@ async def observed(
             "hit_rate": hit_rate, "hit_samples": hit_decided,
         }
     for ep_id in ids:                # an endpoint nobody has called says so, rather than vanishing
-        out.setdefault(ep_id, {"samples": 0, "ok_rate": None,
+        out.setdefault(ep_id, {"samples": 0, "decided": 0, "ok_rate": None,
                                "p50_ms": None, "p95_ms": None, "last_ok_days": None,
                                "hit_rate": None, "hit_samples": 0})
     return out

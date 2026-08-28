@@ -7,8 +7,12 @@ sources:
   - src/treg/agent_pages.py
   - src/treg/web/robots.txt
   - src/treg/web/catalog.css
+  - src/treg/web/usecase.css
   - src/treg/web/index.html
   - src/treg/web/landing.html
+  - src/treg/web/llms.txt
+  - src/treg/endpoint_stats.py
+  - scripts/indexnow_submit.py
   - src/treg/web/support.html
   - assets/brand/og-card.html
 related:
@@ -488,7 +492,7 @@ What links what now, and where it is generated:
 
 | From | To | Where |
 |---|---|---|
-| footer of every server-rendered page (Explore / Build / Company columns; the nav is unchanged by request) | `/use-cases`, `/workflows`, `/agents/claude-code` | `_page()` in `routers/web.py` |
+| footer of every server-rendered page (Explore / Build / Company columns; the nav is unchanged by request) | `/use-cases`, `/workflows`, `/agents/claude-code` — **hosted only**: those pages 404 on a self-hosted registry, so the links are gated by `_hosted()` (the landing wraps them in `<!--hosted-->` markers the route strips off-host) | `_page()` in `routers/web.py` |
 | the landing footer (`landing.html`; the public catalog SPA has no footer and links the hubs from its prerender) | same three | hand-kept markup, so `test_every_surface_links_the_three_hubs` walks `/` and `/catalog` |
 | `/catalog` prerender | both hubs, in a sentence | `catalog_index` |
 | `/tools/<provider>` "Used in" | every job page whose capabilities the provider answers | `_jobs_by_provider()`, cached per process from `USE_CASE_PAGES` × the catalog |
@@ -503,20 +507,23 @@ workflow is cross-linked the moment it is routed, and nothing is listed by hand.
 The non-brand queries that reach the site are "{provider} api pricing" phrasings ("linkedin api
 pricing", "1688 api pricing" — the one non-brand click in 28 days), not "api for agents". So:
 
-- `/tools/<provider>` titles lead with it: `{Provider} API pricing per call: from $0.0245 | treg.to`
-  (falls back to `{Provider} API pricing per call | treg.to` past 65 characters; own-account
-  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate,
-  median latency — read through `_observed_or_empty` like the job pages; it is the one fact a
-  vendor's own pricing page cannot print.
+- `/tools/<provider>` titles lead with it: `{Provider} API pricing: from $0.00245/result, no signup | treg.to`
+  (the price label carries its own billing unit, so the copy never says "per call" beside it;
+  falls back to `{Provider} API pricing: from $X | treg.to` past 65 characters; own-account
+  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate
+  weighted by each endpoint's DECIDED calls (`decided` in `endpoint_stats`, 2xx + 5xx, never the
+  4xx-inclusive `samples`), median of the endpoint `p50_ms` medians — read through
+  `_observed_or_empty` like the job pages; it is the one fact a vendor's own pricing page cannot
+  print.
 - compare-form job titles get `, from $X` appended when the hand-written title carries no price and
   the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
 
 ### IndexNow
 
 `/{INDEXNOW_KEY}.txt` serves the IndexNow key (not a secret: the protocol only checks the key is
-served from the host named in the submission). `scripts/indexnow_submit.py` reads the live sitemap
-and pushes every URL to `api.indexnow.org` (Bing, Yandex, Seznam, Naver share the feed) and pings
-Google's sitemap endpoint. Google's own resubmission goes through Search Console
+served from the host named in the submission), on every host, since IndexNow is generic.
+`scripts/indexnow_submit.py` reads the live sitemap and pushes every URL to `api.indexnow.org`
+(Bing, Yandex, Seznam, Naver share the feed). Google retired its sitemap ping; its resubmission goes through Search Console
 (`google-search-console.x.webmasters-sitemaps-submit` in the catalog, owner OAuth). The route is
 registered in `bootstrap.py`'s ownership table like every other public route.
 

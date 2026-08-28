@@ -144,6 +144,10 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     def navlink(href: str, label: str, extra: str = "") -> str:
         cur = ' aria-current="page"' if href == nav_current else ""
         return f'<a href="{href}"{cur}{extra}>{label}</a>'
+    # The job, workflow and agent pages exist on the hosted deployment only (`_hosted`): a
+    # self-hosted registry must not put three 404s in its own footer.
+    hub_links = ('<a href="/use-cases">Use cases</a><a href="/workflows">Workflows</a>'
+                 '<a href="/agents/claude-code">Agents</a>' if _hosted() else "")
     return HTMLResponse(f"""<!doctype html>
 <html lang="en">
 <head>
@@ -193,8 +197,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     </div>
     <nav class="foot-cols" aria-label="Site">
       <div class="foot-col"><div class="lab">Explore</div>
-        <a href="/catalog">Catalog</a><a href="/use-cases">Use cases</a
-        ><a href="/workflows">Workflows</a><a href="/agents/claude-code">Agents</a></div>
+        <a href="/catalog">Catalog</a>{hub_links}</div>
       <div class="foot-col"><div class="lab">Build</div>
         <a href="/tutorial">Docs</a><a href="/docs">API</a><a href="/llms.txt">llms.txt</a
         ><a href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a></div>
@@ -346,9 +349,11 @@ async def catalog_index():
                  # The two hubs are linked from HERE as well as the nav: this prerender is the page
                  # Google crawls most, and before this line the job and workflow pages were reachable
                  # only from the sitemap — "URL is unknown to Google" on every one of them.
-                 + '<p>Looking for a job rather than a platform? <a href="/use-cases">The use cases</a> '
-                   'compare the providers that do one job, and <a href="/workflows">the workflows</a> '
-                   'chain several jobs into one prompt with the price of each step.</p>'
+                 + ('<p>Looking for a job rather than a platform? <a href="/use-cases">The use cases</a> '
+                    'compare the providers that do one job, <a href="/workflows">the workflows</a> '
+                    'chain several jobs into one prompt with the price of each step, and '
+                    '<a href="/agents/claude-code">the agent pages</a> show the whole menu for one '
+                    'agent.</p>' if _hosted() else "")
                  + "".join(sections)
                  + f"<h2>The providers</h2><p>{len(prov_rows)} vendors serve this catalog, each "
                    f"with its own page: {prov_links}</p>")
@@ -1913,9 +1918,13 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
     # thing a vendor's own pricing page cannot print, and it goes above the fold for that reason.
     obs = await _observed_or_empty(db, [e["id"] for e in eps])
     o_samples = sum(int(o.get("samples") or 0) for o in obs.values())
-    o_ok = [o for o in obs.values() if o.get("samples") and o.get("ok_rate") is not None]
-    o_ok_rate = (sum(o["ok_rate"] * o["samples"] for o in o_ok) / sum(o["samples"] for o in o_ok)) if o_ok else None
-    o_p50s = sorted(o["p50"] for o in obs.values() if o.get("p50"))
+    # The provider-wide rate weights each endpoint's published rate by the calls that DECIDED it
+    # (2xx + 5xx). `samples` still counts callers' 4xx, so weighting by it would let one team's
+    # malformed requests drag a healthy provider down. Latency is the median of the endpoint
+    # medians that cleared the successful-sample floor; `p50_ms` is the key endpoint_stats emits.
+    o_ok = [o for o in obs.values() if o.get("ok_rate") is not None and (o.get("decided") or 0) > 0]
+    o_ok_rate = (sum(o["ok_rate"] * o["decided"] for o in o_ok) / sum(o["decided"] for o in o_ok)) if o_ok else None
+    o_p50s = sorted(o["p50_ms"] for o in obs.values() if o.get("p50_ms"))
     o_p50 = o_p50s[len(o_p50s) // 2] if o_p50s else None
     measured = ""
     if o_samples:
@@ -1943,7 +1952,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
             "from then on, through one treg.to token. Calls on your own connection are never metered."
             if is_oauth else
             f"{_esc_html(blurb)} {len(eps)} tools for your agent through one treg.to key, priced "
-            f"per call{' from ' + _esc_html(cheapest) if cheapest else ''}, with no {esc_d} signup.")
+            f"at the provider's own rate{' from ' + _esc_html(cheapest) if cheapest else ''}, with no {esc_d} signup.")
     hero = (
         '<div class="hero"><div class="wrap">'
         '<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
@@ -2142,7 +2151,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
                     f"<h2>Jobs {esc_d} does, compared with the other providers</h2>"
                     '<div class="cards">'
                     + "".join(f'<a class="card" href="/use-cases/{_esc_html(js)}"><h3>{_esc_html(jsent)}</h3>'
-                              f"<p>Every provider that does this job, side by side: price per call, "
+                              f"<p>Every provider that does this job, side by side: price per billing unit, "
                               f"measured success rate and speed.</p></a>" for js, jsent in used_in)
                     + "</div></div></section>")
 
@@ -2158,14 +2167,16 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         # non-brand click), and the number is the part no vendor page prints.
         # `cheapest` already names its unit ("$0.00245/result"), so the title does not say "per
         # call" beside it — a per-result price is not a per-call one.
+        # `cheapest` carries its own billing unit ("$0.00245/result", "$0.0089/call"), so the copy
+        # never says "per call" next to it: a per-result or per-success rate is not a per-call one.
         title = (f"{display} API pricing: from {cheapest}, no signup | treg.to" if cheapest
-                 else f"{display} API pricing per call, no signup | treg.to")
+                 else f"{display} API pricing, no signup | treg.to")
         if len(title) > _TITLE_MAX:
             title = (f"{display} API pricing: from {cheapest} | treg.to" if cheapest
-                     else f"{display} API pricing per call | treg.to")
-        desc = (f"{display} API pricing, per call, with no {display} signup: {len(eps)} tools "
+                     else f"{display} API pricing | treg.to")
+        desc = (f"{display} API pricing at the provider's own rate, with no {display} signup: {len(eps)} tools "
                 f"{'from ' + cheapest + ' ' if cheapest else ''}through one treg.to key or MCP server"
-                f"{' — ' + measured if measured else ''}. Use it from Claude Code, ChatGPT or any agent.")
+                f"{', ' + measured if measured else ''}. Use it from Claude Code, ChatGPT or any agent.")
 
     ld = [
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
@@ -2430,6 +2441,9 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
         # would tell crawlers its front page really lives on treg.to.
         html = page.read_text(encoding="utf-8").replace(
             "{BASE}", get_settings().public_url.rstrip("/"))
+        # The footer's hub links point at hosted-only pages; a self-hosted landing drops them.
+        if not _hosted():
+            html = re.sub(r"<!--hosted-->.*?<!--/hosted-->", "", html, flags=re.S)
         resp = HTMLResponse(html, headers={"Cache-Control": "no-cache"})
         if ref:
             _remember_referral(resp, request, ref)
