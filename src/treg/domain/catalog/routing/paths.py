@@ -97,6 +97,15 @@ def upper(v: Any) -> Any:
     return v.upper() if isinstance(v, str) else v
 
 
+def at_least(v: Any, floor: Any) -> Any:
+    """A provider minimum (`pagination.size must not be less than 10`, lusha) applied to the
+    caller's limit — the caller still pays the provider's price for the rows it insists on."""
+    try:
+        return max(int(v), int(floor))
+    except (TypeError, ValueError):
+        return floor
+
+
 def as_list(v: Any) -> Any:
     """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
     if v is None:
@@ -106,7 +115,7 @@ def as_list(v: Any) -> Any:
 
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
               "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
-              "list": as_list}
+              "list": as_list, "at_least": at_least}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")

@@ -464,6 +464,6 @@ adapters:
   lusha.people.search:
     accepts: [[title]]
     in:  {title: body.filters.contacts.include.jobTitles}
-    in_expr: {body.filters.contacts.include.jobTitles: "list(title)", body.pagination.size: limit, body.pagination.page: "0"}
+    in_expr: {body.filters.contacts.include.jobTitles: "list(title)", body.pagination.size: "at_least(limit, 10)", body.pagination.page: "0"}
     out: {people: results, count: pagination.total}
     miss: "results == []"
