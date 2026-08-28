@@ -488,8 +488,8 @@ What links what now, and where it is generated:
 
 | From | To | Where |
 |---|---|---|
-| nav + footer of every server-rendered page | `/use-cases`, `/workflows`, `/agents/claude-code` | `_page()` in `routers/web.py` |
-| the landing and the public catalog (`landing.html`, `index.html` pubnav) | same three | hand-kept markup, so `test_every_surface_links_the_three_hubs` walks `/` and `/catalog` |
+| footer of every server-rendered page (Explore / Build / Company columns; the nav is unchanged by request) | `/use-cases`, `/workflows`, `/agents/claude-code` | `_page()` in `routers/web.py` |
+| the landing footer (`landing.html`; the public catalog SPA has no footer and links the hubs from its prerender) | same three | hand-kept markup, so `test_every_surface_links_the_three_hubs` walks `/` and `/catalog` |
 | `/catalog` prerender | both hubs, in a sentence | `catalog_index` |
 | `/tools/<provider>` "Used in" | every job page whose capabilities the provider answers | `_jobs_by_provider()`, cached per process from `USE_CASE_PAGES` × the catalog |
 | `/use-cases/<job>` "Run the full sequence" | every workflow with a step on one of the job's capabilities | `_workflows_by_capability()`, cached from `WORKFLOWS[*].steps` |
