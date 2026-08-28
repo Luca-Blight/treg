@@ -377,6 +377,20 @@ checker` 590 against `google indexing api` 260, and the Indexing API is the wron
 job, so the page carries the checker term and says so; `financial news api` 170 sits beside
 `stock news api` 210.
 
+**`{cheapest}` expands to a bare price, so the lede must carry the preposition** (2026-08-27).
+On a metered page it becomes `$0.002`, on a trial-pool page the `free_words` phrase, so "one key,
+{cheapest}, at the provider's rate" reads "one key, $0.002, at". Write "from {cheapest}" and let
+the phrase follow. Three of the 2026-08-27 pages shipped the bare form past 116 green tests and
+were caught by reading the `.md`; the same pass caught a note calling Majestic unpriced while the
+table printed $0.0008 per result for it, because `cost_view` converts index item units to USD.
+
+**Demand keeps outrunning the worklist term, sixth time** (2026-08-27). `coingecko api` 1,300
+against `crypto price api` 170, so the crypto page's H1 leads with CoinGecko; `reddit api` 5,400
+and `reddit mcp` 590 against `reddit search api` 140; `free backlink checker` 2,900 and `ahrefs
+api` 320 against `backlink api` 140, with Ahrefs not in the catalog, which the page says in its
+first paragraph; `competitor keyword research` 1,300 and `semrush api` 720 against `competitor
+ppc keywords` 140. The Glassdoor term held: `glassdoor api` 210, `glassdoor scraper` 110.
+
 **A `related` card resolves by label, not inside the current category.** Four categories carry
 fewer than five jobs (advertising and market research three, e-commerce and local businesses four),
 so their pages have to point at least one of their four cards outside the category. The card used to
@@ -403,6 +417,17 @@ OAuth connection; the AI-mentions job has one provider, DataForSEO, and it is me
 branches on the row's `free` flag: `metered_single` states the rate and the markup, and the meta
 description does not claim "never metered". Both were found the same way as the Semrush one: by
 reading the stock and AI-visibility pages after the tests went green.
+
+**`{cheapest}` is the cheapest of ONE unit, not of the page** (2026-08-28). `_uc_providers` groups
+rows by billing unit and `{cheapest}` expands to `cheapest_by_unit[units[0]]`, whichever unit is
+found first. On a mixed-unit page that is not the lowest number the reader can see: the keyword
+volume job printed "from $0.09" (DataForSEO's flat per-request row) above a table whose first line
+is Serpstat at $0.0005 per keyword, and the LinkedIn profile job printed "from $0.0015" above a
+$0.001 row. The comparison block itself is correct, because it prints a cheapest per unit with the
+units-are-not-interchangeable caveat; only the interpolated lede lies. Both ledes now state the
+rate in prose instead. **Do not write "from {cheapest}" on a page whose providers meter in more
+than one unit**, and read the rendered lede against the rendered table before shipping. Found the
+same way as the two above.
 
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a

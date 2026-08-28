@@ -15,6 +15,7 @@ from treg.bootstrap import create_app
 
 _SNAPSHOT = Path(__file__).parent / "snapshots" / "routes.json"
 _CALL_ROUTE = "DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT /call/{rest:path}"
+_CATALOG_CALL_ROUTE = "DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT /catalog/call/{rest:path}"
 
 
 def _all_routes() -> list[str]:
@@ -32,7 +33,10 @@ _ALL_ROUTES = _all_routes()
 # MCP is calling traffic: the dataplane owns its mount and its RFC 9728 resource metadata.
 _DATAPLANE_ONLY = (
     _CALL_ROUTE,
+    _CATALOG_CALL_ROUTE,
     "GET,HEAD /.well-known/oauth-protected-resource/mcp",
+    "GET,HEAD /.well-known/oauth-protected-resource/mcp/v2",
+    "MOUNT /mcp/v2",
     "MOUNT /mcp",
 )
 _DATAPLANE_ROUTES = [route for route in _ALL_ROUTES if route in _DATAPLANE_ONLY]
@@ -90,6 +94,7 @@ def test_role_manifests_are_explicit_and_match_the_created_app(role):
     }
 
     assert app.state.role == role
+    assert app.state.endpoint_observation_reader is not None
     assert app.state.role_manifest == expected
     assert _actual_routes(app) == expected["routes"]
 

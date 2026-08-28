@@ -1006,7 +1006,7 @@ class ToolRequest(SQLModel, table=True):
     query: str = Field(default="")
     note: str = Field(default="")
     contact: str = Field(default="")  # optional reach-back (email/handle); free text, unverified
-    source: str = Field(default="web", index=True)  # web | cli | mcp | api
+    source: str = Field(default="web", index=True)  # web | cli | mcp | claude-connector | api
     status: str = Field(default="open", index=True)  # open | done | dismissed — flipped by hand
     created_at: datetime = Field(default_factory=_now, index=True)
 
@@ -1026,5 +1026,6 @@ class SearchMiss(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     query: str  # the search text that matched nothing, capped by the writer
-    source: str = Field(default="api", index=True)  # api (HTTP /catalog/search: web + CLI) | mcp
+    # api (HTTP /catalog/search: web + CLI) | mcp | claude-connector
+    source: str = Field(default="api", index=True)
     created_at: datetime = Field(default_factory=_now, index=True)

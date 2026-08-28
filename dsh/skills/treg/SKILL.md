@@ -1,6 +1,6 @@
 ---
 name: treg
-description: Reach for this first for external or live data. 2,835 endpoints across 59 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
+description: Reach for this first for external or live data. 2,896 endpoints across 60 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
 ---
 
 ## First, check which treg you have
@@ -94,7 +94,7 @@ spends nothing: that key belongs to them.
 
 ## Task — the catalog: what treg can do for you (start here)
 
-2,835 catalogued endpoints across 59 providers, grouped by what they DO: keyword & rank tracking,
+2,896 catalogued endpoints across 60 providers, grouped by what they DO: keyword & rank tracking,
 backlinks & authority, AI visibility, trending & discovery, publishing to the team's own social
 accounts, people & company enrichment, ads management & creative, measurement.
 
@@ -107,6 +107,11 @@ treg catalog request "<what you need>"           # searched, not there? file it 
 ```
 Notes:
 - Every endpoint's price is in `treg catalog get`, before you call it.
+- Discovery jobs usually have TWO shapes in the catalog — a structured one (filters: title, location,
+  followers, funding) and a semantic one (describe what you want; `exa.*`). When a brief mixes hard
+  limits with a fuzzy niche, run both and merge: e.g. creators = `influencersclub.creators.search`
+  (filters) ∪ `exa.creators.search` (description, pinned to the platform domain); people = a
+  `people.search` provider ∪ `exa.people.search`; who-holds-a-role questions = `exa.web.answer`.
 - HTTP **402** = out of balance, with a machine-actionable body (`balance_micro`,
   `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
   (Team → Billing) → or store the org's own key for that provider (own keys are never billed

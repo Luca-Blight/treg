@@ -811,6 +811,7 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
 
 
 _wrong_resource = auth_use_cases._wrong_resource
+_effective_mcp_resource = auth_use_cases._effective_mcp_resource
 _same_mcp_resource = auth_use_cases._same_mcp_resource
 
 
@@ -866,6 +867,7 @@ async def oauth_authorize(
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
             resource=resource,
+            scope=scope,
             session_cookie=treg_session,
         )
     except auth_use_cases.OAuthServerError as exc:
@@ -875,7 +877,8 @@ async def oauth_authorize(
         # query the sign-in page would have to understand — the first version invented that
         # convention and nothing implemented it, so the user signed in and landed on the dashboard
         # with the authorization silently dropped.
-        resp = RedirectResponse("/", status_code=302)
+        # The query is only a UI cue. The validated request stays in the HttpOnly return cookie.
+        resp = RedirectResponse("/?signin=oauth", status_code=302)
         _remember_oauth_return(resp, request)
         return resp
 
@@ -996,6 +999,15 @@ async def oauth_protected_resource():
     resource's own path, and which one a given client tries is not something we get to choose.
     """
     return JSONResponse(mcp_oauth.protected_resource_metadata(),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/.well-known/oauth-protected-resource/mcp/v2", include_in_schema=False)
+async def oauth_protected_resource_v2():
+    """Protected-resource metadata for the catalog-only connector."""
+    if not get_settings().claude_connector_enabled:
+        raise HTTPException(status_code=404, detail="Claude catalog connector is not enabled")
+    return JSONResponse(mcp_oauth.protected_resource_metadata("v2"),
                         headers={"Cache-Control": "public, max-age=3600"})
 
 

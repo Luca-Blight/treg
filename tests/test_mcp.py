@@ -99,10 +99,15 @@ async def mcp_session(client: AsyncClient):
     host = FastAPI()
     host.mount("/mcp", fresh)
     client.headers.pop("X-Treg-Token", None)
-    async with _mcp.mcp_lifespan(fresh):
-        async with _AC(transport=ASGITransport(app=host), base_url="http://localhost") as mc:
-            mc.headers.update({k: v for k, v in client.headers.items() if k.lower() == "cookie"})
-            yield mc
+    reader = app.state.endpoint_observation_reader
+    _mcp.configure_endpoint_observation_reader(reader)
+    try:
+        async with _mcp.mcp_lifespan(fresh):
+            async with _AC(transport=ASGITransport(app=host), base_url="http://localhost") as mc:
+                mc.headers.update({k: v for k, v in client.headers.items() if k.lower() == "cookie"})
+                yield mc
+    finally:
+        _mcp.clear_endpoint_observation_reader(reader)
 
 
 async def test_the_server_lists_exactly_the_six_tools(clients):
@@ -347,6 +352,7 @@ async def test_every_tool_declares_what_it_can_do(clients):
     ann = {t.name: t.annotations for t in await server.list_tools()}
     assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools",
                         "catalog_request"}
+    assert all(a.title is None for a in ann.values())
     for name in ("catalog_search", "catalog_get", "balance", "my_tools"):
         a = ann[name]
         assert a and a.read_only_hint is True, name
@@ -1401,6 +1407,8 @@ async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clie
 
     token = (await clients.post("/users", json={"email": "ranker@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
+        await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 25}, token=token)
+        await app.state.endpoint_observation_reader.wait_for_idle()
         out = await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 25}, token=token)
     ids = [r["endpoint_id"] for r in out["results"]]
     assert ids.index(good) < ids.index(broken), ids

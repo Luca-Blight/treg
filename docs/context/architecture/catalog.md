@@ -4,6 +4,7 @@ status: shipped
 sources:
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
+  - scripts/catalog_ingest.py
   - scripts/catalog_validate.py
   - src/treg/catalog/aliases.yaml
   - src/treg/catalog/fx.yaml
@@ -40,11 +41,14 @@ sources:
   - src/treg/catalog/examples/crustdata.people.search.json
   - src/treg/catalog/google-search-console.yaml
   - src/treg/catalog/google-search-console.extended.yaml
+  - src/treg/catalog/google-tag-manager.yaml
+  - src/treg/catalog/google-tag-manager.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
   - src/treg/domain/catalog/__init__.py
   - src/treg/domain/catalog/store.py
   - src/treg/domain/catalog/stats.py
+  - src/treg/infra/catalog_observations.py
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
@@ -123,6 +127,11 @@ Path placeholders are substituted by the marketplace caller. Raw values are perc
 that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource
 names returned by an upstream API. An invalid/literal `%` is still encoded as `%25`. Search Console's
 `siteUrl` examples deliberately use the raw `sc-domain:example.com` form to demonstrate the default path.
+Google Tag Manager is the opposite case: its `parent`/`path` values describe a hierarchy rather than
+one opaque identifier, so the curated catalog exposes atomic account/container/workspace/version ids.
+`catalog_ingest.google_flat_path_params` makes the generated GTM input schema use the same atomic
+placeholders already present in Discovery's `flatPath`; no slash-delimited resource name is passed
+through one placeholder and accidentally encoded as `%2F`.
 
 ## Where things live
 
@@ -406,6 +415,13 @@ The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider fo
 6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
 7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
    capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+   Worked case (2026-08-27): "find instagram influencers by niche…" returned ZERO results because
+   influencers.club's name/summary said only "creators" — fixed by naming the job in the endpoint
+   (`…influencers by niche & size`), carrying the facet words (country, followers, engagement,
+   Instagram/TikTok/YouTube) in the `creators.search` capability description, and aliasing
+   `influencer(s)/kol(s)/microinfluencer(s) → creators` and `ig → instagram`. Long natural-language
+   queries still require every rare word to appear somewhere; the `near:` hint tells the agent
+   which words to drop.
 8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
    A name claiming an output the endpoint does not return is a lie an agent will spend money on.
 
@@ -692,7 +708,7 @@ can say "bring your own key" *before* the call instead of relaying the 403 after
   calls it `douyin`; if both don't land on `douyin`, the marketplace shelf splits in two and the
   cross-provider comparison the catalog exists for silently stops working.
 
-### The first-party OAuth wave (2026-07-28)
+### The first-party OAuth wave (2026-07-28; Google Tag Manager added 2026-08-27)
 
 The scraper providers sell breadth and their extended tier reads as a menu. The nine providers
 where treg owns the OAuth app are the opposite question — *what can this one connected account
@@ -702,6 +718,7 @@ actually do?* — and their sources differ per provider:
 |---|---|---|---|
 | google-search-console | searchconsole v1 discovery | 7 | 0 |
 | google-analytics | analyticsdata + analyticsadmin v1beta discovery | 63 (55 on the admin host) | 32 |
+| google-tag-manager | tagmanager v2 discovery | 98 | 8 |
 | google-business-profile | six My Business discovery docs + 7 hand-listed legacy v4 routes | 60 (45 off-host) | n/a |
 | youtube | youtube v3 discovery + the published quota-cost table | 76 | 2 |
 | google-ads | the GAQL resource reference — one entry per queryable resource | 42 | 0 |
@@ -717,6 +734,10 @@ Three things generalise from it:
   HTML reference. Scopes are ALTERNATIVES (holding any one suffices), so coverage is an
   intersection, not a subset. The My Business documents are the exception that declares no scopes
   at all, which is why that provider has no computable gaps.
+- **Google Tag Manager keeps risky administration outside the grant.** Its core catalog presents an
+  audit → workspace edit → version/publish workflow across cumulative `read`/`write`/`manage` tiers.
+  The generated catalog still lists methods requiring container deletion or account/user management,
+  but marks all eight with `scope_gap`; those three scopes are intentionally never requested.
 - **Google Ads is a resource list, not a route list.** One endpoint (`googleAds:searchStream`)
   answers every read and what varies is the GAQL `FROM` clause, so the unit of coverage is the
   queryable resource. Forty entries share a path and differ in `input.note` and `docs_url`.
@@ -906,6 +927,26 @@ sample size** per endpoint from `CallRecord` — which has recorded `endpoint_id
 `/catalog/endpoints/{id}`, attached to the endpoint **and every sibling**, because the choice is made
 on that page and an agent will not make a second round-trip to compare reliability.
 
+The aggregate is authoritative but no longer request-time. `stats.EndpointObservationReader` is the
+narrow domain port, and bootstrap supplies `CachedEndpointObservationReader` around a
+`PostgresEndpointObservationReader`. Entries are keyed by endpoint id. They are fresh for five
+minutes; from five through thirty minutes HTTP and MCP search serve the old value immediately and
+start a refresh; after thirty minutes they publish no observation until a refresh succeeds. A cold
+process therefore answers the first requests without reliability weighting instead of making either
+Catalog entry point wait for Postgres. The API shape does not change: `observed` is `null` when no
+acceptable entry exists.
+
+Refresh is process-level singleflight. Concurrent misses join one shared Task, duplicate endpoint ids
+already in flight are not queued again, and the Task batches the requested ids. Its
+`PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
+closes it as soon as the two queries finish. HTTP `/catalog/search` and both MCP catalog-search tools
+receive the same reader instance from bootstrap, so their request paths have no observation DB
+dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+entries, backs off before retry, and never changes the Catalog response status; a failure with no
+cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
+counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
+and process restarts begin cold, and no cross-instance correctness depends on the cache.
+
 Five rules worth keeping:
 
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
@@ -1067,6 +1108,7 @@ long strings clipped, ~10 KB cap) by the verifier, then human-reviewed for PII b
 | service | platform focus | auth (from oauth_providers.py) | overlap group |
 |---|---|---|---|
 | dataforseo | google, web | Basic (login:password base64) | SEO: web.backlinks.*, web.url.metrics |
+| exa (2026-08-27) | web, people, companies | `x-api-key` header; dollar-priced, settles from `costDollars.total` | Search: web.search*, web.contents.get, web.similar, web.answer; Enrichment: people.search, companies.search |
 | moz | web | Basic (AccessID:SecretKey base64), POST JSON API | SEO: web.backlinks.*, web.url.metrics |
 | tikhub | tiktok (+instagram, youtube, x) | Bearer key | Social: tiktok.* |
 | justoneapi | tiktok (+instagram, xiaohongshu, weibo) | `?token=` query param | Social: tiktok.* |

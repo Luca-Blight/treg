@@ -154,6 +154,15 @@ orgs resolve independently and may reuse a tool name or upstream host; the use c
 same-org secrets. After resolution `application.call.authorize` runs tool/project ACL, deny, member-cap,
 and public-demo gates in that order, with no money hold or upstream access. Its short session closes before
 the reserve stage; `-1`/default member caps add no query. Two resolution shapes:
+
+`* /catalog/call/{rest:path}` is the narrower entrance used by catalog-only MCP surfaces.
+`routers.call.call_catalog_endpoint` sets `request.state.catalog_only` (gated on
+`claude_connector_enabled`) and then enters the same `call_tool` handler; the flag travels on
+`CallInput` into `execute_call`. Resolution accepts only an exact catalog endpoint id and never calls
+`resolve_call_target`, so a private team tool or arbitrary passthrough path cannot shadow the catalog
+entry. Everything after catalog resolution stays shared: credentials, ACLs, deny rules, caps,
+cancellation cleanup, metering, audit, idempotency, and faithful relay.
+
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the

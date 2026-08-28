@@ -24,6 +24,11 @@
   "middleware": [
     {
       "args": [],
+      "class": "treg.mcp.NormalizeDirectoryMCPPath",
+      "kwargs": {}
+    },
+    {
+      "args": [],
       "class": "treg.api._BodyDecodeMiddleware",
       "kwargs": {}
     },

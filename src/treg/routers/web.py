@@ -2441,6 +2441,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/resources", "resources.html", "0.8"),
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
+    ("/connectors/claude", "claude-connector.html", "0.6"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -2672,6 +2673,12 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/connectors/claude", include_in_schema=False)
+async def claude_connector_page():
+    """Setup, scope, billing, privacy, and removal instructions for the Claude connector."""
+    return _legal_page("claude-connector.html")
+
+
 @app.get("/adtrack.js", include_in_schema=False)
 async def adtrack_js():
     """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
@@ -2783,12 +2790,16 @@ async def connect_demo_page():
     browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
     error message.
     """
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo.html")
 
 
 @app.get("/connect-demo/callback", include_in_schema=False)
 async def connect_demo_callback():
     """Where treg sends the browser back. Hands the code to the opener and closes."""
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo-callback.html")
 
 

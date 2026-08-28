@@ -16,6 +16,9 @@ This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this 
 - Run `uv run pytest -q` before and after changes; keep it green (add tests for new behavior).
 - Keep changes minimal and scoped; match the surrounding style.
 - When you change a subsystem, update its `docs/context/` fragment in the same change.
+- When `/mcp/`, `/mcp/v2/`, or shared MCP code changes, review both MCP surfaces. Preserve the
+  documented differences, run the paired MCP contract tests, and update
+  `docs/context/architecture/mcp-oauth.md` when the contract changes.
 - Commits follow Conventional Commits (`feat(scope): …`, `fix: …`, `docs: …`); one logical change per
   commit. PRs should say what changed and why, and note which fragments were updated.
 

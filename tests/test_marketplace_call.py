@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 import pytest
 from httpx import AsyncClient
 
-from treg import api as A, audit
+from treg import api as A, audit, catalog_store, oauth_providers
 from treg.application.call import resolve as call_resolution
 from treg.application.call import service as call_service
 from treg.application.call.types import ResolutionFailed, UpstreamResponse
@@ -125,6 +125,22 @@ async def test_tier1_registered_tool_wins(clients: AsyncClient):
     assert (await _telemetry(clients))["tool_name"] == "our-tikhub"
 
 
+async def test_catalog_only_route_cannot_be_shadowed_by_same_named_team_tool(clients: AsyncClient):
+    """The directory route resolves the curated id directly; legacy `/call` still gives an exact
+    same-named team tool precedence, preserving both contracts at once."""
+    sid = (await clients.post("/secrets", json={"name": "own-key", "value": "OWN"})).json()["id"]
+    await clients.post("/tools", json={"name": EP, "base_url": "http://upstream", "secret_id": sid})
+    await clients.post("/secrets", json={"name": "tikhub", "value": "CATALOG"})
+
+    legacy = await clients.get(f"/call/{EP}?aweme_id=7")
+    directory = await clients.get(f"/catalog/call/{EP}?aweme_id=7")
+
+    assert legacy.status_code == 200 and legacy.json()["auth"] == "Bearer OWN"
+    assert directory.status_code == 200
+    assert directory.json()["auth"] == "Bearer CATALOG"
+    assert directory.json()["raw_path"] == EP_PATH
+
+
 async def test_tier3_no_credential_is_an_actionable_404(clients: AsyncClient):
     """With tier 4 OFF (the default — no provider allow-listed), the ladder still dead-ends here."""
     r = await clients.get(f"/call/{EP}?aweme_id=7")
@@ -181,6 +197,21 @@ def test_path_placeholders_fill_from_query_and_are_consumed():
     with pytest.raises(ResolutionFailed) as exc:
         call_resolution._marketplace_upstream(ep, provider, {})
     assert exc.value.status_code == 400 and "siteUrl" in exc.value.detail
+
+
+def test_gtm_catalog_builds_hierarchy_from_atomic_ids_without_encoded_slashes():
+    ep = catalog_store.load().by_id["google-tag-manager.workspaces"]
+    url, consumed = A._marketplace_upstream(
+        ep,
+        oauth_providers.GOOGLE_TAG_MANAGER,
+        {"account_id": "123", "container_id": "456", "pageToken": "next"},
+    )
+    assert url == (
+        "https://tagmanager.googleapis.com/tagmanager/v2/"
+        "accounts/123/containers/456/workspaces"
+    )
+    assert "%2F" not in url
+    assert consumed == {"account_id", "container_id"}
 
 
 async def test_deny_rules_cover_marketplace_calls(clients: AsyncClient):
@@ -463,6 +494,12 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro(_mk("dataforseo"), b"not json") is None
     assert A._observed_cost_micro(_mk("dataforseo"), b"[1,2,3]") is None
     assert A._observed_cost_micro(_mk("tikhub"), b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
+    # exa reports dollars one level down; a 20-result search is the base plus ten $0.001 riders
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0.016, "search": {"neural": 0.016}}}') == 16_000
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0}}') == 0
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": "0.007"}}') is None
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": 0.007}') is None
+    assert A._observed_cost_micro(_mk("exa"), b'{"results": []}') is None
     assert A._observed_cost_micro(_mk("scrapecreators"), b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
     assert A._observed_cost_micro(_mk("scrapecreators"), b'{"success": true}') is None
     # akta reports `credits_consumed` — the field that makes its per-section enrich billable at
@@ -824,6 +861,15 @@ def test_crustdata_and_aviato_catalogs_are_platform_priced():
     rows = cat.for_provider("crustdata") + cat.for_provider("aviato")
     assert len(rows) == 29
     assert all(cat.platform_eligible(ep) for ep in rows)
+
+
+def test_exa_catalog_is_platform_priced():
+    """Exa prices in dollars per call, so every curated route converts natively and is eligible."""
+    cat = A.catalog_store.load()
+    rows = cat.for_provider("exa")
+    assert len(rows) == 10
+    assert all(cat.platform_eligible(ep) for ep in rows)
+    assert all(cat.cost_view(ep["cost"], "exa")["usd"] > 0 for ep in rows)
 
 
 def test_brightdata_estimate_counts_the_body_array():

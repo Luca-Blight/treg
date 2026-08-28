@@ -240,7 +240,8 @@ async def call_tool(
     # valid percent-escapes, so the original bytes travel through to the upstream one-to-one.
     raw_path = request.scope.get("raw_path")
     if raw_path:
-        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
+        call_prefix = "/catalog/call/" if getattr(request.state, "catalog_only", False) else "/call/"
+        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition(call_prefix)
         if sep:
             rest = raw_rest
     call_input = CallInput(
@@ -252,6 +253,7 @@ async def call_tool(
         body=_HttpRequestBody(request),
         caller=CallerSnapshot.capture(caller),
         client_ip=_client_ip(request),
+        catalog_only=bool(getattr(request.state, "catalog_only", False)),
     )
     try:
         context = create_call_context(call_input)
@@ -266,3 +268,20 @@ async def call_tool(
         request.state.idem_claim = context.idempotency
         request.state.call_audited = context.audited
         request.state.call_cost_micro = context.cost_micro
+
+
+@app.api_route(
+    "/catalog/call/{rest:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    include_in_schema=False,
+)
+async def call_catalog_endpoint(
+    rest: str,
+    request: Request,
+    caller: Caller = Depends(require_member),
+):
+    """Call one catalog endpoint through the same policy, billing, audit, and relay path as /call."""
+    if not get_settings().claude_connector_enabled:
+        raise HTTPException(status_code=404, detail="Claude catalog connector is not enabled")
+    request.state.catalog_only = True
+    return await call_tool(rest, request, caller)

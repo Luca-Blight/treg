@@ -71,6 +71,7 @@ this fragment is the *process*, not the mechanics reference.
 | HTTP Basic with a RAW token after `Basic ` | `token_format="Basic {secret}"`, **no** `token_encode` | The Companies API |
 | Cheapest check on a DIFFERENT host | `probe_url` (absolute) | Semrush (balance host), Diffbot (account host) |
 | Probe needs a POST body | `probe_method="POST"` + `probe_json` | Serpstat, Moz, Coresignal |
+| No free route at all — the cheapest PAID call is the probe | `probe_method="POST"` + `probe_json` on the cheapest cached call; say the price in `setup_note` | Exa `/contents` on example.com, $0.001; `/v0/teams/me` 404s on every key (2026-08-27) |
 | 200 on a bad key; a truthy field = valid | `token_verify_field` | Slack `ok`, Apollo `is_logged_in` |
 | 200 on a bad key; a field == a value = valid | `token_ok_field` + `token_ok_value` | Majestic `Code=="OK"` |
 | 200 on a bad key; an error object present = invalid | `token_reject_field` | Serpstat `error` |

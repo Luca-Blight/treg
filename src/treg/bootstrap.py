@@ -25,6 +25,10 @@ from .bootstrap_http import (
 )
 from .config import get_settings
 from .db import init_db, session_maker
+from .infra.catalog_observations import (
+    CachedEndpointObservationReader,
+    PostgresEndpointObservationReader,
+)
 from .routers import call as call_routes
 
 
@@ -99,6 +103,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/legal.css', ('GET',), 'legal_css'),
     ('/terms', ('GET',), 'terms_page'),
     ('/privacy', ('GET',), 'privacy_page'),
+    ('/connectors/claude', ('GET',), 'claude_connector_page'),
     ('/adtrack.js', ('GET',), 'adtrack_js'),
     ('/resources', ('GET',), 'resources_page'),
     ('/usecase.css', ('GET',), 'usecase_css'),
@@ -242,9 +247,13 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
 })
 _DATAPLANE_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ("/call/{rest:path}", ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"), "call_tool"),
+    ("/catalog/call/{rest:path}",
+     ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"),
+     "call_catalog_endpoint"),
     # MCP is calling traffic, so its mount and its RFC 9728 resource metadata belong to the
     # dataplane. Token issuance (consent, /oauth/*) stays on control; the dataplane only validates.
     ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
+    ('/.well-known/oauth-protected-resource/mcp/v2', ('GET',), 'oauth_protected_resource_v2'),
 })
 
 ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
@@ -413,15 +422,25 @@ def _lifespan(api_module, role: AppRole):
             if ROLE_BACKGROUND_TASKS[role] and adsconv.enabled()
             else None
         )
+        endpoint_observations = app.state.endpoint_observation_reader
+        mcp_reader_bound = role != "control" and _mcp is not None
+        if mcp_reader_bound:
+            _mcp.configure_endpoint_observation_reader(endpoint_observations)
         try:
             if role == "control" or _mcp is None:
                 yield
+            elif get_settings().claude_connector_enabled:
+                async with _mcp.all_mcp_lifespans():
+                    yield
             else:
                 async with _mcp.mcp_lifespan():
                     yield
         finally:
             if ads_task is not None:
                 ads_task.cancel()
+            if mcp_reader_bound:
+                _mcp.clear_endpoint_observation_reader(endpoint_observations)
+            await endpoint_observations.aclose()
             await audit.drain()
             await analytics.drain()
             await app.state.http.aclose()
@@ -446,6 +465,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
         docs_url="/docs/api" if expose_docs else None,
         redoc_url=None,
     )
+    app.state.endpoint_observation_reader = CachedEndpointObservationReader(
+        PostgresEndpointObservationReader(session_maker)
+    )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
     app.add_middleware(_LegacyHostRedirectMiddleware)
@@ -460,6 +482,11 @@ def create_app(role: AppRole = "all") -> FastAPI:
     _install_head_and_openapi(app)
 
     if role != "control" and _mcp is not None:
+        if get_settings().claude_connector_enabled:
+            # Claude can remove the final slash. Normalize before the parent V1 mount can match.
+            app.add_middleware(_mcp.NormalizeDirectoryMCPPath)
+            # Register the nested mount first so the /mcp parent does not consume it.
+            app.mount("/mcp/v2", _mcp.directory_mcp_app)
         app.mount("/mcp", _mcp.mcp_app)
 
     startup_checks = list(ROLE_STARTUP_CHECKS[role])

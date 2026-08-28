@@ -183,6 +183,7 @@ class Settings(BaseSettings):
     platform_key_influencersclub: str = ""  # Bearer key (dashboard JWT); creator discovery + enrichment, fx.yaml $0.598/credit (our $299/500 plan)
     platform_key_crustdata: str = ""  # Bearer key; every call also needs the pinned x-api-version header
     platform_key_aviato: str = ""     # Bearer key; $10 auto-top-up buys 1,000 credits
+    platform_key_exa: str = ""        # x-api-key; dollar-metered ($7/1k searches, $1/1k pages); settles from costDollars.total
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
@@ -242,6 +243,15 @@ class Settings(BaseSettings):
     # Call-time SSRF guard on the proxy: resolve the upstream host and refuse an internal target. On by
     # default; the test suite disables it (its upstream is an in-process ASGI transport, not real DNS).
     proxy_ssrf_check: bool = True
+
+    # Additive Claude directory MCP. Default OFF so deploying code cannot publish a new connector
+    # surface before its production Inspector and custom-connector gates have passed.
+    claude_connector_enabled: bool = False
+
+    # Browser-only OAuth/MCP test harness. It handles real grants and therefore belongs on local
+    # and staging deployments, not on the public product surface. Explicitly enable it where an
+    # engineer is testing the protocol end to end.
+    connect_demo_enabled: bool = False
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
