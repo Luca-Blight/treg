@@ -113,7 +113,11 @@ async def _overflow_verify(args) -> int:
     todo = [r for r in rows if args.all or r.enabled or r.last_verified_at]
     keys = {"orthogonal": s.overflow_key_orthogonal, "monid": s.overflow_key_monid}
     passed = failed = skipped = 0
-    async with httpx.AsyncClient(timeout=60) as c, session_maker() as db:
+    # One SHORT transaction per route. The first prod run (2026-08-28) kept a single session open
+    # across every network round-trip: each `db.get` autoflushed the previous row's UPDATE, the row
+    # locks piled up for minutes, and db.py's 5 s lock_timeout — there to keep the worker from
+    # queueing behind live traffic — killed the run at route 60 (LockNotAvailableError).
+    async with httpx.AsyncClient(timeout=60) as c:
         for r in todo:
             ep = by_id.get(r.endpoint_id)
             key = keys.get(r.aggregator)
@@ -146,18 +150,22 @@ async def _overflow_verify(args) -> int:
                 if body is not None:
                     hdrs["Content-Type"] = "application/json"
             v = await V.verify_route(c, r, key=key, direct=direct, test_request=tr, direct_headers=hdrs)
-            row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
-            if v.passed:
-                row.last_verified_at = v.verified_at or utcnow_naive()
-                passed += 1
-            else:
-                failed += 1
-                if row.enabled:
-                    row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
-            row.updated_at = utcnow_naive()
+            async with session_maker() as db:
+                row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
+                if row is None:
+                    skipped += 1
+                    continue
+                if v.passed:
+                    row.last_verified_at = v.verified_at or utcnow_naive()
+                    passed += 1
+                else:
+                    failed += 1
+                    if row.enabled:
+                        row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
+                row.updated_at = utcnow_naive()
+                await db.commit()
             print(f"{'ok ' if v.passed else 'FAIL'} {r.endpoint_id} via {r.aggregator} "
                   f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
-        await db.commit()
     print(f"verified {passed}, failed {failed}, skipped {skipped}")
     return 1 if failed else 0
 

@@ -337,6 +337,12 @@ async def test_team_and_directory_endpoint_details_and_balance_match(clients):
     token = clients.headers["X-Treg-Token"]
     endpoint_args = {"endpoint_id": "tikhub.tiktok.video.comments"}
     async with paired_mcp_session() as client:
+        # Endpoint stats come through the stale-while-revalidate cache: a COLD read answers
+        # `observed: None` and refreshes in the background, so two reads in a row can differ on
+        # nothing but timing (CI, 2026-08-28). Warm it, then compare.
+        from treg import api as A
+        await _call_tool(client, "catalog_get", endpoint_args, token, path="/mcp/")
+        await A.app.state.endpoint_observation_reader.wait_for_idle()
         team_endpoint = await _call_tool(
             client, "catalog_get", endpoint_args, token, path="/mcp/",
         )
