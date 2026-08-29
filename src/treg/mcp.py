@@ -568,7 +568,11 @@ async def _catalog_search_impl(
     # one of the 24 "ad library" matches scores 6 — so with a default limit of 8 the rows an agent
     # actually sees were decided by file order. That handed back seven tikhub rows (one of them
     # uncallable) and hid the cheapest endpoint with a perfect measured record.
-    ranked, total, tie_truncated = catalog_store.rank_band(query, cat, min(100, limit * 4))  # wider: groups collapse below
+    # The band is widened only so routed groups can collapse below without starving the page; with
+    # steering off there is no collapsing, so the original band is the right one.
+    _steering = str(get_settings().routed_discovery).strip().lower() not in ("off", "0", "false", "no")
+    ranked, total, tie_truncated = catalog_store.rank_band(
+        query, cat, min(100, limit * 4) if _steering else limit)
     stats = await _observed_stats([ep["id"] for ep, _ in ranked])
     ranked = catalog_store.rerank(ranked, stats, cat)
     results = []
@@ -592,7 +596,7 @@ async def _catalog_search_impl(
             **({"routed": f"treg picks among {len(ep.get('routed_children') or [])} providers"
                           + (f" — {hidden[ep['id']]} more than shown here; catalog_get('{ep['id']}') ranks them all"
                              if ep["id"] in hidden else " below")}
-               if ep.get("kind") == "routed" else {}),
+               if _steering and ep.get("kind") == "routed" else {}),
             "usd_per_call": cost.get("usd"),
             # BOTH halves of tier 4's own truth, not just the price side: `platform_eligible` says
             # the row is priceable, `platform_key_for` says this deploy actually holds an enabled

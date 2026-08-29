@@ -574,7 +574,19 @@ def group_routed(rows: list[dict], key=lambda r: r, max_children: int | None = N
     providers must not eat the whole result budget (`find leads`, 2026-08-28: people.search's
     children pushed people.email.find to one line and people.enrich off the page). The children
     kept are the best-ranked ones; the parent row is stamped `children_hidden` = how many were cut,
-    and the full ranked list is one `catalog get <parent>` away."""
+    and the full ranked list is one `catalog get <parent>` away.
+
+    `TREG_ROUTED_DISCOVERY=off` turns the STEERING off and returns the rows untouched: routed
+    endpoints stay callable, priced and reachable by id — search simply stops leading with them, as
+    it did before routing shipped. Whether the router answers well and whether every agent should
+    be pointed at it by default are different questions; this is the switch for the second one."""
+    from ...config import get_settings
+    if str(get_settings().routed_discovery).strip().lower() in ("off", "0", "false", "no"):
+        # Not merely "do not group": before routing shipped these rows did not exist, and a routed
+        # row still MATCHES a keyword search on its own summary, so leaving it in would keep
+        # steering by the back door. Off means search never surfaces one; `catalog get <id>` and
+        # `POST /call/<id>` are untouched.
+        return [r for r in rows if key(r).get("kind") != "routed"]
     routed_caps = {key(r)["capability"] for r in rows if key(r).get("kind") == "routed"}
     if not routed_caps:
         return rows
