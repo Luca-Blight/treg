@@ -899,3 +899,82 @@ async def test_the_weak_hit_fallback_is_bounded_like_the_error_fallback(
         f"the first ask plus at most {call_route.MAX_WEAK_FALLBACKS} more, not the whole ladder"
     assert len(seen) == len(attempts), "and no provider beyond the bound was ever called"
     assert len(d["output"]["people"]) == 1, "and the caller still gets the answer that exists"
+
+
+async def test_merge_unions_the_rows_the_caller_already_paid_for(
+    clients: AsyncClient, enrichment_on, monkeypatch
+):
+    """`X-Treg-Route-Merge: 1` — a list answer is the one shape a union makes sense for, and the
+    caller is charged for EVERY attempt already (`charged_micro` sums them), so returning only the
+    winner's rows throws away results the team bought. Bench 2026-08-29: a people.search that fell
+    through returned the fullest single provider's rows, never icypeas' 5 plus exa's 10."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_ICYPEAS", "PLATFORM-ICYPEAS-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "hunter,tomba,leadmagic,leadsforge,findymail,aviato,fiber-ai,icypeas")
+    get_settings.cache_clear()
+    icy = {"leads": [{"firstname": "Ada", "lastname": "L", "profileUrl": "https://linkedin.com/in/ada"},
+                     {"firstname": "Bo", "lastname": "M", "profileUrl": "https://linkedin.com/in/bo"}], "total": 2}
+    # one row OVERLAPS on the profile url (different casing/scheme), one is new
+    other = {"items": [{"fullName": "Ada L", "URLs": {"linkedin": "www.linkedin.com/in/Ada/"}},
+                       {"fullName": "Cy N", "URLs": {"linkedin": "linkedin.com/in/cy"}}], "count": {"value": 2}}
+    body = {"q": "backend engineer", "title": "Backend Engineer", "limit": 15}
+
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, icy)], "*": [(200, other)] * 8}, seen))
+    r = await clients.post("/call/treg.people.search", json=body,
+                           headers={"X-Treg-Route-Min-Results": "5", "X-Treg-Route-Merge": "1"})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    people = d["output"]["people"]
+    keys = sorted(call_route._row_key(p) for p in people)
+    assert keys == ["linkedin.com/in/ada", "linkedin.com/in/bo", "linkedin.com/in/cy"], \
+        "the union of both providers, and Ada — who both returned, spelled differently — appears ONCE"
+    assert len(people) == 3, "3 distinct people from two answers of 2 rows each"
+    assert len(d["_treg"]["merged_from"]) >= 2 and "X-Treg-Merged-From" in r.headers
+    assert d["_treg"]["charged_micro"] == int(r.headers["X-Treg-Cost-Micro"]), \
+        "merging changes no money: the sum over attempts is what it always was"
+
+    # without the header the winner's rows alone come back — the pre-existing contract
+    seen2 = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, icy)], "*": [(200, other)] * 8}, seen2))
+    r2 = await clients.post("/call/treg.people.search", json=body,
+                            headers={"X-Treg-Route-Min-Results": "5"})
+    assert "merged_from" not in r2.json()["_treg"] and len(r2.json()["output"]["people"]) == 2
+
+
+def test_a_per_success_endpoint_with_no_adapter_settles_on_the_providers_own_success_rule():
+    """The adapter's `miss` predicate covers routed children; 1330 of 1517 per_success endpoints
+    have no adapter, and they are the SCRAPERS — whose failure mode is an HTTP 200 carrying an
+    error code. Those providers publish a success rule and the catalog records it as `expect`,
+    which until now only `scripts/catalog_verify.py` read.
+
+    Live 2026-08-29: `justoneapi.x.linkedin-search-user-v1` answered
+    `{"code": 301, "message": "COLLECT FAILED, SEND REQUEST AGAIN"}` — free on the vendor's own
+    published terms ("only a code-0 response is billed") — and treg settled $0.0295 against the
+    caller."""
+    from test_marketplace_call import _mk
+    from treg.application.call import settle as A
+    cat = catalog_store.load()
+    eid = "justoneapi.x.linkedin-search-user-v1"
+    ep = cat.by_id[eid]
+    assert (ep.get("cost") or {}).get("type") == "per_success" and cat.adapters.get(eid) is None, \
+        "the shape this rule exists for: priced per success, no adapter to ask"
+    assert ep.get("expect") == {"json_path": "code", "equals": 0}, "the loader must carry the rule"
+
+    mk = _mk("justoneapi", endpoint_id=eid, cost_type="per_success")
+    fail = b'{"code": 301, "data": null, "message": "COLLECT FAILED, SEND REQUEST AGAIN"}'
+    assert A._observed_cost_micro(mk, fail) == 0, "a vendor-side failure the vendor does not bill"
+    ok = b'{"code": 0, "data": {"users": [{"name": "Ada"}]}}'
+    assert A._observed_cost_micro(mk, ok) is None, "a real hit still settles at the estimate"
+
+    # a nested rule form (dataforseo's task envelope) reads the same way — picking one that also
+    # has no adapter, since an adapter's own predicate takes precedence when there is one
+    dfs = [e for e in cat.by_id.values()
+           if (e.get("expect") or {}).get("json_path") == "tasks.0.status_code"
+           and cat.adapters.get(e["id"]) is None
+           and (e.get("cost") or {}).get("type") == "per_success"]
+    if dfs:
+        m2 = _mk(dfs[0]["provider"], endpoint_id=dfs[0]["id"], cost_type="per_success")
+        assert A._observed_cost_micro(m2, b'{"tasks": [{"status_code": 40501}]}') == 0
+        assert A._observed_cost_micro(m2, b'{"tasks": [{"status_code": 20000}]}') is None

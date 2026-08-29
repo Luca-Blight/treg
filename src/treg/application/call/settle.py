@@ -276,14 +276,45 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
     # at the estimate — a whole credit for a miss the catalog and the provider both call free
     # (found live by the first routed waterfall, 2026-08-28: three of five misses were charged).
     if mk.cost_type == "per_success" and isinstance(doc, dict):
-        adapter = catalog_store.load().adapters.get(mk.endpoint_id)
+        cat = catalog_store.load()
+        adapter = cat.adapters.get(mk.endpoint_id)
         if adapter is not None and adapter.verified:
             try:
                 if adapter.is_miss(doc):
                     return 0
             except Exception:  # noqa: BLE001 — a predicate that cannot decide settles at the estimate
                 pass
+        # No adapter? Most `.x.` endpoints have none — 1330 of 1517 per_success rows, concentrated
+        # in the scrapers whose failure mode IS an HTTP 200 carrying an error code. Those providers
+        # publish a success rule and the catalog already records it as `expect`; it was read only by
+        # catalog_verify. Live 2026-08-29: justoneapi answered `{"code":301,"message":"COLLECT
+        # FAILED"}` — free on the vendor's own terms ("only a code-0 response is billed") — and treg
+        # settled $0.0295 against the caller.
+        elif (rule := (cat.by_id.get(mk.endpoint_id) or {}).get("expect")):
+            try:
+                if _dig(doc, rule["json_path"]) != rule.get("equals"):
+                    return 0
+            except Exception:  # noqa: BLE001 — same rule as above: undecidable settles at the estimate
+                pass
     return None
+
+
+def _dig(doc, dotted: str):
+    """Walk a dotted path through dicts and list indices — the same reader `expect` was written
+    for (scripts/catalog_verify.py), so a rule means at settle time exactly what it meant at
+    verification time."""
+    cur = doc
+    for part in dotted.split("."):
+        if isinstance(cur, list):
+            try:
+                cur = cur[int(part)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(cur, dict):
+            cur = cur.get(part)
+        else:
+            return None
+    return cur
 
 
 async def _buffer_response(response: UpstreamResponse) -> tuple[UpstreamResponse, bytes]:

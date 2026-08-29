@@ -19,6 +19,7 @@ from __future__ import annotations
 
 
 import json
+import re
 import logging
 from dataclasses import dataclass, field
 from urllib.parse import urlencode
@@ -71,9 +72,11 @@ MAX_COST_HEADER = "x-treg-route-max-cost"
 PREFER_HEADER = "x-treg-route-prefer"
 EXCLUDE_HEADER = "x-treg-route-exclude"
 MIN_RESULTS_HEADER = "x-treg-route-min-results"
+MERGE_HEADER = "x-treg-route-merge"
 _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-encoding", b"idempotency-key",
                               b"x-treg-route-waterfall", b"x-treg-route-max-cost", b"x-treg-route-prefer",
-                              b"x-treg-route-exclude", b"x-treg-route-min-results", b"host"})
+                              b"x-treg-route-exclude", b"x-treg-route-min-results",
+                              b"x-treg-route-merge", b"host"})
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 _CANDIDATE_LOCAL_FAILURES = frozenset({"tool_access_denied", "policy_denied", "capability_pinned"})
 _GLOBAL_REFUSALS = frozenset({"insufficient_balance", "tag_spend_cap_reached",
@@ -105,6 +108,7 @@ class RouteOptions:
     prefer: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
     min_results: int = 1     # a hit with fewer rows than this is WEAK: keep looking, keep the best
+    merge: bool = False      # union the rows of every attempt that returned some (list answers only)
 
     @classmethod
     def from_headers(cls, get, default_max_cost_micro: int | None = None) -> "RouteOptions":
@@ -123,9 +127,10 @@ class RouteOptions:
         except ValueError:
             raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
                                    detail=f"{MIN_RESULTS_HEADER} must be a whole number, got {get(MIN_RESULTS_HEADER)!r}")
+        mg = str(get(MERGE_HEADER) or "").strip().lower()
         return cls(waterfall=wf not in ("0", "false", "no", "off"),
                    max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)),
-                   min_results=mr)
+                   min_results=mr, merge=mg in ("1", "true", "yes", "on"))
 
 
 class _Bytes:
@@ -153,6 +158,58 @@ class Attempt:
         return {"endpoint_id": self.endpoint_id, "provider": self.provider, "outcome": self.outcome,
                 "status": self.status, "charged_micro": self.charged_micro, **({"detail": self.detail} if self.detail else {}),
                 **({"ignored_filters": list(self.ignored)} if self.ignored else {})}
+
+
+def _list_field(contract) -> str | None:
+    """The contract's ONE list-shaped required output (`people`, `companies`). Merging only makes
+    sense for these: two answers to "this person's email" is a conflict, not a union."""
+    for k in contract.required_output:
+        if (contract.output.get(k) or {}).get("type") == "list":
+            return k
+    return None
+
+
+def _norm_url(v: str) -> str:
+    """Scheme, `www.` and trailing slashes are noise a provider adds or omits at will — two rows for
+    one person differ by exactly that (`https://linkedin.com/in/ada` vs `www.linkedin.com/in/Ada/`)."""
+    u = v.strip().lower()
+    u = re.sub(r"^https?://", "", u)
+    u = re.sub(r"^www\.", "", u)
+    return u.rstrip("/")
+
+
+def _row_key(row) -> str:
+    """Dedup across PROVIDER-NATIVE rows, which share no schema. A profile URL is the only value
+    two providers reliably agree on; a normalised name is the fallback, and a row with neither is
+    kept (dropping it would silently lose an answer we already paid for)."""
+    if not isinstance(row, dict):
+        return ""
+    for path in ("linkedin_url", "profileUrl", "url", "linkedinUrl", "profile_url"):
+        v = row.get(path)
+        if isinstance(v, str) and v.strip():
+            return _norm_url(v)
+    urls = row.get("URLs")
+    if isinstance(urls, dict) and isinstance(urls.get("linkedin"), str):
+        return _norm_url(urls["linkedin"])
+    name = row.get("fullName") or row.get("full_name") or row.get("name") or " ".join(
+        str(row.get(k) or "") for k in ("firstname", "lastname")).strip()
+    return re.sub(r"[^a-z0-9]+", "", str(name).lower()) if name else ""
+
+
+def _merge_rows(field: str, answers: list[tuple], limit: int | None):
+    """Union in ATTEMPT order — the ranking of the provider that answered first leads, later
+    providers append what they add. The caller already paid for every one of these rows
+    (`spent` sums every attempt), so discarding them is pure waste."""
+    seen, out = set(), []
+    for _cand, _doc, core, _raw in answers:
+        for r in (core.get(field) or []):
+            k = _row_key(r)
+            if k and k in seen:
+                continue
+            if k:
+                seen.add(k)
+            out.append(r)
+    return out[:limit] if limit else out
 
 
 async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptions) -> Plan:
@@ -281,6 +338,7 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
     errors = 0
     rejected_by: set[str] = set()  # providers that answered a vendor 4xx
     winner: tuple[Candidate, dict, dict, bytes] | None = None
+    answers: list[tuple] = []      # every attempt that returned rows, for X-Treg-Route-Merge
     weak_hits = 0
     best: tuple[int, tuple[Candidate, dict, dict, bytes]] | None = None   # best WEAK answer seen
     for n, cand in enumerate(plan.candidates):
@@ -370,6 +428,7 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         if weak:
             if best is None or n_rows > best[0]:
                 best = (n_rows, (cand, doc, core, raw))
+            answers.append((cand, doc, core, raw))
             weak_hits += 1
             # Bounded like the error fallback, and for the same reason: a brief whose honest answer
             # IS one or two people (a lookup — "who runs engineering at X") never clears the bar, so
@@ -379,6 +438,7 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
             if weak_hits > MAX_WEAK_FALLBACKS:
                 break
             continue
+        answers.append((cand, doc, core, raw))
         winner = (cand, doc, core, raw)
         break
     if winner is None and best is not None:
@@ -400,16 +460,31 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                        f"every candidate for {ep['id']} failed"})
     cand, doc, output, raw = winner
     served = cand.endpoint["id"]
+    merged_from: list[str] = []
+    if options.merge and len(answers) > 1:
+        # A LIST answer is the only shape a union makes sense for, and the caller has already been
+        # charged for every attempt (`charged_micro` is the running sum) — so without this the
+        # router throws away rows the team paid for. Bench 2026-08-29: a `people.search` that fell
+        # through returned the fullest SINGLE provider's rows, never icypeas' 5 plus exa's 10.
+        field = _list_field(plan.contract)
+        if field:
+            rows = _merge_rows(field, answers, plan.identity.get("limit"))
+            if len(rows) > len(output.get(field) or []):
+                output = {**output, field: rows}
+                merged_from = [c.endpoint["id"] for c, _, core_i, _ in answers if (core_i.get(field) or [])]
+                served = merged_from[0]
     # The rows answer a LOOSER question than the caller asked when the winner could not express a
     # filter. It is on the attempt, but no caller reads `tried[]` — say it where the answer is, and
     # on a header, or the agent post-filters nothing and never knows why the geography is wrong.
     body_out = {"output": output or {k: None for k in plan.contract.output}, "raw": doc,
                 "_treg": {"served_by": served, "provider": cand.endpoint["provider"], "tier": cand.tier,
+                          **({"merged_from": merged_from} if merged_from else {}),
                           "outcome": tried[-1].outcome, "tried": [t.view() for t in tried], "charged_micro": spent,
                           **({"ignored_filters": list(cand.ignored)} if cand.ignored else {}),
                           **({"dropped": plan.dropped} if plan.dropped else {})}}
     _audit_parent(parent, ep, 200, spent, audit_client)
     return _json(body_out, 200, {"X-Treg-Served-By": served, "X-Treg-Providers-Tried": ",".join(t.provider for t in tried),
+                                 **({"X-Treg-Merged-From": ",".join(merged_from)} if merged_from else {}),
                                  **({"X-Treg-Ignored-Filters": ",".join(cand.ignored)} if cand.ignored else {}),
                                  "X-Treg-Route-Outcome": tried[-1].outcome}), spent
 
