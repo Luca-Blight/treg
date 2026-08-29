@@ -253,6 +253,7 @@ contracts:
       country: {type: str, default: null, note: "ISO country code, where the provider supports it"}
       location: {type: str, default: null, note: "free-text place ('London, United Kingdom', 'Greater Phoenix') passed through to providers that take one; finer than country, never normalised"}
       limit: {type: int, default: 10, note: "rows to return — THE price dial: most providers bill per row"}
+      keywords: {type: list, default: null, note: "skills, topics or domain terms the person must match ('microservices', 'match analysis') — the SUBSTANCE of most briefs; a provider with no keyword field answers a looser question and ranks below one that has it"}
     output:
       people: {type: list, required: true, note: "the provider's own people rows (name, title, profile url, location…) — shapes differ per provider; raw is the same body"}
       count: {type: int}
@@ -261,6 +262,23 @@ contracts:
     idempotent: true
 
   # ---- batch 5: company enrichment (2026-08-28) -----------------------------------------------
+  creators.search:
+    summary: "Find creators/influencers on a platform by niche, place and audience size — provider-native rows in `creators`"
+    identity:
+      - {q: str}
+    filters:
+      platform: {type: str, default: instagram, note: "instagram | youtube | tiktok | twitter | twitch — a creator search is always ON one platform"}
+      location: {type: str, default: null, note: "where the creator is, free text ('Melbourne, Australia'); providers that cannot express it answer a LOOSER question and rank below those that can"}
+      keywords: {type: list, default: null, note: "niche terms in the creators' own language ('specialty coffee', 'barista', 'latte art')"}
+      followers_min: {type: int, default: null, note: "audience floor — the constraint a creator brief almost always carries, and the one a URL-only result cannot answer"}
+      followers_max: {type: int, default: null, note: "audience ceiling"}
+      limit: {type: int, default: 10, note: "creators to return — THE price dial: providers bill per creator"}
+    output:
+      creators: {type: list, required: true, note: "the provider's own creator rows (handle, followers, engagement, location…) — shapes differ per provider; raw is the same body"}
+      count: {type: int}
+    miss: "creators == []"
+    idempotent: true
+
   companies.enrich:
     summary: "Enrich a company from its domain, name, LinkedIn URL or a work email — treg picks the provider and names the one that served"
     identity:
