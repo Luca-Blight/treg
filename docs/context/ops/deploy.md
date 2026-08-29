@@ -4,6 +4,7 @@ status: shipped
 sources:
   - pyproject.toml
   - src/treg/__main__.py
+  - src/treg/maintenance.py
   - src/treg/worker.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
@@ -22,15 +23,33 @@ related:
 # Running & deploying
 
 ## Entry point (`__main__.py`)
-`python -m treg` → `main()` → `uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))`
-(`--reload` optional). It honors `$PORT` (Render/Heroku route + health-check that port). `python -m treg
-keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
-`bootstrap.create_app(role="all")`; the compatibility import and deployed behavior are unchanged.
+`python -m treg upgrade` runs the explicit release phase: `maintenance.upgrade()` first calls the
+idempotent `init_db()`, then runs the ordered, idempotent release-task registry. The registry currently
+contains the provider companion-tool backfill. It does not provision a single-user identity, so a hosted
+pre-deploy command cannot accidentally create a local owner.
+
+The default `python -m treg` serve path runs that same upgrade phase and then
+`api._bootstrap_single_user()`, then disposes the async engine inside the pre-serve event loop before calling
+`uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))` (`--reload` optional). It honors
+`$PORT` (Render/Heroku route + health-check that port). `python -m treg keygen` prints a Fernet key for
+`TREG_SECRET_KEY` without importing the server maintenance stack. `treg.api:app` is
+`bootstrap.create_app(role="all")`.
+
+The FastAPI lifespan still calls `init_db()` until the later Stage 5 migration-execution PR. That
+idempotent second call is harmless, and role startup manifests no longer contain data backfills or
+single-user provisioning. Operators serving `treg.api:app` directly through a raw ASGI command must run
+`python -m treg upgrade` once for every release. Render needs no Blueprint change because its existing
+`startCommand: python -m treg` already executes the pre-serve phase.
+
+Both pre-Uvicorn entry paths dispose the engine before their `asyncio.run()` loop closes: the default
+serve path does so after single-user bootstrap, and `python -m treg upgrade` does so after all release
+tasks. The next event loop therefore creates fresh pooled connections instead of receiving connections
+bound to a closed maintenance loop. Calling `maintenance.upgrade()` directly does not dispose the engine.
 
 ## Startup safety (`db.py init_db`)
 - **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated
   current-schema baseline, but startup still runs `init_db`. No existing database is stamped or
-  upgraded through Alembic in stage 1; that execution switch is reserved for refactor stage 5.
+  upgraded through Alembic yet; that execution switch remains a later refactor Stage 5 PR.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.
@@ -106,7 +125,7 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
   [api](../interface/api.md).
 - **Frictionless local mode** (`single_user`, `single_user_token_file`): `curl {BASE}/selfhost.sh | sh`
   brings up a registry on the caller's own machine that they are **already signed into** — no account,
-  email or password. `lifespan` calls `_bootstrap_single_user()`, which idempotently creates the
+  email or password. The default serve pre-phase calls `_bootstrap_single_user()`, which idempotently creates the
   `you@local.treg` owner + `personal` team and writes the token (0600) for the installer to hand to the
   CLI; the token is **stable across restarts** (re-minted only if the file is deleted), and `dashboard()`
   attaches a session when there is none. It adopts an org **only through a membership this identity

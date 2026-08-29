@@ -650,6 +650,10 @@ async def reset_db() -> None:
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
+async def dispose_engine() -> None:
+    await _engine.dispose()
+
+
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with session_maker() as session:
         yield session

@@ -192,6 +192,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/ledger.py` | architecture/money.md |
 | `src/treg/localproxy.py` | architecture/local-proxy.md |
 | `src/treg/localrun.py` | architecture/local-run.md |
+| `src/treg/maintenance.py` | ops/deploy.md |
 | `src/treg/mcp.py` | architecture/mcp-oauth.md |
 | `src/treg/mcp_install.py` | interface/skill.md |
 | `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
@@ -298,5 +299,5 @@ Regenerate via `scripts/build-map.py`.
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
 | `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `marks.py`, `test_capacity_protect.py`, `limiter.py`, `overflow_spend.py`, `routes_view.py`, `overflow.py`, `0007_overflow_spend.py`, `test_capacity_overflow.py`, `test_capacity_overflow_spend.py`, `0008_org_platform_overflow_disabled.py`, `test_capacity_smoothing.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0006_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0005_capacity_policy_snapshot.py`, `test_capacity_know.py` |
-| `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `worker.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `dev-local.sh`, `render.yaml` |
+| `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `maintenance.py`, `worker.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `dev-local.sh`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |
