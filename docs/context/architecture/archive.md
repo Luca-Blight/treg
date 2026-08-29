@@ -114,7 +114,10 @@ Hooked in `call_tool` immediately after `_buffer_response` — the one line wher
 call, body already in memory" is a fact, which IS eligibility gate 3. Metered 2xx only; the
 `X-Treg-Cache`-style serve headers do not exist yet. `archive.record()` is fire-and-forget with
 audit's discipline: bounded pending set (512), failures swallowed with a log line, `drain()` on
-shutdown (bootstrap) and in tests. A recorder crash cannot fail a call (tested).
+shutdown (bootstrap) and in tests. A recorder crash cannot fail a call (tested). `drain()` removes
+the tasks it gathered itself rather than waiting on their done callbacks — audit's exact drain
+discipline; the busy-spin both avoid (the 2026-08 serial-Postgres CI hang) is explained and pinned
+for both modules in `tests/test_audit.py`.
 
 **Counted vs kept.** Statistics and the raw-body `content_hash` are recorded for every observed
 answer (a hash is an identity, not the content); body BYTES are kept only when the entry's cache

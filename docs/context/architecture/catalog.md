@@ -1209,6 +1209,35 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   currently floats one provider. lusha, crustdata, companyenrich and leadmagic all filter on
   location upstream — their adapters just do not map it. Until they do, the rule is doing more work
   than it should have to.
+- **A contract that cannot say what the brief says (2026-08-29)**: `people.search` exposed only
+  `{q, company_domain, title, full_name}` + `{country, location, limit}`, while icypeas natively
+  filters on `keyword`, `skills`, `pastJobTitle`, `school`, `languages` and
+  `totalYearsOfExperience`. And `q` is IDENTITY, so when icypeas matched the `{title}` variant the
+  free text was never sent — a routed search for "backend developers in London with microservices"
+  reached the provider as `title + location`, with the requirement dropped. Every failing bench
+  query had this shape ("football scouting analysts" → `title="Football Analyst"`, 15 rows, 0
+  qualified). `keywords` is now a FILTER (filters always travel; identity does not) mapped to
+  icypeas `query.keyword.include`, leadsforge's keyword field, and folded into exa's semantic query.
+  Measured on the bench's 30 recruiting briefs: **55.4 → 69.2 overall** (nDCG@10 51.2 → 64.3,
+  coverage 49.7 → 68.1), failing queries 8 → 2.
+  A `titles` list filter was tried at the same time and **REVERTED**: paired over the same 30
+  queries it cost −0.068 ± 0.022 (95% CI [−0.112, −0.024]). Broader title variants ("Software
+  Engineer" for a backend brief) buy recall the metric does not want and lose precision.
+- **min_results, and why it is bounded (2026-08-29)**: `X-Treg-Route-Min-Results: N` records a hit
+  with fewer than N rows as `weak` and keeps going, returning the fullest answer seen. It is what
+  the hand-written bench policy did (`if len(rows) < 3 -> semantic fallback`) and the routed path
+  could not express. Unbounded it is ruinous on LOOKUP briefs, whose honest answer IS one person:
+  nothing ever clears the bar, so every call pays the whole ladder — the bench's deterministic set
+  went **$1.76 → $22.35 over 28 queries, 12.7x**, for answers that were already right. Bounded at
+  `MAX_WEAK_FALLBACKS = 2`, mirroring the error fallback, the same set costs ~$0.39 — cheaper than
+  the baseline — and recruiting keeps its gain (it never needed more than one fall-through).
+  Pair it with `X-Treg-Route-Max-Cost` on any capability where thin answers are normal.
+- **Routed parity with a hand-written policy (2026-08-29)**: after the two changes above, paired
+  over the same 30 recruiting briefs against the 08-27 hand-written icypeas policy, the routed path
+  is indistinguishable — nDCG@10 −2.40 (95% CI [−7.12, +2.33]), utility −0.80 ([−3.10, +1.51]),
+  qualified/query −0.53 ([−1.84, +0.77]) — and ahead of the published Lessie 68.2, Exa 64.7 and
+  Claude Code 50.5. The remaining differences are agent-side, not routing: the hand-written policy
+  post-filtered rows on location and over-fetched (`size: 20`, trimmed to 15).
 - **The answer says what it ignored (2026-08-29)**: `ignored_filters` was on `_treg.tried[]` only,
   which no caller reads. It is now also on `_treg` itself for the child that served and on an
   `X-Treg-Ignored-Filters` response header, so an agent can post-filter, or say why the rows are
@@ -1246,6 +1275,17 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   work, not from routing — which is also why a `git revert` of #242 would be the wrong instrument). It exists because "does the router answer well" and "should every agent be led to it by
   default" are separate questions: the bench answered the first (55.4 → 69.2 on recruiting, parity
   with a hand-written policy), and only traffic can answer the second.
+- **creators.search routed (2026-08-29)**: the capability that most needed it and never had it. Two
+  providers answer "find creators" and they are not comparable: influencersclub takes `location`,
+  `keywords_in_bio` and `number_of_followers {min,max}` as REAL filters and returns followers,
+  engagement and location inline; `exa.creators.search` takes a sentence and returns a URL and a
+  title. Unrouted, an agent picks one blind. On the bench it picked exa, then made **115
+  `instagram.user.profile` calls** checking follower counts by hand, discarded everyone it could not
+  confirm, and returned 1 row where the hand-written pipeline returned 15 qualified — influencer was
+  the ONLY category the agent lost (54.4 vs the pipeline's 60.2). With the contract, exa reports
+  `ignored_filters: [platform, followers_min, followers_max]` and ranks below a provider that can
+  express them. `followers_min`/`followers_max` are contract filters because an audience band is the
+  constraint a creator brief almost always carries, and the one a URL-only result cannot answer.
 - **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
   and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
   apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the

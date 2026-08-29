@@ -1,13 +1,22 @@
-"""The audit queue's drain discipline."""
+"""The fire-and-forget drain discipline — audit and archive carry twin copies of it."""
 
 import asyncio
 import subprocess
 import sys
 
-from treg import audit
+import pytest
+
+from treg import archive, audit
+
+# Two hand-copied implementations of the same pending-set/drain pattern (archive documents itself
+# as "audit's discipline"), so both are pinned here: archive copied audit's drain BEFORE the
+# busy-spin fix landed in audit, and the stale copy went on wedging CI for a day after audit was
+# already safe. A shared pin is what keeps the twins from diverging again.
+_MODULES = [audit, archive]
 
 
-async def test_drain_exits_when_a_finished_task_lingers_in_the_pending_set():
+@pytest.mark.parametrize("mod", _MODULES, ids=lambda m: m.__name__.rsplit(".", 1)[-1])
+async def test_drain_exits_when_a_finished_task_lingers_in_the_pending_set(mod):
     """The CI livelock shape: a completed task still in `_pending` with no removal callback coming.
 
     Awaiting a gather of already-complete tasks never suspends (Python ≥3.10 gather returns a done
@@ -20,12 +29,13 @@ async def test_drain_exits_when_a_finished_task_lingers_in_the_pending_set():
 
     task = asyncio.create_task(_noop())
     await task
-    audit._pending.add(task)
-    await asyncio.wait_for(audit.drain(), timeout=5)
-    assert task not in audit._pending
+    mod._pending.add(task)
+    await asyncio.wait_for(mod.drain(), timeout=5)
+    assert task not in mod._pending
 
 
-def test_drain_livelock_regression_fails_instead_of_wedging():
+@pytest.mark.parametrize("name", ["audit", "archive"])
+def test_drain_livelock_regression_fails_instead_of_wedging(name):
     """Run the same shape in a subprocess with a parent-side deadline.
 
     A regression here livelocks the event loop at ~100% CPU, starving every in-process watchdog —
@@ -33,16 +43,16 @@ def test_drain_livelock_regression_fails_instead_of_wedging():
     bug presented on CI; a reintroduction must fail in seconds instead.
     """
     program = (
-        "import asyncio\n"
-        "from treg import audit\n"
+        f"import asyncio\n"
+        f"from treg import {name} as mod\n"
         "async def main():\n"
         "    async def _noop():\n"
         "        return None\n"
         "    task = asyncio.create_task(_noop())\n"
         "    await task\n"
-        "    audit._pending.add(task)\n"
-        "    await audit.drain()\n"
-        "    assert not audit._pending\n"
+        "    mod._pending.add(task)\n"
+        "    await mod.drain()\n"
+        "    assert not mod._pending\n"
         "asyncio.run(main())\n"
     )
     result = subprocess.run(
