@@ -428,11 +428,36 @@ adapters:
     out: {results: results, count: "len(results)"}
     miss: "results == []"
 
+  # ---- creators.search ---------------------------------------------------------------------
+  # The capability that most needs routing, and the one that never had it. influencersclub takes
+  # location / keywords_in_bio / number_of_followers as REAL filters and returns followers,
+  # engagement and location inline; exa takes a sentence and returns a URL and a title. Both answer
+  # "find creators", so an agent picks one blind — and on the bench it picked exa, then spent 115
+  # instagram.user.profile calls checking follower counts by hand and discarded people it could not
+  # confirm. With a contract, exa reports `ignored_filters` and ranks below a provider that filters.
+  influencersclub.creators.search:
+    accepts: [[q]]
+    in:  {}
+    in_expr: {body.platform: "coalesce(platform, 'instagram')", body.nlp_search: q,
+              body.paging.limit: limit, body.paging.page: "0",
+              body.filters.location: "list(location)", body.filters.keywords_in_bio: "list(keywords)",
+              body.filters.number_of_followers.min: followers_min,
+              body.filters.number_of_followers.max: followers_max}
+    test_identity: {q: specialty coffee baristas}
+    out: {creators: accounts, count: "len(accounts)"}
+    miss: "accounts == []"
+  exa.creators.search:
+    accepts: [[q]]
+    in:  {q: body.query}
+    in_expr: {body.query: "join(q, csv(keywords), location)", body.numResults: limit}
+    out: {creators: results, count: "len(results)"}
+    miss: "results == []"
+
   # ---- people.search ------------------------------------------------------------------------
   exa.people.search:
     accepts: [[q]]
     in:  {q: body.query}
-    in_expr: {body.numResults: limit}
+    in_expr: {body.query: "join(q, csv(keywords))", body.numResults: limit}
     const: {body.category: people}
     out: {people: results, count: "len(results)"}
     miss: "results == []"
@@ -440,7 +465,8 @@ adapters:
     accepts: [[company_domain, title], [company_domain], [title]]
     in:  {company_domain: body.query.currentCompanyWebsite.include, title: body.query.currentJobTitle.include}
     in_expr: {body.query.currentCompanyWebsite.include: "list(company_domain)", body.query.currentJobTitle.include: "list(title)",
-              body.query.location.include: "list(coalesce(location, country_name(country)))", body.pagination.size: limit}
+              body.query.location.include: "list(coalesce(location, country_name(country)))", body.pagination.size: limit,
+              body.query.keyword.include: "list(keywords)"}
     out: {people: leads, count: total, next_cursor: pagination.token}
     miss: "leads == []"
   companyenrich.people.search:
@@ -1877,7 +1903,7 @@ adapters:
   leadsforge.people.search:
     accepts: [[company_domain]]
     in:  {company_domain: body.companyDomains.include}
-    in_expr: {body.companyDomains.include: "list(company_domain)", body.limit: limit}
+    in_expr: {body.companyDomains.include: "list(company_domain)", body.limit: limit, body.keywords.include: "list(keywords)"}
     out: {people: leads, next_cursor: cursor}
     miss: "leads == []"
   findymail.search.employees:

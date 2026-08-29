@@ -212,7 +212,13 @@ class Settings(BaseSettings):
     # error refuses the call rather than letting an unbounded amount of our money out. It is a
     # blast-radius limit on a runaway agent or a mispriced catalog entry, not a billing control —
     # the balance is what a team actually spends against.
-    platform_daily_cap_usd: float = 100.0
+    #
+    # Raised 100 -> 500 on 2026-08-29. At 100 an ordinary day's work tripped it: a benchmark agent
+    # exploring the catalog spends ~$0.10 a query, and 26 of 32 briefs came back empty because every
+    # call after the ceiling 429'd — the team had $92 of balance and could not use it. The rail is
+    # still here, and it is still ours to raise per team; it just should not fire before a real
+    # workload does.
+    platform_daily_cap_usd: float = 500.0
     # OAuth providers whose UPSTREAM bill lands on treg's developer app rather than the connected
     # user (X moved to pay-per-use in Feb 2026: the app owner is billed per resource read / per post
     # written, whoever's token made the call). Calls through a registry connect of a provider named
