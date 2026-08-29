@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from alembic import command
+from alembic.autogenerate import compare_metadata
 from alembic.config import Config
+from alembic.migration import MigrationContext
 from sqlalchemy import inspect, text
 from sqlmodel import SQLModel
 
@@ -16,6 +18,7 @@ from treg.config import get_settings
 
 
 _ROOT = Path(__file__).parents[1]
+ADOPTION_REV = "0009"
 
 
 def _normalized(value: Any) -> Any:
@@ -75,6 +78,11 @@ async def _drop_everything() -> None:
         await connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
 
 
+def _autogenerate_diff(connection) -> list[Any]:
+    context = MigrationContext.configure(connection)
+    return compare_metadata(context, SQLModel.metadata)
+
+
 async def test_alembic_baseline_matches_init_db_on_a_fresh_database(monkeypatch):
     """Compare schema objects on SQLite locally and Postgres in test-postgres CI."""
     await audit.drain()
@@ -90,12 +98,31 @@ async def test_alembic_baseline_matches_init_db_on_a_fresh_database(monkeypatch)
 
         alembic_config = Config(_ROOT / "alembic.ini")
         alembic_config.set_main_option("sqlalchemy.url", db._db_url.replace("%", "%%"))
-        await asyncio.to_thread(command.upgrade, alembic_config, "head")
+        # Frozen legacy adoption boundary. This comparison retires with init_db in Stage 5 PR3.
+        await asyncio.to_thread(command.upgrade, alembic_config, ADOPTION_REV)
         alembic_schema = await _dump_current_schema()
 
         assert init_db_schema.keys() == alembic_schema.keys()
         for table, schema in init_db_schema.items():
             assert alembic_schema[table] == schema, f"schema mismatch for {table}"
+    finally:
+        await _drop_everything()
+        await db.reset_db()
+
+
+async def test_alembic_head_has_no_model_drift():
+    """Alembic is authoritative after adoption, so head must match SQLModel metadata exactly."""
+    await audit.drain()
+    await _drop_everything()
+
+    try:
+        alembic_config = Config(_ROOT / "alembic.ini")
+        alembic_config.set_main_option("sqlalchemy.url", db._db_url.replace("%", "%%"))
+        await db._engine.dispose()
+        await asyncio.to_thread(command.upgrade, alembic_config, "head")
+        async with db._engine.connect() as connection:
+            diff = await connection.run_sync(_autogenerate_diff)
+        assert diff == []
     finally:
         await _drop_everything()
         await db.reset_db()
