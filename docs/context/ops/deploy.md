@@ -265,6 +265,19 @@ in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Curr
 BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
 `tier: oauth`; the burn from the free period is only in console.x.com.
 
+## Routed discovery — the steering switch (2026-08-29)
+
+`TREG_ROUTED_DISCOVERY` (`on` by default, `off` to disable) decides whether DISCOVERY steers to
+`treg.<capability>` rows. Off, search and the platform browse view stop showing them and
+`/skill.md` + `/llms.txt` stop teaching them — while the endpoints stay generated, priced,
+`catalog get`-able and callable by id, so agents that already hold one keep working. A dashboard
+flip, no redeploy, like `TREG_PLATFORM_PROVIDERS` and `TREG_OVERFLOW_MODE`.
+
+It exists because two questions are separate: whether the router ANSWERS well (measured — the
+people-search bench puts the routed path at parity with the hand-written policy it replaces) and
+whether every agent should be LED to it by default (only traffic answers that). Flip it rather than
+reverting the feature.
+
 ## Market data platform keys (2026-08-16)
 
 Five more `TREG_PLATFORM_KEY_*` env vars beside the originals, and the providers must ALSO be in

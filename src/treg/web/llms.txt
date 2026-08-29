@@ -194,6 +194,7 @@ endpoint** through a treg-owned relay account — same request, same response sh
 real price — with `X-Treg-Served-Via: overflow:<name>` on the response (a team can opt out with
 `treg org overflow off`). Your own keys are never relayed.
 
+<!--routed-->
 **Routed endpoints — when you WANT treg to choose.** `treg.<capability>` rows (today:
 `treg.people.email.find`) are first-party endpoints generated from the providers of one capability.
 `POST /call/treg.people.email.find` with `{full_name, domain}` (or `first_name`+`last_name`+`domain`,
@@ -205,6 +206,7 @@ provider error OR a miss falls through to the next provider, cheapest first, wit
 ranked plan and prices before you spend.
 Call a specific provider's endpoint when you need a particular one.
 
+<!--/routed-->
 Money notes for agents:
 - The price is visible before you call (`treg catalog get`, or `estimated_cost_usd` in
   `GET {BASE}/catalog/endpoints/<id>/access`). No confirmation ritual — costs are fractions

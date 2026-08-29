@@ -199,6 +199,14 @@ class Settings(BaseSettings):
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
     # Render dashboard turns the whole feature off without a redeploy.
     platform_providers: str = ""
+    # Whether DISCOVERY steers to routed rows: `treg.<capability>` first in search, and a routed
+    # parent pulled in whenever one of its children matched. `off` leaves every routed endpoint
+    # callable and priced — only the steering stops, and search looks as it did before routing
+    # shipped. Same runtime-switch shape as `platform_providers`: flip it in the dashboard, no
+    # redeploy. It exists because "does the router answer well" and "should every agent be led to
+    # it by default" are separate questions, and the second one is answered by traffic, not by
+    # argument.
+    routed_discovery: str = "on"
     # Per-org, per-UTC-day ceiling on tier-4 spend, and the CEILING a team may raise its own
     # `Org.daily_cap_micro` to. Enforced FAIL-CLOSED (unlike the soft per-user call cap): a query
     # error refuses the call rather than letting an unbounded amount of our money out. It is a

@@ -2402,7 +2402,8 @@ async def llms_txt():
     if not f.exists():
         raise HTTPException(status_code=404, detail="llms.txt not bundled")
     base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/plain; charset=utf-8")
+    return PlainTextResponse(_strip_routed(f.read_text(encoding="utf-8")).replace("{BASE}", base),
+                             media_type="text/plain; charset=utf-8")
 
 
 @app.get("/robots.txt", include_in_schema=False)
@@ -2550,6 +2551,20 @@ async def selfhost_sh():
                              media_type="text/x-shellscript; charset=utf-8")
 
 
+def routed_discovery_on() -> bool:
+    """`TREG_ROUTED_DISCOVERY` — see catalog_store.group_routed. The agent-facing files honour it
+    too: a deployment that hides routed rows from search must not keep TEACHING agents to call
+    them, or the docs and the catalog disagree and the agent trusts the docs."""
+    return str(get_settings().routed_discovery).strip().lower() not in ("off", "0", "false", "no")
+
+
+def _strip_routed(text: str) -> str:
+    """Remove the `<!--routed-->…<!--/routed-->` blocks (and, when kept, just the markers)."""
+    if routed_discovery_on():
+        return text.replace("<!--routed-->\n", "").replace("\n<!--/routed-->", "")
+    return re.sub(r"<!--routed-->.*?<!--/routed-->\n?", "", text, flags=re.S)
+
+
 def _serve_md(name: str) -> PlainTextResponse:
     """Serve a bundled markdown file as inline text (so "open in new tab" shows it, not a download),
     with the serving domain templated in. Backs the 'copy markdown' buttons on the docs pages."""
@@ -2557,7 +2572,7 @@ def _serve_md(name: str) -> PlainTextResponse:
     if not f.exists():
         raise HTTPException(status_code=404, detail=f"{name} not bundled")
     base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
+    return PlainTextResponse(_strip_routed(f.read_text(encoding="utf-8")).replace("{BASE}", base),
                              media_type="text/plain; charset=utf-8")
 
 

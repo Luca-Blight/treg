@@ -764,3 +764,42 @@ async def test_the_geo_aware_child_wins_a_filtered_search_and_the_answer_says_wh
     assert d2["_treg"]["ignored_filters"] == ["country"], "the caller sent it; aviato has no place for it"
     assert r2.headers["X-Treg-Ignored-Filters"] == "country"
     assert d2["_treg"]["tried"][-1]["ignored_filters"] == ["country"], "same set in all three places"
+
+
+async def test_routed_discovery_is_a_runtime_switch(clients: AsyncClient, enrichment_on, monkeypatch):
+    """`TREG_ROUTED_DISCOVERY=off` stops search LEADING with `treg.<capability>` — nothing else.
+    The endpoints stay callable, priced and reachable by id; only the steering goes away, so a
+    deployment can answer "should every agent be pointed at the router by default" with traffic
+    instead of an argument, and can undo it without a redeploy."""
+    q = {"q": "find someone's work email from their name and company", "limit": 8}
+    on = (await clients.get("/catalog/search", params=q)).json()
+    ids_on = [r["id"] for r in on["results"]]
+    assert any(i.startswith("treg.") for i in ids_on), "steering on: the routed row is in the page"
+
+    monkeypatch.setenv("TREG_ROUTED_DISCOVERY", "off")
+    get_settings.cache_clear()
+    off = (await clients.get("/catalog/search", params=q)).json()
+    ids_off = [r["id"] for r in off["results"]]
+    assert not any(i.startswith("treg.") for i in ids_off), \
+        "steering off: search looks as it did before routing shipped"
+    assert ids_off, "and it still returns the providers themselves"
+
+    # every OTHER discovery surface follows the same switch, or the deployment contradicts itself
+    plat = (await clients.get("/catalog/platforms/people")).json()
+    flat = json.dumps(plat)
+    assert "treg.people." not in flat, "browse view: no routed row while steering is off"
+    for path in ("/skill.md", "/llms.txt"):
+        body = (await clients.get(path)).text
+        assert "Routed endpoints" not in body, f"{path} must not teach what search hides"
+        assert "<!--routed" not in body, f"{path} leaked a marker"
+        assert "provider_capacity_unavailable" in body, f"{path} lost the unrelated overflow guidance"
+
+    # …but the endpoint is untouched: still callable, still priced, still found by id
+    r = await clients.get("/catalog/endpoints/treg.people.email.find")
+    assert r.status_code == 200 and r.json()["endpoint"]["kind"] == "routed"
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"tomba": [(200, {"data": {"email": "p@stripe.com", "score": 99, "first_name": "Patrick",
+                                   "last_name": "Collison", "verification": {"status": "valid"}}})]}, []))
+    call = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
+    assert call.status_code == 200 and call.json()["_treg"]["served_by"] == "tomba.people.email.find"
+    get_settings.cache_clear()
