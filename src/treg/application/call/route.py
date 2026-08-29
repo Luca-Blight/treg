@@ -17,7 +17,6 @@ the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (
 
 from __future__ import annotations
 
-import re
 
 import json
 import logging
@@ -34,7 +33,7 @@ from ...domain.catalog import stats as endpoint_stats
 from ...domain.catalog import store as catalog_store
 from ...domain.catalog.routing.contracts import canonical_identity
 from ...domain.catalog.routing.plan import (
-    MAX_ERROR_FALLBACKS, Candidate, Plan, candidates_for, cost_at, rank,
+    MAX_ERROR_FALLBACKS, Candidate, Plan, candidates_for, cost_at, ignored_filters, rank,
 )
 from .resolve import _host_of, _marketplace_secret
 from .types import CallContext, CallFailure, GatewayFailed, ResolutionFailed, UpstreamResponse
@@ -196,7 +195,8 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         price = 0 if tier != "platform" else cost_at(cv, identity)
         c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=st.get("hit_rate"),
                       ok_rate=st.get("ok_rate"), p50_ms=st.get("p50_ms"), last_ok_days=st.get("last_ok_days"),
-                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])))
+                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])),
+                      ignored=ignored_filters(ad, contract, identity))
         if tier == "platform" and not cat.platform_eligible(e):
             dropped.append({"endpoint_id": e["id"], "why": "not platform-eligible and no own key"})
             continue
@@ -284,9 +284,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
         # A filter the caller sent that this adapter never mentions is silently NOT applied — say so
         # on the attempt (live 2026-08-29: `country: fr` reached icypeas as nothing, rows came from
-        # anywhere; the bench had post-filtered in the agent).
-        used = set(cand.adapter.in_map) | {n for e in (cand.adapter.in_expr or {}).values() for n in re.findall(r"[A-Za-z_]\w*", e)}
-        ignored = tuple(k for k in plan.contract.filters if plan.identity.get(k) not in (None, "") and k not in used)
+        # anywhere; the bench had post-filtered in the agent). Computed at planning time, where it
+        # also ranks the candidate down.
+        ignored = cand.ignored
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
         try:
             response = await execute_child(child, upstream_client)
@@ -366,12 +366,17 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                        f"every candidate for {ep['id']} failed"})
     cand, doc, output, raw = winner
     served = cand.endpoint["id"]
+    # The rows answer a LOOSER question than the caller asked when the winner could not express a
+    # filter. It is on the attempt, but no caller reads `tried[]` — say it where the answer is, and
+    # on a header, or the agent post-filters nothing and never knows why the geography is wrong.
     body_out = {"output": output or {k: None for k in plan.contract.output}, "raw": doc,
                 "_treg": {"served_by": served, "provider": cand.endpoint["provider"], "tier": cand.tier,
                           "outcome": tried[-1].outcome, "tried": [t.view() for t in tried], "charged_micro": spent,
+                          **({"ignored_filters": list(cand.ignored)} if cand.ignored else {}),
                           **({"dropped": plan.dropped} if plan.dropped else {})}}
     _audit_parent(parent, ep, 200, spent, audit_client)
     return _json(body_out, 200, {"X-Treg-Served-By": served, "X-Treg-Providers-Tried": ",".join(t.provider for t in tried),
+                                 **({"X-Treg-Ignored-Filters": ",".join(cand.ignored)} if cand.ignored else {}),
                                  "X-Treg-Route-Outcome": tried[-1].outcome}), spent
 
 

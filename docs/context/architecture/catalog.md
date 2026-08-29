@@ -1195,6 +1195,24 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   goes to a title-aware search, not a free domain-only one that would answer the whole company.
   Only caller-supplied keys count (`rank(given=…)`), never keys reached through `derive`. Price
   decides among equals.
+- **Ranking, dropped filters (2026-08-29)**: a candidate whose adapter cannot express a filter the
+  caller SENT ranks below every candidate that can — `len(candidate.ignored)` sits in `rank()`'s key
+  between specificity and price. It answers a LOOSER question, and a non-empty answer to the looser
+  question still passes `adapter.miss`, so cheapness alone must never buy it. Found live: a
+  `people.search` for `{q, title, location: "London, United Kingdom", country: GB}` went to the
+  cheapest child, which mapped neither geo filter, and returned people in Bengaluru and San
+  Francisco — reported as a hit, $0.0025, no signal to the caller. `ignored_filters()` is pure and
+  computed at PLANNING time (`routing/plan.py`), so the ranking and the per-attempt report read the
+  same set. The provider stays reachable: it still wins when nothing better is callable, and price
+  still decides among candidates that ignore equally much.
+  **Coverage caveat**: of 16 `people.search` children, only icypeas maps geo today, so the rule
+  currently floats one provider. lusha, crustdata, companyenrich and leadmagic all filter on
+  location upstream — their adapters just do not map it. Until they do, the rule is doing more work
+  than it should have to.
+- **The answer says what it ignored (2026-08-29)**: `ignored_filters` was on `_treg.tried[]` only,
+  which no caller reads. It is now also on `_treg` itself for the child that served and on an
+  `X-Treg-Ignored-Filters` response header, so an agent can post-filter, or say why the rows are
+  wrong, without walking the attempt list.
 - **people.\* sweep (2026-08-29)**: people.search 6 → 16 children (aviato dsl/simple, companyenrich
   scroll, crustdata, fiber-ai, leadsforge, leadmagic search + role-finder, findymail employees +
   domain — the last retagged from email.find, it returns a list), people.enrich 9 → 14 (aviato bulk,
@@ -1217,6 +1235,11 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   them under ALSO with the rest of the same-job endpoints that have no adapter; the search page's
   "+N more" points there. The routed row's example body and `/access` dry-run use the identity
   variant MOST children accept, and the dry-run tries every variant before saying "unservable".
+  That dry-run is ONE identity shape, so its drops are mostly "this adapter takes another identity",
+  not "your team cannot reach this provider" — `/access` used to label them "not available here",
+  which read as a missing key and sent a reader hunting for one (2026-08-29: aviato, callable on
+  treg's platform key and serving live calls, was listed as unavailable). It now names the shape and
+  gives each drop its own `why`.
 - **Coverage (2026-08-28)**: 74 routed capabilities = 80.9% of 30-day platform calls (88% was the
   routable ceiling). The per-capability ledger — what shipped with which children, what is 🚫 and
   why (one usable vendor, async task-post engines, identity-less feeds), and the 49 zero-traffic

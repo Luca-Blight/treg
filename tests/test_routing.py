@@ -695,3 +695,72 @@ def test_rank_prefers_the_candidate_that_uses_more_of_the_identity():
     hunter = cand("hunter.people.email.find", ("first_name", "last_name", "domain"), 4_900)
     apollo = cand("apollo.people.enrich", ("full_name", "domain"), 26_000)
     assert rank([apollo, hunter], given={"full_name", "domain"}, derive=derive)[0] is hunter
+
+
+def test_a_provider_that_cannot_express_a_supplied_filter_ranks_last_among_equals():
+    """Live 2026-08-29: `{q, title, location: London, country: GB}` went to the cheapest candidate,
+    which had no place for either geo filter, and returned people in Bengaluru and San Francisco —
+    reported as a hit. Cheapness must not buy an answer to a looser question."""
+    from treg.domain.catalog.routing.plan import Candidate, ignored_filters, rank
+    def cand(eid, price, ignored=()):
+        return Candidate(endpoint={"id": eid, "provider": eid.split(".")[0], "cost": {"type": "per_result"}},
+                         adapter=None, variant=("q",), tier="platform", price_micro=price, hit_rate=None,
+                         ok_rate=None, p50_ms=None, last_ok_days=None, ignored=ignored)
+    geo_blind = cand("aviato.people.search", 2_500, ignored=("country", "location"))
+    geo_aware = cand("icypeas.people.search", 5_700)
+    assert [c.endpoint["id"] for c in rank([geo_blind, geo_aware], given={"q"})] == [
+        "icypeas.people.search", "aviato.people.search"], "the dearer provider that honours the filters leads"
+    # still reachable when it is the only candidate, and price still decides among equals
+    assert rank([geo_blind], given={"q"})[0] is geo_blind
+    assert rank([geo_blind, cand("z.people.search", 9_000, ignored=("country", "location"))], given={"q"})[0] is geo_blind
+
+    # and the set itself is read off the adapter's input map, not guessed
+    cat = catalog_store.load()
+    contract = cat.contracts["people.search"]
+    ident = {"q": "backend engineers", "country": "GB", "location": "London, United Kingdom", "limit": 15}
+    assert "country" in ignored_filters(cat.adapters["aviato.people.search"], contract, ident)
+    assert ignored_filters(cat.adapters["icypeas.people.search"], contract, ident) == (), \
+        "icypeas is the only people.search adapter that maps geo — the rule must float it to the top"
+
+
+async def test_the_geo_aware_child_wins_a_filtered_search_and_the_answer_says_what_was_dropped(
+    clients: AsyncClient, enrichment_on, monkeypatch
+):
+    """End to end on the real people.search ladder: the caller sends geo, so the child that maps it
+    is called even though a CHEAPER one is callable — and when the winner drops a filter, the
+    envelope and a header say so, where a caller will see it (not buried in `tried[]`).
+
+    Live 2026-08-29 this went to aviato ($0.0025, maps neither `country` nor `location`) and came
+    back with people in Bengaluru and San Francisco for a London brief, reported as a hit."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_ICYPEAS", "PLATFORM-ICYPEAS-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "hunter,tomba,leadmagic,leadsforge,findymail,aviato,fiber-ai,icypeas")
+    get_settings.cache_clear()
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, {"leads": [{"firstname": "Aleksei", "lastname": "Strizhak", "lastJobTitle": "Senior Backend Engineer",
+                                       "address": "London Area, United Kingdom", "profileUrl": "https://linkedin.com/in/as"}]})],
+         "*": [(200, {"persons": []})] * 12}, seen))
+    r = await clients.post("/call/treg.people.search",
+                           json={"q": "backend engineer", "title": "Backend Engineer",
+                                 "location": "London, United Kingdom", "country": "GB", "limit": 15})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["_treg"]["served_by"] == "icypeas.people.search", \
+        "the child that maps country/location leads, though the cheaper geo-blind aviato is callable"
+    assert seen == [("icypeas", "POST", {}, {"query": {"currentJobTitle": {"include": ["Backend Engineer"]},
+                                                      "location": {"include": ["London, United Kingdom"]}},
+                                             "pagination": {"size": 15}})], \
+        "one call, and the geography actually reached the provider"
+    assert "ignored_filters" not in d["_treg"] and "X-Treg-Ignored-Filters" not in r.headers
+
+    # …and when the winner cannot express a filter, the answer says which — envelope, header, attempt
+    seen2 = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"*": [(200, {"items": [{"fullName": "Ada L", "URLs": {"linkedin": "linkedin.com/in/al"}}], "count": {"value": 1}})] * 12}, seen2))
+    r2 = await clients.post("/call/treg.people.search", json={"q": "backend engineer", "country": "GB", "limit": 15})
+    assert r2.status_code == 200, r2.text
+    d2 = r2.json()
+    assert d2["_treg"]["served_by"] == "aviato.people.search", "no geo-aware child answers a {q}-only brief here"
+    assert d2["_treg"]["ignored_filters"] == ["country"], "the caller sent it; aviato has no place for it"
+    assert r2.headers["X-Treg-Ignored-Filters"] == "country"
+    assert d2["_treg"]["tried"][-1]["ignored_filters"] == ["country"], "same set in all three places"
