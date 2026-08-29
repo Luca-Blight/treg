@@ -237,6 +237,28 @@ async def catalog_search(q: str = "", limit: int = 25,
     return out
 
 
+def _related_capabilities(ep: dict, cat) -> list[dict]:
+    """Adjacent JOBS on the same subject, as routed rows the caller can call next.
+
+    `siblings` answers "who else does THIS job"; nothing answered "this is the wrong job, the one
+    you want is next door". A caller that lands on `people.enrich` wanting an email gets a 200 with
+    a job title and no way to learn `people.email.find` exists — the contract has no `email` field
+    at all, because every provider sells profile data and email lookup as separate products
+    (measured 2026-08-29: 0 of 403 enriched rows carried one). Discovery vocabulary fixes the
+    caller who SEARCHES; this fixes the caller who arrived by id."""
+    cap = ep.get("capability") or ""
+    subject = cap.split(".")[0]
+    if not subject:
+        return []
+    out = []
+    for row in cat.by_id.values():
+        c = row.get("capability") or ""
+        if (row.get("kind") == "routed" and c != cap and c.startswith(subject + ".")
+                and cat.capabilities.get(c)):
+            out.append({"endpoint_id": row["id"], "capability": c, "does": cat.capabilities[c]})
+    return sorted(out, key=lambda r: r["capability"])[:5]
+
+
 @app.get("/catalog/endpoints/{endpoint_id}")
 async def catalog_endpoint(
     endpoint_id: str,
@@ -313,6 +335,7 @@ async def catalog_endpoint(
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
                      **cat.provider_meta.get(ep["provider"], {})},
         "siblings": siblings,
+        **({"related_capabilities": rel} if (rel := _related_capabilities(ep, cat)) else {}),
         **({"routing": routing} if routing is not None else {}),
         "call_template": catalog_store.call_template(ep),
         "example_response": example,

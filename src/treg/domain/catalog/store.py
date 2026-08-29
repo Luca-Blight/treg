@@ -257,6 +257,13 @@ def _parse(directory: Path) -> Catalog:
                 continue
             if "cache" not in raw and meta.get("cache") is not None:
                 raw = {**raw, "cache": meta["cache"]}
+            # Same inheritance for the provider's SUCCESS rule. A vendor's "HTTP 200 always, read
+            # `code`" convention is one fact about the whole provider, and stating it per endpoint
+            # means an ingest that adds routes silently ships them without one — 33 of justoneapi's
+            # 260 were missing it, and settle.py bills the estimate when it cannot tell a failure
+            # from a hit.
+            if "expect" not in raw and doc.get("expect") is not None:
+                raw = {**raw, "expect": doc["expect"]}
             ep = _normalize(raw, provider, directory)
             if ep["id"] in by_id:  # first file wins; ids are unique by validator contract
                 continue
@@ -456,6 +463,11 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # the request the verifier actually made — a proven set of values, which is what makes
         # `call_template` a paste-ready line rather than a shape with placeholders in it
         "test_request": raw.get("test_request") or {},
+        # The provider's OWN success rule ("HTTP 200 always; `code` 0 means it worked"). It was a
+        # verification-only field (scripts/catalog_verify.py); settle.py now reads it so a
+        # per_success endpoint with no routing adapter can still tell a vendor-side failure from a
+        # hit. Without it treg bills the estimate for a body the VENDOR gave away free.
+        "expect": raw.get("expect") or None,
         "cost": _effective_cost(raw),
         # Absent `tier` means core: the curated first wave predates the split, and treating an
         # unmarked endpoint as extended would hide it from the platform view entirely.
