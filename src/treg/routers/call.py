@@ -198,9 +198,17 @@ async def catalog_endpoint_access(
         first = plan.candidates[0]
         how = ("your registered tool" if first.tier == "tool" else "your own credential" if first.tier == "credential"
                else f"treg's {first.endpoint['provider']} key, ~${(first.price_micro or 0) / 1e6:g}")
+        # The plan above is for ONE identity shape — the endpoint's example body. Most drops are
+        # "this adapter takes a different identity", not "your team cannot reach this provider";
+        # labelling them "not available here" read as no-key and sent a reader hunting for a
+        # missing credential (2026-08-29). Name the shape, and give each drop its reason.
+        dropped_note = ""
+        if plan.dropped:
+            dropped_note = ("; for this {" + ", ".join(plan.variant) + "} example, not usable: "
+                            + ", ".join(f"{d['endpoint_id']} ({d['why']})" for d in plan.dropped))
         return {"tier": "routed", "detail": f"routed — {len(plan.candidates)} providers callable now; first: "
                                             f"{first.endpoint['id']} on {how} (send {{{', '.join(first.variant)}}})"
-                                            + (f"; not available here: {', '.join(d['endpoint_id'] for d in plan.dropped)}" if plan.dropped else ""),
+                                            + dropped_note,
                 "plan": [c.view() for c in plan.candidates], "dropped": plan.dropped}
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:

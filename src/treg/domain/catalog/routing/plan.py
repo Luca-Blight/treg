@@ -13,6 +13,13 @@ MAX_ERROR_FALLBACKS = 2
 MIN_HIT_SAMPLES = 50
 
 
+def ignored_filters(adapter: Adapter, contract: Contract, identity: dict[str, Any]) -> tuple[str, ...]:
+    """Filters the caller supplied that this adapter has no place for — the provider will answer a
+    LOOSER question than the one asked. Pure, and knowable before the call, so ranking can use it."""
+    used = set(adapter.in_map) | {n for e in (adapter.in_expr or {}).values() for n in re.findall(r"[A-Za-z_]\w*", e)}
+    return tuple(k for k in (contract.filters or ()) if identity.get(k) not in (None, "") and k not in used)
+
+
 def cost_at(cost_view: dict | None, request: dict | None = None) -> int | None:
     """Micro-USD this request will cost at its requested size (plan §3, bench 08-27): per-result
     prices × the requested `limit` (default 1 for a lookup); flat per-call/per-success as listed;
@@ -49,6 +56,7 @@ class Candidate:
     last_ok_days: int | None
     exhausted: bool = False
     note: str = ""
+    ignored: tuple[str, ...] = ()     # caller filters this adapter cannot express (ranks it down)
 
     @property
     def expected_cost_per_hit(self) -> float:
@@ -72,7 +80,8 @@ class Candidate:
                 "identity": list(self.variant), "price_micro": self.price_micro,
                 "expected_cost_per_hit_micro": (None if self.expected_cost_per_hit == float("inf") else int(self.expected_cost_per_hit)),
                 "hit_rate": self.hit_rate, "ok_rate": self.ok_rate, "p50_ms": self.p50_ms,
-                "confidence": self.confidence, "exhausted": self.exhausted, **({"note": self.note} if self.note else {})}
+                "confidence": self.confidence, "exhausted": self.exhausted, **({"note": self.note} if self.note else {}),
+                **({"ignored_filters": list(self.ignored)} if self.ignored else {})}
 
 
 @dataclass
@@ -118,7 +127,13 @@ def rank(candidates: list[Candidate], *, prefer: list[str] | None = None, exclud
         # would return the whole company (live 2026-08-29: a free domain-only provider won and
         # answered 100 unnamed rows). Price decides among candidates of equal specificity.
         specificity = -covers(c.variant) if given else 0
-        return (own, pref, specificity, c.expected_cost_per_hit, c.p50_ms if c.p50_ms is not None else 10**9,
+        # A provider that cannot express a filter the caller SENT answers a looser question, and a
+        # non-empty answer to the looser question still counts as a hit — so it must never win on
+        # price alone (live 2026-08-29: `{q, title, location: London, country: GB}` went to the
+        # cheapest candidate, which dropped both geo filters and returned people in Bengaluru and
+        # San Francisco). It stays reachable, just last among equals.
+        return (own, pref, specificity, len(c.ignored), c.expected_cost_per_hit,
+                c.p50_ms if c.p50_ms is not None else 10**9,
                 c.last_ok_days if c.last_ok_days is not None else 10**6, c.endpoint["id"])
     return sorted(keep, key=key)
 

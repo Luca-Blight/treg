@@ -695,3 +695,29 @@ def test_rank_prefers_the_candidate_that_uses_more_of_the_identity():
     hunter = cand("hunter.people.email.find", ("first_name", "last_name", "domain"), 4_900)
     apollo = cand("apollo.people.enrich", ("full_name", "domain"), 26_000)
     assert rank([apollo, hunter], given={"full_name", "domain"}, derive=derive)[0] is hunter
+
+
+def test_a_provider_that_cannot_express_a_supplied_filter_ranks_last_among_equals():
+    """Live 2026-08-29: `{q, title, location: London, country: GB}` went to the cheapest candidate,
+    which had no place for either geo filter, and returned people in Bengaluru and San Francisco —
+    reported as a hit. Cheapness must not buy an answer to a looser question."""
+    from treg.domain.catalog.routing.plan import Candidate, ignored_filters, rank
+    def cand(eid, price, ignored=()):
+        return Candidate(endpoint={"id": eid, "provider": eid.split(".")[0], "cost": {"type": "per_result"}},
+                         adapter=None, variant=("q",), tier="platform", price_micro=price, hit_rate=None,
+                         ok_rate=None, p50_ms=None, last_ok_days=None, ignored=ignored)
+    geo_blind = cand("aviato.people.search", 2_500, ignored=("country", "location"))
+    geo_aware = cand("icypeas.people.search", 5_700)
+    assert [c.endpoint["id"] for c in rank([geo_blind, geo_aware], given={"q"})] == [
+        "icypeas.people.search", "aviato.people.search"], "the dearer provider that honours the filters leads"
+    # still reachable when it is the only candidate, and price still decides among equals
+    assert rank([geo_blind], given={"q"})[0] is geo_blind
+    assert rank([geo_blind, cand("z.people.search", 9_000, ignored=("country", "location"))], given={"q"})[0] is geo_blind
+
+    # and the set itself is read off the adapter's input map, not guessed
+    cat = catalog_store.load()
+    contract = cat.contracts["people.search"]
+    ident = {"q": "backend engineers", "country": "GB", "location": "London, United Kingdom", "limit": 15}
+    assert "country" in ignored_filters(cat.adapters["aviato.people.search"], contract, ident)
+    assert ignored_filters(cat.adapters["icypeas.people.search"], contract, ident) == (), \
+        "icypeas is the only people.search adapter that maps geo — the rule must float it to the top"
