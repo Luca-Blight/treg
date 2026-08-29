@@ -70,15 +70,17 @@ WATERFALL_HEADER = "x-treg-route-waterfall"
 MAX_COST_HEADER = "x-treg-route-max-cost"
 PREFER_HEADER = "x-treg-route-prefer"
 EXCLUDE_HEADER = "x-treg-route-exclude"
+MIN_RESULTS_HEADER = "x-treg-route-min-results"
 _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-encoding", b"idempotency-key",
                               b"x-treg-route-waterfall", b"x-treg-route-max-cost", b"x-treg-route-prefer",
-                              b"x-treg-route-exclude", b"host"})
+                              b"x-treg-route-exclude", b"x-treg-route-min-results", b"host"})
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 _CANDIDATE_LOCAL_FAILURES = frozenset({"tool_access_denied", "policy_denied", "capability_pinned"})
 _GLOBAL_REFUSALS = frozenset({"insufficient_balance", "tag_spend_cap_reached",
                               "platform_daily_cap_reached", "daily_cap_reached"})
 
 
+MAX_WEAK_FALLBACKS = 2   # extra providers asked after a thin-but-real answer (see min_results)
 CHEAP_RETRY_MICRO = 10_000  # ≤ 1¢: a per_call provider cheap enough to be asked after another's 4xx
 
 
@@ -102,6 +104,7 @@ class RouteOptions:
     max_cost_micro: int | None = DEFAULT_MAX_COST_MICRO
     prefer: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
+    min_results: int = 1     # a hit with fewer rows than this is WEAK: keep looking, keep the best
 
     @classmethod
     def from_headers(cls, get, default_max_cost_micro: int | None = None) -> "RouteOptions":
@@ -115,8 +118,14 @@ class RouteOptions:
             raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
                                    detail=f"{MAX_COST_HEADER} must be a USD number, got {mc!r}")
         wf = str(get(WATERFALL_HEADER) or "").strip().lower()
+        try:
+            mr = max(1, int(get(MIN_RESULTS_HEADER) or 1))
+        except ValueError:
+            raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
+                                   detail=f"{MIN_RESULTS_HEADER} must be a whole number, got {get(MIN_RESULTS_HEADER)!r}")
         return cls(waterfall=wf not in ("0", "false", "no", "off"),
-                   max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)))
+                   max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)),
+                   min_results=mr)
 
 
 class _Bytes:
@@ -272,6 +281,8 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
     errors = 0
     rejected_by: set[str] = set()  # providers that answered a vendor 4xx
     winner: tuple[Candidate, dict, dict, bytes] | None = None
+    weak_hits = 0
+    best: tuple[int, tuple[Candidate, dict, dict, bytes]] | None = None   # best WEAK answer seen
     for n, cand in enumerate(plan.candidates):
         if options.max_cost_micro is not None and spent + (cand.price_micro or 0) > options.max_cost_micro:
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0, "would exceed max cost"))
@@ -346,11 +357,34 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                 continue
             winner = (cand, doc if doc is not None else {}, {}, raw)
             break
-        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "hit", response.status, charged, ignored=ignored))
+        # A HIT that answers thinly is not the end of the search. `min_results` lets the caller say
+        # how many rows make an answer; below it the waterfall keeps going and the best result so
+        # far is kept, so a weak first provider can still win if nothing better turns up. Without
+        # this the router stops at the first non-empty body — three rows of the wrong people end a
+        # search that a later provider would have answered (bench 2026-08-29, recruiting).
+        n_rows = max((len(v) for v in core.values() if isinstance(v, list)), default=1)
+        weak = options.waterfall and n_rows < options.min_results
+        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "weak" if weak else "hit",
+                             response.status, charged, f"{n_rows} < min_results {options.min_results}" if weak else "",
+                             ignored=ignored))
+        if weak:
+            if best is None or n_rows > best[0]:
+                best = (n_rows, (cand, doc, core, raw))
+            weak_hits += 1
+            # Bounded like the error fallback, and for the same reason: a brief whose honest answer
+            # IS one or two people (a lookup — "who runs engineering at X") never clears the bar, so
+            # an unbounded rule walks the whole paid ladder on every such call. Measured on the
+            # bench's deterministic set, unbounded cost 12.7x ($1.76 -> $22.35 over 28 queries) for
+            # answers that were already correct.
+            if weak_hits > MAX_WEAK_FALLBACKS:
+                break
+            continue
         winner = (cand, doc, core, raw)
         break
+    if winner is None and best is not None:
+        winner = best[1]          # nobody cleared min_results — the fullest answer we paid for wins
     if winner is None:
-        outcome = "miss" if tried and all(t.outcome in ("miss", "skipped") for t in tried) else "error"
+        outcome = "miss" if tried and all(t.outcome in ("miss", "skipped", "weak") for t in tried) else "error"
         if outcome == "miss":
             last = next(t for t in reversed(tried) if t.outcome == "miss")
             body_out = {"output": {k: None for k in plan.contract.output}, "raw": None,

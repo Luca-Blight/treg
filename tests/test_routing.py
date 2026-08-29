@@ -803,3 +803,99 @@ async def test_routed_discovery_is_a_runtime_switch(clients: AsyncClient, enrich
     call = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
     assert call.status_code == 200 and call.json()["_treg"]["served_by"] == "tomba.people.email.find"
     get_settings.cache_clear()
+
+def test_keywords_are_a_filter_so_they_reach_every_provider_that_can_express_them():
+    """The brief's SUBSTANCE lives in its keywords. As identity they would be dropped whenever
+    another variant matched — icypeas matches {title}, so a `q` carrying "microservices" never
+    reached it and the search degenerated to title+location (bench 2026-08-29: "football scouting
+    analysts" reached the provider as title="Football Analyst" and scored 0 qualified of 15)."""
+    cat = catalog_store.load()
+    contract = cat.contracts["people.search"]
+    assert "keywords" in contract.filters and "keywords" not in {k for v in contract.identity for k in v}
+    ident, variant = canonical_identity(contract, {
+        "q": "backend developers with microservices", "title": "Backend Engineer",
+        "location": "London, United Kingdom", "country": "GB",
+        "keywords": ["microservices", "architecture"], "limit": 15})
+    from treg.domain.catalog.routing.contracts import adapter_accepts
+    icy = cat.adapters["icypeas.people.search"]
+    _, body = icy.to_upstream(ident, adapter_accepts(icy, ident))
+    assert body["query"]["keyword"]["include"] == ["microservices", "architecture"], \
+        "icypeas takes them natively — the whole point of the contract field"
+    exa = cat.adapters["exa.people.search"]
+    _, body = exa.to_upstream(ident, adapter_accepts(exa, ident))
+    assert "microservices" in body["query"], "a semantic provider gets them folded into the query"
+    # and a provider with nowhere to put them says so, which ranks it down (PR #254)
+    from treg.domain.catalog.routing.plan import ignored_filters
+    assert "keywords" in ignored_filters(cat.adapters["aviato.people.search"], contract, ident)
+
+
+async def test_a_thin_hit_does_not_end_the_waterfall_when_the_caller_set_min_results(
+    clients: AsyncClient, enrichment_on, monkeypatch
+):
+    """`X-Treg-Route-Min-Results: 3` — one row is not an answer to "find me candidates". The
+    router keeps going and the FULLEST answer wins; without it the first non-empty body stops the
+    search (bench 2026-08-29: the hand-written policy's `if len(rows) < 3 -> fall through` was the
+    single behaviour the routed path could not express)."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_ICYPEAS", "PLATFORM-ICYPEAS-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "hunter,tomba,leadmagic,leadsforge,findymail,aviato,fiber-ai,icypeas")
+    get_settings.cache_clear()
+    thin = {"leads": [{"firstname": "Solo", "lastname": "Row", "profileUrl": "https://linkedin.com/in/s"}]}
+    full = {"items": [{"fullName": f"P{i}", "URLs": {"linkedin": f"linkedin.com/in/p{i}"}} for i in range(9)],
+            "count": {"value": 9}}
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, thin)], "*": [(200, full)] * 12}, seen))
+    body = {"q": "backend engineer", "title": "Backend Engineer",
+            "location": "London, United Kingdom", "country": "GB", "limit": 15}
+    r = await clients.post("/call/treg.people.search", json=body, headers={"X-Treg-Route-Min-Results": "3"})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert [t["outcome"] for t in d["_treg"]["tried"]][0] == "weak", "1 row < 3 is not an answer"
+    assert d["_treg"]["served_by"] != "icypeas.people.search" and len(d["output"]["people"]) == 9
+
+    # default (min_results 1): the same thin answer ends the search, as before
+    seen2 = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, thin)], "*": [(200, full)] * 12}, seen2))
+    r2 = await clients.post("/call/treg.people.search", json=body)
+    assert r2.json()["_treg"]["served_by"] == "icypeas.people.search" and len(seen2) == 1
+
+    # and when NOBODY clears the bar, the fullest weak answer is still returned, not a miss
+    seen3 = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas": [(200, thin)], "*": [(200, {"items": [{"fullName": "Two"}, {"fullName": "Rows"}],
+                                                "count": {"value": 2}})] * 12}, seen3))
+    r3 = await clients.post("/call/treg.people.search", json=body, headers={"X-Treg-Route-Min-Results": "5"})
+    assert r3.status_code == 200 and len(r3.json()["output"]["people"]) == 2, "best effort beats nothing"
+
+
+async def test_the_weak_hit_fallback_is_bounded_like_the_error_fallback(
+    clients: AsyncClient, enrichment_on, monkeypatch
+):
+    """Some briefs HAVE only one right answer ("who runs engineering at X"), so no provider ever
+    clears min_results and an unbounded rule pays the whole ladder on every call. Measured on the
+    bench's deterministic set: 12.7x ($1.76 -> $22.35 over 28 queries) for answers already correct.
+    At most MAX_WEAK_FALLBACKS extra providers are asked, then the fullest answer is returned."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_ICYPEAS", "PLATFORM-ICYPEAS-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "hunter,tomba,leadmagic,leadsforge,findymail,aviato,fiber-ai,icypeas")
+    get_settings.cache_clear()
+    # Every provider answers ONE row in ITS OWN shape — a real thin HIT, not a miss (a miss does
+    # not consume the bound, and must not: the bound is about paying for thin answers).
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"icypeas":    [(200, {"leads": [{"firstname": "One", "lastname": "Row"}], "total": 1})] * 4,
+         "leadsforge": [(200, {"leads": [{"firstName": "One", "lastName": "Row"}]})] * 4,
+         "leadmagic":  [(200, {"data": [{"full_name": "One Row"}], "total_count": 1})] * 4,
+         "hunter":     [(200, {"data": {"emails": [{"value": "one@stripe.com"}]}, "meta": {"results": 1}})] * 4,
+         "*":          [(200, {"items": [{"fullName": "One Row"}], "count": {"value": 1}})] * 8}, seen))
+    # {company_domain} has the deepest ladder, so the BOUND is what stops this, not running out
+    body = {"company_domain": "stripe.com", "limit": 15}
+    r = await clients.post("/call/treg.people.search", json=body,
+                           headers={"X-Treg-Route-Min-Results": "5"})   # nothing will ever clear 5
+    assert r.status_code == 200, r.text
+    d = r.json()
+    attempts = [t for t in d["_treg"]["tried"] if t["outcome"] == "weak"]
+    assert len(attempts) == call_route.MAX_WEAK_FALLBACKS + 1, \
+        f"the first ask plus at most {call_route.MAX_WEAK_FALLBACKS} more, not the whole ladder"
+    assert len(seen) == len(attempts), "and no provider beyond the bound was ever called"
+    assert len(d["output"]["people"]) == 1, "and the caller still gets the answer that exists"

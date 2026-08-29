@@ -432,7 +432,7 @@ adapters:
   exa.people.search:
     accepts: [[q]]
     in:  {q: body.query}
-    in_expr: {body.numResults: limit}
+    in_expr: {body.query: "join(q, csv(keywords))", body.numResults: limit}
     const: {body.category: people}
     out: {people: results, count: "len(results)"}
     miss: "results == []"
@@ -440,7 +440,8 @@ adapters:
     accepts: [[company_domain, title], [company_domain], [title]]
     in:  {company_domain: body.query.currentCompanyWebsite.include, title: body.query.currentJobTitle.include}
     in_expr: {body.query.currentCompanyWebsite.include: "list(company_domain)", body.query.currentJobTitle.include: "list(title)",
-              body.query.location.include: "list(coalesce(location, country_name(country)))", body.pagination.size: limit}
+              body.query.location.include: "list(coalesce(location, country_name(country)))", body.pagination.size: limit,
+              body.query.keyword.include: "list(keywords)"}
     out: {people: leads, count: total, next_cursor: pagination.token}
     miss: "leads == []"
   companyenrich.people.search:
@@ -1877,7 +1878,7 @@ adapters:
   leadsforge.people.search:
     accepts: [[company_domain]]
     in:  {company_domain: body.companyDomains.include}
-    in_expr: {body.companyDomains.include: "list(company_domain)", body.limit: limit}
+    in_expr: {body.companyDomains.include: "list(company_domain)", body.limit: limit, body.keywords.include: "list(keywords)"}
     out: {people: leads, next_cursor: cursor}
     miss: "leads == []"
   findymail.search.employees:
