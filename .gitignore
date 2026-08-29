@@ -71,3 +71,8 @@ e2e.db*
 # not in the product repo (Jason, 2026-08-25).
 /loopany/
 .DS_Store
+
+# Never in git, never in the sdist (see [tool.hatch.build.targets.sdist])
+docs/evidence/
+.import_linter_cache/
+body.json
