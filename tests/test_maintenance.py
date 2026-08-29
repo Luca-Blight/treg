@@ -197,3 +197,27 @@ def test_upgrade_backfills_companions_and_is_idempotent(tmp_path):
     assert second.returncode == 0, second.stderr
     assert _companion_count(database) == 1
 
+
+def test_app_lifespan_does_not_run_release_backfills(tmp_path):
+    env, database, _ = _env(tmp_path)
+    _seed_connection(env)
+    assert _companion_count(database) == 0
+    script = textwrap.dedent(
+        """
+        import asyncio
+
+        from treg.bootstrap import create_app
+
+        async def start_and_stop():
+            app = create_app("all")
+            async with app.router.lifespan_context(app):
+                pass
+
+        asyncio.run(start_and_stop())
+        """
+    )
+
+    result = _run(["-c", script], env)
+
+    assert result.returncode == 0, result.stderr
+    assert _companion_count(database) == 0

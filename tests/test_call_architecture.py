@@ -201,8 +201,9 @@ def test_startup_manifests_keep_dataplane_and_control_work_separate() -> None:
         "dataplane": (),
         "control": ("treg.adsconv.worker",),
     }
-    assert "treg.api._bootstrap_single_user" not in bootstrap.ROLE_STARTUP_CHECKS["dataplane"]
-    assert "treg.api._bootstrap_single_user" in bootstrap.ROLE_STARTUP_CHECKS["control"]
+    for checks in bootstrap.ROLE_STARTUP_CHECKS.values():
+        assert "treg.api._backfill_provider_extra_tools" not in checks
+        assert "treg.api._bootstrap_single_user" not in checks
     assert "treg.mcp.mcp_lifespan" in bootstrap.ROLE_STARTUP_CHECKS["dataplane"]
     assert "treg.mcp.mcp_lifespan" not in bootstrap.ROLE_STARTUP_CHECKS["control"]
 

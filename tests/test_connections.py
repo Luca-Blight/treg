@@ -16,6 +16,7 @@ from sqlmodel import select
 
 from treg import api as A
 from treg import crypto, oauth
+from treg.application.connect import _backfill_provider_extra_tools
 from treg.config import get_settings
 from treg.db import session_maker
 from treg.models import Secret, Tool
@@ -705,9 +706,9 @@ async def test_split_host_reconnect_rebinds_extras_without_duplicating(clients: 
     assert len(admins) == 1, "reconnecting must rebind the extra tool, not pile up duplicates"
 
 
-async def test_startup_backfills_missing_split_host_tool_idempotently(
+async def test_upgrade_backfills_missing_split_host_tool_idempotently(
         clients: AsyncClient, treg_google_app):
-    """A pre-split-host GA4 connection heals on boot without requiring another consent."""
+    """A pre-split-host GA4 connection heals on release upgrade without another consent."""
     st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
     async with session_maker() as db:
         old_admin = (await db.execute(
@@ -716,16 +717,16 @@ async def test_startup_backfills_missing_split_host_tool_idempotently(
         await db.delete(old_admin)
         await db.commit()
 
-    assert await A._backfill_provider_extra_tools() == 1
+    assert await _backfill_provider_extra_tools() == 1
     tools = [t for t in (await clients.get("/tools")).json()
              if t["name"] == "google-analytics-admin"]
     assert len(tools) == 1
     assert tools[0]["bindings"][0]["secret_id"] == st["secret_id"]
 
-    assert await A._backfill_provider_extra_tools() == 0
+    assert await _backfill_provider_extra_tools() == 0
     tools = [t for t in (await clients.get("/tools")).json()
              if t["name"] == "google-analytics-admin"]
-    assert len(tools) == 1, "re-running startup must not duplicate the companion"
+    assert len(tools) == 1, "re-running the upgrade must not duplicate the companion"
 
 
 async def test_revoke_removes_the_extra_tool_too(clients: AsyncClient, treg_google_app):

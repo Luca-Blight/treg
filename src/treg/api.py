@@ -62,11 +62,8 @@ from .routers.web import LOCAL_USER_EMAIL, _WEB_DIR
 from .timeutil import utcnow_naive as _utcnow_naive
 
 # ---- compatibility re-exports --------------------------------------------------------------
-# bootstrap addresses these through this module: the role startup manifests resolve
-# "treg.api._backfill_provider_extra_tools" by dotted string, and _mount_static reads the
-# static dirs off `api_module`. Everything else moved code once re-exported here now lives at -
-# and is imported from - its real home.
-from .application.connect import _backfill_provider_extra_tools  # noqa: F401
+# _mount_static reads these directories off `api_module`. Everything else once re-exported here
+# now lives in, and is imported from, its real home.
 from .routers.web import _LOGO_DIR, _MEDIA_DIR, _TOUR_DIR, _VENDOR_DIR  # noqa: F401
 
 

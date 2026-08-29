@@ -140,7 +140,7 @@ rejects on HTTP status by default.
    `token_endpoint_auth_method="client_secret_basic"` (X, Pinterest — ALSO persisted into the token blob
    so refresh speaks the same dialect), `extra_tools` for a vendor that splits one product across hosts
    (GA4's admin/data split — each extra host provisions a companion Tool on the same secret; the
-   generic `_backfill_provider_extra_tools` startup pass gives existing connections newly-added
+   generic `_backfill_provider_extra_tools` release-upgrade pass gives existing connections newly-added
    companions automatically), and
    `resource_example` to stamp a ready-made call onto the tool once the user picks their resource.
 5. **NON-STANDARD OAuth is not free.** TikTok Ads (`app_id`/`auth_code`, JSON-body token exchange, `code==0`
