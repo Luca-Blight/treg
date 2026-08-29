@@ -1228,6 +1228,17 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   is listed on the attempt as `ignored_filters` — silently unapplied was the worst outcome (the bench
   had post-filtered in the agent because of it). Bench re-run, recruiting 30: same icypeas rows as the
   hand-written policy, one automatic fall-through, region briefs rescued by the pass-through.
+- **Routed DISCOVERY is a runtime switch (2026-08-29)**: `TREG_ROUTED_DISCOVERY=off` (default `on`)
+  stops search leading with `treg.<capability>` and stops a routed parent riding in when a child
+  matches — the endpoints stay callable, priced and reachable by id, and `catalog get`/`POST /call/`
+  are untouched. Off also HIDES routed rows from search results, not merely ungroups them: a routed
+  row matches a keyword query on its own summary, so leaving it in would steer by the back door.
+  One choke point (`group_routed`) serves both callers (`mcp.py`, `routers/catalog.py`); MCP also
+  narrows its rank band back to `limit` when off, since the widening exists only so groups can
+  collapse. Same dashboard-flip shape as `platform_providers` and `TREG_OVERFLOW_MODE` — no
+  redeploy. It exists because "does the router answer well" and "should every agent be led to it by
+  default" are separate questions: the bench answered the first (55.4 → 69.2 on recruiting, parity
+  with a hand-written policy), and only traffic can answer the second.
 - **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
   and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
   apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the
