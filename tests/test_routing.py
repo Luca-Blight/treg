@@ -978,3 +978,45 @@ def test_a_per_success_endpoint_with_no_adapter_settles_on_the_providers_own_suc
         m2 = _mk(dfs[0]["provider"], endpoint_id=dfs[0]["id"], cost_type="per_success")
         assert A._observed_cost_micro(m2, b'{"tasks": [{"status_code": 40501}]}') == 0
         assert A._observed_cost_micro(m2, b'{"tasks": [{"status_code": 20000}]}') is None
+
+
+def test_creators_search_is_routed_so_a_url_only_provider_cannot_win_a_filtered_brief():
+    """The capability that most needed routing and never had it.
+
+    influencersclub takes location / keywords_in_bio / number_of_followers as REAL filters and
+    returns followers, engagement and location inline. exa takes a sentence and returns a URL and a
+    title. Both answer "find creators", so an agent picked one blind — and on the bench (2026-08-29)
+    it picked exa, then spent 115 `instagram.user.profile` calls checking follower counts by hand,
+    discarded everyone it could not confirm, and returned 1 row where the pipeline returned 15
+    qualified. Influencer was the only category the agent lost."""
+    cat = catalog_store.load()
+    contract = cat.contracts["creators.search"]
+    assert {"platform", "location", "keywords", "followers_min", "followers_max"} <= set(contract.filters)
+
+    from treg.domain.catalog.routing.contracts import adapter_accepts
+    from treg.domain.catalog.routing.plan import Candidate, cost_at, ignored_filters, rank
+    ident, _ = canonical_identity(contract, {
+        "q": "specialty coffee baristas in Melbourne", "platform": "instagram",
+        "location": "Melbourne, Australia", "keywords": ["specialty coffee", "barista"],
+        "followers_min": 10_000, "followers_max": 80_000, "limit": 15})
+
+    ic, exa = cat.adapters["influencersclub.creators.search"], cat.adapters["exa.creators.search"]
+    assert ignored_filters(ic, contract, ident) == (), "it maps every constraint the brief carries"
+    assert set(ignored_filters(exa, contract, ident)) == {"platform", "followers_min", "followers_max"}, \
+        "and the URL-only provider SAYS which constraints it cannot express"
+
+    _, body = ic.to_upstream(ident, adapter_accepts(ic, ident))
+    assert body["filters"]["number_of_followers"] == {"min": 10_000, "max": 80_000}
+    assert body["filters"]["location"] == ["Melbourne, Australia"]
+    assert body["filters"]["keywords_in_bio"] == ["specialty coffee", "barista"]
+
+    def cand(eid):
+        ep = cat.by_id[eid]
+        return Candidate(endpoint=ep, adapter=cat.adapters[eid], variant=("q",), tier="platform",
+                         price_micro=cost_at(cat.cost_view(ep.get("cost"), ep["provider"]), ident),
+                         hit_rate=None, ok_rate=None, p50_ms=None, last_ok_days=None,
+                         ignored=ignored_filters(cat.adapters[eid], contract, ident))
+    order = [c.endpoint["id"] for c in rank([cand("exa.creators.search"),
+                                             cand("influencersclub.creators.search")], given={"q"})]
+    assert order[0] == "influencersclub.creators.search", \
+        "the provider that can honour the follower band leads, whatever it costs"
