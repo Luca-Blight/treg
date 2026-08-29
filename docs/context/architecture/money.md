@@ -647,7 +647,9 @@ the entire point of giving them a scoped token.
 
 ### The per-org daily cap has two owners
 
-`Org.daily_cap_micro` is the team's own ceiling; `platform_daily_cap_usd` is ours. The effective cap is
+`Org.daily_cap_micro` is the team's own ceiling; `platform_daily_cap_usd` is ours (**$500/day**
+since 2026-08-29 — at $100 a normal agent workload tripped it while the team still held balance).
+The effective cap is
 `min(the two)` (`api._effective_daily_cap`). A team may lower theirs freely and see it at
 `GET /orgs/{id}/settings` — a limit nobody can see becomes a support ticket the first time an agent
 trips it. Raising past our ceiling is **refused, not clamped**: a builder who thinks they set $500/day
