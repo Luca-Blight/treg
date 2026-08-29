@@ -221,6 +221,9 @@ def record(
         caller_body=caller_body, headers=headers, status_code=status_code,
         media_type=media_type, body=body, origin=origin), timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
+    # NOT redundant with drain()'s own removal: on a running server drain() never fires, and this
+    # callback is the only exit from `_pending` — without it the set fills to _MAX_PENDING and
+    # record() sheds every recording from then on.
     task.add_done_callback(_pending.discard)
 
 
@@ -230,13 +233,10 @@ async def drain() -> None:
     while _pending:
         tasks = list(_pending)
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        # Remove what was just gathered HERE, without yielding. The `_pending.discard` done
-        # callback runs a loop iteration after its task finishes — and awaiting a gather of
-        # already-finished tasks returns synchronously, without yielding. Entered in that window
-        # (task done, callback still queued), a loop keyed on the callback re-gathers the same
-        # completed set forever without ever reaching the scheduler, starving the whole event
-        # loop — timers included, so no timeout can break it. That busy-spin is what hung CI's
-        # serial Postgres job at `await archive.drain()` five times (2026-08-28/29).
+        # Remove what was just gathered HERE: a gather of already-finished tasks returns without
+        # yielding, so the queued `_pending.discard` callbacks may not have run yet, and a loop
+        # keyed on them busy-spins forever, starving the loop and every timer on it (the 2026-08
+        # serial-Postgres CI hang). Same discipline as audit.drain(); test_audit.py pins both.
         _pending.difference_update(tasks)
         for r in results:
             if isinstance(r, asyncio.TimeoutError | TimeoutError):
