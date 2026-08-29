@@ -1,3 +1,0 @@
-Alembic migrations for the tools-registry server schema.
-
-The application continues to run treg.db.init_db at startup until refactor stage 5.
