@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
 from .. import audit, catalog_store, oauth_providers
+from ..config import get_settings
 from ..domain.catalog import stats as endpoint_stats
 
 
@@ -87,6 +88,11 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     hidden_count = len([e for e in eps if e["kind"] in catalog_store.HIDDEN_KINDS])
     if not include_hidden:
         eps = [e for e in eps if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    # The BROWSE view steers too — it sorts the routed parent to the top of its capability group —
+    # so it honours the same switch as search. Otherwise a deployment with routed discovery off
+    # would hide the row in search and still lead with it one click later.
+    if str(get_settings().routed_discovery).strip().lower() in ("off", "0", "false", "no"):
+        eps = [e for e in eps if e.get("kind") != "routed"]
     grouped: dict[str, list[dict]] = {}
     extended: list[dict] = []
     pairs: list[tuple[dict, dict]] = []

@@ -1236,7 +1236,14 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   One choke point (`group_routed`) serves both callers (`mcp.py`, `routers/catalog.py`); MCP also
   narrows its rank band back to `limit` when off, since the widening exists only so groups can
   collapse. Same dashboard-flip shape as `platform_providers` and `TREG_OVERFLOW_MODE` — no
-  redeploy. It exists because "does the router answer well" and "should every agent be led to it by
+  redeploy. It covers every surface that steers, not just search: the platform BROWSE view
+  (`/catalog/platforms/{slug}`, which sorts the routed parent to the top of its capability group)
+  drops routed rows too, and `/skill.md` and `/llms.txt` strip their routed section — a deployment
+  that hides the row from search must not keep TEACHING agents to call it, or the docs and the
+  catalog disagree and the agent believes the docs. The section is delimited in those two files by
+  `<!--routed-->…<!--/routed-->`; the markers are stripped either way, and the unrelated overflow /
+  `provider_capacity_unavailable` guidance in the same paragraphs is kept (it came from the capacity
+  work, not from routing — which is also why a `git revert` of #242 would be the wrong instrument). It exists because "does the router answer well" and "should every agent be led to it by
   default" are separate questions: the bench answered the first (55.4 → 69.2 on recruiting, parity
   with a hand-written policy), and only traffic can answer the second.
 - **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),

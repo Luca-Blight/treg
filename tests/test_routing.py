@@ -784,6 +784,16 @@ async def test_routed_discovery_is_a_runtime_switch(clients: AsyncClient, enrich
         "steering off: search looks as it did before routing shipped"
     assert ids_off, "and it still returns the providers themselves"
 
+    # every OTHER discovery surface follows the same switch, or the deployment contradicts itself
+    plat = (await clients.get("/catalog/platforms/people")).json()
+    flat = json.dumps(plat)
+    assert "treg.people." not in flat, "browse view: no routed row while steering is off"
+    for path in ("/skill.md", "/llms.txt"):
+        body = (await clients.get(path)).text
+        assert "Routed endpoints" not in body, f"{path} must not teach what search hides"
+        assert "<!--routed" not in body, f"{path} leaked a marker"
+        assert "provider_capacity_unavailable" in body, f"{path} lost the unrelated overflow guidance"
+
     # …but the endpoint is untouched: still callable, still priced, still found by id
     r = await clients.get("/catalog/endpoints/treg.people.email.find")
     assert r.status_code == 200 and r.json()["endpoint"]["kind"] == "routed"
