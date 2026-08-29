@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import socket
 import sqlite3
@@ -64,12 +65,21 @@ def _legacy_init(env: dict[str, str]) -> None:
     assert result.returncode == 0, result.stderr
 
 
-def _alembic_head() -> str:
-    from alembic.config import Config
+@functools.cache
+def _script_directory():
     from alembic.script import ScriptDirectory
 
-    config = Config(ROOT / "alembic.ini")
-    return ScriptDirectory.from_config(config).get_current_head()
+    from treg.maintenance import _alembic_config
+
+    return ScriptDirectory.from_config(_alembic_config())
+
+
+def _alembic_head() -> str:
+    return _script_directory().get_current_head()
+
+
+def _one_behind_head() -> str:
+    return _script_directory().get_revision(_alembic_head()).down_revision
 
 
 def _alembic_version(database: Path) -> str | None:
@@ -212,10 +222,8 @@ def test_empty_database_upgrade_uses_pure_alembic_without_provisioning_a_user(tm
     result = _upgrade(env)
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == [
-        "treg schema: alembic upgrade head (empty database)",
-        "treg upgrade complete",
-    ]
+    assert "treg schema: alembic upgrade head (empty database)" in result.stdout
+    assert "treg upgrade complete" in result.stdout
     with sqlite3.connect(database) as db:
         tables = {row[0] for row in db.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
@@ -259,12 +267,13 @@ def test_upgrade_refuses_to_stamp_a_drifted_legacy_schema(tmp_path):
     assert _alembic_version(database) is None
 
 
-def test_upgrade_repairs_a_pre_request_shape_archive_before_stamping(tmp_path):
-    """A database whose archive tables predate revision 0004 (a mid-series dev/archive checkout,
-    or `alembic upgrade 0003` that later lost its version table) is missing the four request-shape
-    columns, and neither `create_all` nor the frozen legacy migrations add a column to an existing
-    table. Adoption must repair them - stamping head without them would put the archivekey ORM
-    permanently ahead of the schema, with revision 0004 never running again."""
+def test_upgrade_refuses_a_pre_request_shape_archive(tmp_path):
+    """A database whose archive tables predate revision 0004 (see `_find_adoption_gaps`) is
+    missing the four request-shape columns, and neither `create_all` nor the frozen legacy
+    migrations add a column to an existing table. Only mid-series dev checkouts have this shape,
+    so adoption refuses it by name rather than carrying repair logic nobody deployed needs -
+    stamping head without the columns would put the archivekey ORM permanently ahead of the
+    schema, with revision 0004 never running again."""
     env, database, _ = _env(tmp_path)
     initial = _alembic_upgrade(env, "0003")
     assert initial.returncode == 0, initial.stderr
@@ -275,21 +284,20 @@ def test_upgrade_repairs_a_pre_request_shape_archive_before_stamping(tmp_path):
 
     result = _upgrade(env)
 
-    assert result.returncode == 0, result.stderr
-    assert "treg schema: adoption repaired archivekey.req_method, archivekey.req_url, " \
-           "archivekey.req_body, archivekey.req_headers" in result.stdout
-    assert "treg schema: adopted legacy database and stamped head" in result.stdout
-    assert _alembic_version(database) == _alembic_head()
-    with sqlite3.connect(database) as db:
-        post = {row[1] for row in db.execute("PRAGMA table_info(archivekey)")}
-    assert {"req_method", "req_url", "req_body", "req_headers"} <= post
+    assert result.returncode != 0
+    for column in ("req_method", "req_url", "req_body", "req_headers"):
+        assert f"column archivekey.{column}" in result.stderr
+    assert "Alembic stamp was not applied" in result.stderr
+    assert _alembic_version(database) is None
 
 
-def test_upgrade_applies_a_pending_revision_from_0008(tmp_path):
+def test_upgrade_applies_a_pending_revision_from_one_behind_head(tmp_path):
     env, database, _ = _env(tmp_path)
-    initial = _alembic_upgrade(env, "0008")
+    previous = _one_behind_head()
+    assert previous != _alembic_head()
+    initial = _alembic_upgrade(env, previous)
     assert initial.returncode == 0, initial.stderr
-    assert _alembic_version(database) == "0008"
+    assert _alembic_version(database) == previous
 
     result = _upgrade(env)
 

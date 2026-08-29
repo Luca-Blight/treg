@@ -56,7 +56,10 @@ async def _run_migrations_online() -> None:
 
     async with connectable.connect() as connection:
         if connection.dialect.name == "postgresql":
+            # Same policy as init_db (db.py): a contended deploy fails fast and clean instead of
+            # queueing the world behind an ACCESS EXCLUSIVE lock, and no ALTER runs unbounded.
             await connection.execute(text("SET lock_timeout = '5s'"))
+            await connection.execute(text("SET statement_timeout = '120s'"))
             await connection.commit()
         await connection.run_sync(_run_migrations)
 
