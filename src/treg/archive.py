@@ -174,6 +174,12 @@ from datetime import datetime, timezone
 _log = logging.getLogger("treg.archive")
 _pending: set[asyncio.Task] = set()
 _MAX_PENDING = 512
+# A recording is best-effort by contract (audit's discipline: shed, never wedge). A database that
+# does not answer in this window — a lock, a stuck pool slot, a dying connection — costs ONE
+# dropped sample, which the next identical call re-supplies; it must never hold drain(), a test,
+# or a shutdown hostage. CI's serial Postgres job hung exactly that way three times before this
+# bound existed, at whichever drain() happened to gather the stuck task.
+_STORE_TIMEOUT_S = 30
 
 
 def _utcnow() -> datetime:
@@ -210,18 +216,23 @@ def record(
     trusts them and never raises."""
     if len(_pending) >= _MAX_PENDING:  # shed load; the stream self-heals on the next call
         return
-    task = asyncio.create_task(_store(
+    task = asyncio.create_task(asyncio.wait_for(_store(
         method=method, endpoint_id=endpoint_id, provider=provider, url=url,
         caller_body=caller_body, headers=headers, status_code=status_code,
-        media_type=media_type, body=body, origin=origin))
+        media_type=media_type, body=body, origin=origin), timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
     task.add_done_callback(_pending.discard)
 
 
 async def drain() -> None:
-    """Flush in-flight recordings — shutdown and tests."""
+    """Flush in-flight recordings — shutdown and tests. Bounded: every task carries its own
+    _STORE_TIMEOUT_S, so this cannot wait longer than the slowest permitted recording."""
     while _pending:
-        await asyncio.gather(*list(_pending), return_exceptions=True)
+        results = await asyncio.gather(*list(_pending), return_exceptions=True)
+        for r in results:
+            if isinstance(r, asyncio.TimeoutError | TimeoutError):
+                _log.warning("archive recording dropped: database did not answer in %ss",
+                             _STORE_TIMEOUT_S)
 
 
 async def _store(
@@ -463,7 +474,7 @@ def _touch(key_hash: str) -> None:
     no snapshot and no change statistics, because nothing new was observed."""
     if len(_pending) >= _MAX_PENDING:
         return
-    task = asyncio.create_task(_touch_write(key_hash))
+    task = asyncio.create_task(asyncio.wait_for(_touch_write(key_hash), timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
     task.add_done_callback(_pending.discard)
 
