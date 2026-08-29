@@ -208,8 +208,10 @@ module symbols:
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
   path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
   stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
-  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` on every startup to
-  heal older connections automatically. The backfill is registry-generic: it scans provider-attributed
+  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` in the ordered release
+  upgrade phase to heal older connections automatically. The default `python -m treg` serve command runs
+  that phase before Uvicorn; raw ASGI deployments run `python -m treg upgrade` once per release. The
+  backfill is registry-generic: it scans provider-attributed
   Secrets, requires the corresponding main Tool to be bound to that Secret, then calls the same extra
   upsert, so adding a future `extra_tools` entry needs no one-off migration. Revoke already sweeps the
   companions (any tool whose only binding was the deleted credential goes). `resource_example` closes the loop from the

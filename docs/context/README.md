@@ -51,7 +51,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Provider capacity — knowing what treg's own vendor accounts have left](ops/capacity.md) | shipped (steps B–F built; production rollout = the shadow week, then TREG_OVERFLOW_MODE=on) | __init__.py, collectors.py, policy.py, sweep.py, … |
-| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, worker.py, selfhost.sh, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, maintenance.py, worker.py, … |
 
 ## Reference
 

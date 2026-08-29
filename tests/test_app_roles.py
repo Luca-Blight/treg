@@ -53,21 +53,16 @@ _EXPECTED_BACKGROUND_TASKS = {
 _EXPECTED_STARTUP_CHECKS = {
     "all": [
         "treg.db.init_db",
-        "treg.api._backfill_provider_extra_tools",
-        "treg.api._bootstrap_single_user",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ],
     "dataplane": [
         "treg.db.init_db",
-        "treg.api._backfill_provider_extra_tools",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ],
     "control": [
         "treg.db.init_db",
-        "treg.api._backfill_provider_extra_tools",
-        "treg.api._bootstrap_single_user",
         "app.state.http",
     ],
 }
