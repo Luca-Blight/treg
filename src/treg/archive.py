@@ -71,11 +71,11 @@ _STORABLE = (CACHE_TRANSIENT, CACHE_ARCHIVE)
 def policy(entry: dict[str, Any] | None) -> str:
     """Gates 1+2 for one catalog entry, returning the effective cache policy.
 
-    `entry` is the endpoint's catalog mapping (the same dict the resolver already holds). The
-    default is FORBIDDEN on every uncertain branch — an entry that is missing, an action, or an
-    unjudged license must never be stored. This is the same posture as the platform offer's
-    free-only guard: the safe answer is the silent one.
-    """
+    `entry` is the endpoint's catalog mapping (the same dict the resolver already holds). Two
+    branches are non-negotiable whatever the default says: a missing entry or an ACTION is never
+    stored, and a JUDGED forbidden (a licence that was read and says no) is always respected.
+    An UNJUDGED entry takes `archive_default_policy` — "transient" since the founder's 2026-08-29
+    keep-all decision, flippable back to "forbidden" by env without a deploy."""
     if not entry:
         return CACHE_FORBIDDEN
     if entry.get("kind") == "action":  # gate 1 — never store an action's answer
@@ -85,7 +85,10 @@ def policy(entry: dict[str, Any] | None) -> str:
         declared = declared.get("mode")
     if declared in _STORABLE:  # gate 2 — an explicit, judged license decision
         return str(declared)
-    return CACHE_FORBIDDEN
+    if declared == CACHE_FORBIDDEN:  # judged and refused — always respected
+        return CACHE_FORBIDDEN
+    default = (get_settings().archive_default_policy or "").strip().lower()
+    return CACHE_TRANSIENT if default == CACHE_TRANSIENT else CACHE_FORBIDDEN
 
 
 def storable(entry: dict[str, Any] | None) -> bool:
@@ -171,6 +174,12 @@ from datetime import datetime, timezone
 _log = logging.getLogger("treg.archive")
 _pending: set[asyncio.Task] = set()
 _MAX_PENDING = 512
+# A recording is best-effort by contract (audit's discipline: shed, never wedge). A database that
+# does not answer in this window — a lock, a stuck pool slot, a dying connection — costs ONE
+# dropped sample, which the next identical call re-supplies; it must never hold drain(), a test,
+# or a shutdown hostage. CI's serial Postgres job hung exactly that way three times before this
+# bound existed, at whichever drain() happened to gather the stuck task.
+_STORE_TIMEOUT_S = 30
 
 
 def _utcnow() -> datetime:
@@ -207,18 +216,23 @@ def record(
     trusts them and never raises."""
     if len(_pending) >= _MAX_PENDING:  # shed load; the stream self-heals on the next call
         return
-    task = asyncio.create_task(_store(
+    task = asyncio.create_task(asyncio.wait_for(_store(
         method=method, endpoint_id=endpoint_id, provider=provider, url=url,
         caller_body=caller_body, headers=headers, status_code=status_code,
-        media_type=media_type, body=body, origin=origin))
+        media_type=media_type, body=body, origin=origin), timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
     task.add_done_callback(_pending.discard)
 
 
 async def drain() -> None:
-    """Flush in-flight recordings — shutdown and tests."""
+    """Flush in-flight recordings — shutdown and tests. Bounded: every task carries its own
+    _STORE_TIMEOUT_S, so this cannot wait longer than the slowest permitted recording."""
     while _pending:
-        await asyncio.gather(*list(_pending), return_exceptions=True)
+        results = await asyncio.gather(*list(_pending), return_exceptions=True)
+        for r in results:
+            if isinstance(r, asyncio.TimeoutError | TimeoutError):
+                _log.warning("archive recording dropped: database did not answer in %ss",
+                             _STORE_TIMEOUT_S)
 
 
 async def _store(
@@ -460,7 +474,7 @@ def _touch(key_hash: str) -> None:
     no snapshot and no change statistics, because nothing new was observed."""
     if len(_pending) >= _MAX_PENDING:
         return
-    task = asyncio.create_task(_touch_write(key_hash))
+    task = asyncio.create_task(asyncio.wait_for(_touch_write(key_hash), timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
     task.add_done_callback(_pending.discard)
 

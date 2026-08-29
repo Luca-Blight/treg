@@ -49,12 +49,22 @@ def test_serve_implies_recording(monkeypatch):
 # ---------------------------------------------------------------------------------------------
 # Policy: forbidden on every uncertain branch
 
-def test_policy_refuses_uncertainty():
-    assert policy(None) == "forbidden"
-    assert policy({}) == "forbidden"
-    assert policy({"kind": "read"}) == "forbidden"                  # unjudged license
-    assert policy({"cache": "everything"}) == "forbidden"           # unknown value
-    assert policy({"cache": {"mode": "keep"}}) == "forbidden"       # unknown value, dict form
+def test_policy_defaults():
+    # The founder's 2026-08-29 keep-all decision: an UNJUDGED entry defaults to transient.
+    assert policy(None) == "forbidden"                              # no entry: never
+    assert policy({}) == "forbidden"                                # empty ≈ no entry: never
+    assert policy({"kind": "read"}) == "transient"                  # unjudged license
+    assert policy({"cache": "everything"}) == "transient"           # unknown value
+    assert policy({"cache": {"mode": "keep"}}) == "transient"       # unknown value, dict form
+    # A judged forbidden is always respected, whatever the default says.
+    assert policy({"cache": "forbidden"}) == "forbidden"
+    assert policy({"cache": {"mode": "forbidden", "license_quote": "q"}}) == "forbidden"
+
+
+def test_keep_all_can_be_switched_off(monkeypatch):
+    monkeypatch.setattr(get_settings(), "archive_default_policy", "forbidden")
+    assert policy({"kind": "read"}) == "forbidden"
+    assert policy({"cache": "transient"}) == "transient"            # judged stays judged
 
 
 def test_policy_action_beats_license():
@@ -205,9 +215,9 @@ async def test_recorder_observes_a_metered_call(clients: AsyncClient, shadow):
     keys, snaps = await _rows()
     assert len(keys) == 1 and len(snaps) == 1
     assert keys[0].endpoint_id == EP and keys[0].provider == "tikhub"
-    # No cache field on this entry yet → policy forbidden → hash-only: counted, never kept.
-    assert keys[0].policy == "forbidden"
-    assert snaps[0].body is None and snaps[0].body_of is None
+    # No cache field on this entry → the keep-all default applies: bytes are stored.
+    assert keys[0].policy == "transient"
+    assert snaps[0].body is not None and snaps[0].body_of is None
     assert snaps[0].size_bytes > 0 and len(snaps[0].content_hash) == 64
     assert snaps[0].origin == "caller"
 
@@ -436,9 +446,10 @@ async def test_a_stale_snapshot_is_not_served(clients: AsyncClient, serve, monke
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
 
 
-async def test_unjudged_policy_never_serves(clients: AsyncClient, platform_on, monkeypatch):
+async def test_default_forbidden_never_serves(clients: AsyncClient, platform_on, monkeypatch):
     monkeypatch.setattr(get_settings(), "archive_mode", "serve")
-    # EP carries no cache judgment here: recorded hash-only, and never served.
+    monkeypatch.setattr(get_settings(), "archive_default_policy", "forbidden")
+    # With keep-all switched off, an unjudged entry is recorded hash-only and never served.
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
     r = await clients.get(f"/call/{EP}?aweme_id=7")

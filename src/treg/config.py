@@ -262,6 +262,11 @@ class Settings(BaseSettings):
     # Bodies above this size are hash-counted but never stored (skipped whole, not truncated):
     # the archive is for API JSON answers, not downloads. Statistics still record size_bytes.
     archive_max_body_bytes: int = 2_000_000
+    # What happens to an endpoint WITHOUT a judged `cache:` field (the founder's 2026-08-29
+    # decision): "transient" keeps every answer body as short-lived cache; "forbidden" is the old
+    # keep-nothing posture. A judged forbidden (a licence that was read and says no) is always
+    # respected, and actions are never stored, whatever this says.
+    archive_default_policy: str = "transient"
     # The refresh worker (serve mode only): how often it scans for due keys, and how many
     # refresh calls ONE provider may spend per UTC day. A refresh is treg's own vendor spend with
     # no caller attached, so the cap is the brake — 0 disables refreshing without touching serving.
