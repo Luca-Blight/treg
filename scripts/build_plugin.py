@@ -259,6 +259,11 @@ def render(variant: str) -> str:
         # stamping it here is what lets one generated file satisfy both registries.
         fm = f"{fm.rstrip()}\nversion: {package_version()}\n"
     out = f"---{fm}---\n{bootstrap}\n{body.lstrip(chr(10))}"
+    # 4. `<!--routed-->` / `<!--/routed-->` delimit the section the SERVER strips when a deployment
+    #    sets TREG_ROUTED_DISCOVERY=off. A plugin copy is static and cannot know a deployment's
+    #    setting, so it keeps the content — but the markers themselves must never ship, or the
+    #    product's most-read page starts with visible HTML comments.
+    out = out.replace("<!--routed-->\n", "").replace("\n<!--/routed-->", "")
     return out.replace("{BASE}", PUBLIC_BASE)
 
 
