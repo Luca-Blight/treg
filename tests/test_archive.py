@@ -293,6 +293,30 @@ async def test_a_recorder_crash_never_fails_the_call(clients: AsyncClient, shado
     await archive.drain()
 
 
+async def test_drain_entered_between_completion_and_its_callbacks_returns():
+    """The busy-spin that hung CI's serial Postgres job five times (2026-08-28/29).
+
+    A finished task leaves `_pending` via its done callback, which runs one loop iteration
+    AFTER completion — while awaiting a gather of already-finished tasks returns synchronously,
+    without yielding. Entered in that window, a drain keyed on the callback re-gathers the same
+    completed set forever and starves the loop (timers included, so no timeout breaks it).
+    The scheduling below opens that exact window deterministically: create_task queues the
+    task's step, sleep(0) queues this coroutine's resume behind it, and the task's discard
+    callback lands behind the resume — so drain() starts with the task done but still pending."""
+    import asyncio
+
+    async def instant():
+        return None
+
+    t = asyncio.create_task(instant())
+    archive._pending.add(t)
+    t.add_done_callback(archive._pending.discard)
+    await asyncio.sleep(0)
+    assert t.done() and t in archive._pending    # the window is open, or this test proves nothing
+    await archive.drain()                        # the old drain never returned from here
+    assert t not in archive._pending
+
+
 # ---------------------------------------------------------------------------------------------
 # The catalog cache field (PR 3): one judgment at the file header covers the provider
 

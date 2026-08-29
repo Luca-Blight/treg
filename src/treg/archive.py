@@ -228,7 +228,16 @@ async def drain() -> None:
     """Flush in-flight recordings — shutdown and tests. Bounded: every task carries its own
     _STORE_TIMEOUT_S, so this cannot wait longer than the slowest permitted recording."""
     while _pending:
-        results = await asyncio.gather(*list(_pending), return_exceptions=True)
+        tasks = list(_pending)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Remove what was just gathered HERE, without yielding. The `_pending.discard` done
+        # callback runs a loop iteration after its task finishes — and awaiting a gather of
+        # already-finished tasks returns synchronously, without yielding. Entered in that window
+        # (task done, callback still queued), a loop keyed on the callback re-gathers the same
+        # completed set forever without ever reaching the scheduler, starving the whole event
+        # loop — timers included, so no timeout can break it. That busy-spin is what hung CI's
+        # serial Postgres job at `await archive.drain()` five times (2026-08-28/29).
+        _pending.difference_update(tasks)
         for r in results:
             if isinstance(r, asyncio.TimeoutError | TimeoutError):
                 _log.warning("archive recording dropped: database did not answer in %ss",
