@@ -25,16 +25,6 @@ RELEASE_TASKS: tuple[ReleaseTask, ...] = (
     ("provider companion tools", _backfill_provider_extra_tools),
 )
 
-_ADOPTION_COLUMNS: dict[str, set[str]] = {
-    "archivekey": {"key_hash"},
-    "callrecord": {"cached", "hit"},
-    "capacitypolicy": {"owner_email"},
-    "org": {"platform_overflow_disabled"},
-    "overflowroute": {"agg_slug"},
-    "overflowspend": {"cost_micro"},
-}
-
-
 def _alembic_config() -> Config:
     config = Config()
     config.set_main_option("script_location", str(files("treg").joinpath("alembic")))
@@ -49,23 +39,64 @@ async def _table_names() -> set[str]:
         ))
 
 
+def _apply_adoption_repairs(sync_connection) -> list[str]:
+    """Heal the historical shapes the frozen legacy path cannot: columns that only ever existed
+    as Alembic revisions. `create_all` never adds a column to an existing table, so a database
+    whose archive tables predate revision 0004 (a mid-series dev/archive checkout, or an
+    `alembic upgrade 0003` that later lost its version table) is missing the request-shape
+    columns and would otherwise be stamped straight past the revision that adds them."""
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    import sqlalchemy as sa
+    import sqlmodel
+
+    inspector = inspect(sync_connection)
+    if "archivekey" not in set(inspector.get_table_names()):
+        return []
+    present = {column["name"] for column in inspector.get_columns("archivekey")}
+    # Mirrors revision 0004 exactly, except the temporary server_default stays in place: the ORM
+    # always writes these values, and dropping a default on SQLite means a full table rebuild.
+    wanted = (
+        sa.Column("req_method", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=""),
+        sa.Column("req_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=""),
+        sa.Column("req_body", sa.LargeBinary(), nullable=True),
+        sa.Column("req_headers", sa.JSON(), nullable=True),
+    )
+    operations = Operations(MigrationContext.configure(sync_connection))
+    applied = []
+    for column in wanted:
+        if column.name in present:
+            continue
+        operations.add_column("archivekey", column)
+        applied.append(f"archivekey.{column.name}")
+    return applied
+
+
 def _find_adoption_gaps(sync_connection) -> list[str]:
+    """Every table and every column of the model metadata must exist before a stamp. A hand-kept
+    subset already let one gap through (the 0004 request-shape columns); the sweep is total so the
+    next gap refuses loudly instead of being stamped past."""
     from . import models  # noqa: F401 - populate SQLModel.metadata
 
     inspector = inspect(sync_connection)
     existing_tables = set(inspector.get_table_names())
-    expected_tables = {table.name for table in SQLModel.metadata.sorted_tables}
-    gaps = [f"table {name}" for name in sorted(expected_tables - existing_tables)]
-
-    for table_name, expected_columns in _ADOPTION_COLUMNS.items():
-        if table_name not in existing_tables:
+    gaps = []
+    for table in SQLModel.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            gaps.append(f"table {table.name}")
             continue
-        actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        actual_columns = {column["name"] for column in inspector.get_columns(table.name)}
         gaps.extend(
-            f"column {table_name}.{name}"
-            for name in sorted(expected_columns - actual_columns)
+            f"column {table.name}.{name}"
+            for name in sorted({column.name for column in table.columns} - actual_columns)
         )
-    return gaps
+    return sorted(gaps)
+
+
+async def _adoption_repairs() -> list[str]:
+    async with _engine.begin() as connection:
+        return await connection.run_sync(_apply_adoption_repairs)
 
 
 async def _adoption_gaps() -> list[str]:
@@ -88,6 +119,9 @@ async def _upgrade_schema() -> None:
         return
 
     await init_db()
+    repaired = await _adoption_repairs()
+    if repaired:
+        print(f"treg schema: adoption repaired {', '.join(repaired)}")
     gaps = await _adoption_gaps()
     if gaps:
         missing = ", ".join(gaps)

@@ -259,6 +259,32 @@ def test_upgrade_refuses_to_stamp_a_drifted_legacy_schema(tmp_path):
     assert _alembic_version(database) is None
 
 
+def test_upgrade_repairs_a_pre_request_shape_archive_before_stamping(tmp_path):
+    """A database whose archive tables predate revision 0004 (a mid-series dev/archive checkout,
+    or `alembic upgrade 0003` that later lost its version table) is missing the four request-shape
+    columns, and neither `create_all` nor the frozen legacy migrations add a column to an existing
+    table. Adoption must repair them - stamping head without them would put the archivekey ORM
+    permanently ahead of the schema, with revision 0004 never running again."""
+    env, database, _ = _env(tmp_path)
+    initial = _alembic_upgrade(env, "0003")
+    assert initial.returncode == 0, initial.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("DROP TABLE alembic_version")
+        pre = {row[1] for row in db.execute("PRAGMA table_info(archivekey)")}
+    assert "req_method" not in pre
+
+    result = _upgrade(env)
+
+    assert result.returncode == 0, result.stderr
+    assert "treg schema: adoption repaired archivekey.req_method, archivekey.req_url, " \
+           "archivekey.req_body, archivekey.req_headers" in result.stdout
+    assert "treg schema: adopted legacy database and stamped head" in result.stdout
+    assert _alembic_version(database) == _alembic_head()
+    with sqlite3.connect(database) as db:
+        post = {row[1] for row in db.execute("PRAGMA table_info(archivekey)")}
+    assert {"req_method", "req_url", "req_body", "req_headers"} <= post
+
+
 def test_upgrade_applies_a_pending_revision_from_0008(tmp_path):
     env, database, _ = _env(tmp_path)
     initial = _alembic_upgrade(env, "0008")
