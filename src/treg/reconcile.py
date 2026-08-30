@@ -305,6 +305,6 @@ async def shared_plan_recovery(db: AsyncSession, since: datetime) -> dict:
 def _catalog():
     """Deferred so reconcile stays importable without the catalog package in odd contexts, and so
     tests can monkeypatch the module in one obvious place."""
-    from . import catalog_store
+    from .domain.catalog import store as catalog_store
 
     return catalog_store

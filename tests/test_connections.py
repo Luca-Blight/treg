@@ -622,7 +622,7 @@ async def test_slack_style_ok_false_is_reported_not_swallowed(clients: AsyncClie
     sid = r.json()["id"]
 
     # /auth.test returns ok:false unless the token contains "good"; swap in a bad one to trigger it
-    async with __import__("treg").db.session_maker() as db:
+    async with session_maker() as db:
         from sqlmodel import select as _select
 
         from treg import crypto as _crypto

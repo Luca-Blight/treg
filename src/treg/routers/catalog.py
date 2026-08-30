@@ -8,8 +8,9 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
-from .. import audit, catalog_store, oauth_providers
+from .. import audit, oauth_providers
 from ..config import get_settings
+from ..domain.catalog import store as catalog_store
 from ..domain.catalog import stats as endpoint_stats
 
 

@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from starlette.requests import Request
 
-from treg import audit, crypto, ledger, localproxy
+from treg import audit, crypto, localproxy
+from treg.domain import money as ledger
 from treg.application.call import idempotency as call_idem
 from treg.application.call import reserve as call_reserve
 from treg.application.call import service as call_service
@@ -247,7 +248,7 @@ async def test_attack_4_concurrent_prechecks_overshoot_is_bounded_not_exact(
     # because the balance is a materialized column it can gate on with one conditional UPDATE, while
     # a per-tag total is an aggregate with no such column. Tightening it would need a second
     # materialized authority on spend (reset daily, decremented on release, corrected on settle
-    # divergence) — four new ways to disagree with ledger.py, which is the only module allowed to
+    # divergence) — four new ways to disagree with domain/money, which is the only module allowed to
     # move money. The hard gates (org balance, per-org daily cap) sit behind this one.
     #
     # What must hold: the overshoot is bounded and every committed call is accounted for. Never

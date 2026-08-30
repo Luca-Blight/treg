@@ -10,7 +10,8 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from starlette.routing import Mount
 
-from treg import mcp, mcp_oauth
+from treg import mcp
+from treg.domain.identity import mcp_oauth
 from treg.routers import auth as auth_routes
 from treg.bootstrap import create_app
 from treg.config import Settings, get_settings

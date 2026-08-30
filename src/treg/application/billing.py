@@ -45,8 +45,8 @@ from .. import adsconv
 from .. import analytics
 from ..infra import db as _db
 from .. import email as email_mod
-from .. import ledger
-from .. import referrals
+from ..domain import money as ledger
+from ..domain import referrals
 from ..config import get_settings
 from ..infra import stripe as stripe_adapter
 from ..models import CreditBlock, LedgerEntry, Membership, Org, User
@@ -55,7 +55,7 @@ from ..models import CreditBlock, LedgerEntry, Membership, Org, User
 # _run_autotopup retains its relative local import; removing the alias breaks task-owned sessions.
 sys.modules.setdefault("treg.application.db", _db)
 
-log = logging.getLogger("treg.billing")
+log = logging.getLogger("treg.application.billing")
 
 MICRO_PER_CENT = 10_000
 MICRO_PER_USD = 1_000_000

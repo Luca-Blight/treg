@@ -14,7 +14,7 @@ import json
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from treg import session as sess
+from treg.domain.identity import session as sess
 from treg.api import app
 from treg.infra.db import reset_db
 

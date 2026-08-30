@@ -15,7 +15,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from treg import ledger
+from treg.domain import money as ledger
 from treg.application.call import service as call_service
 from treg.application.call.types import GatewayFailed
 from treg.routers import call as call_routes

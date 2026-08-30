@@ -326,7 +326,7 @@ async def test_shadow_mode_probes_records_spend_and_returns_the_vendor_error(cli
 
 
 async def test_cancellation_cleanup_releases_both_holds_exactly_once(clients: AsyncClient, overflow_on):
-    from treg import ledger
+    from treg.domain import money as ledger
     from treg.application.call.settle import _finish_cancelled_call
     from treg.application.call.resolve import MarketplaceCall
     from treg.models import Tool

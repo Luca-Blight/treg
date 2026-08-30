@@ -49,7 +49,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import ledger
+from . import money as ledger
 from ..config import get_settings
 from ..models import CreditBlock, Membership, Org, Referral, User
 

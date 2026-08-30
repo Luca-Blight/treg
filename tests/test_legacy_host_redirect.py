@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from treg import session as sess
+from treg.domain.identity import session as sess
 from treg.api import app
 from treg.config import get_settings
 
@@ -105,7 +105,8 @@ async def test_canonical_host_is_untouched(raw_client):
 async def test_legacy_mcp_host_and_oauth_audience_stay_valid():
     # The transport allow-list and the token-audience set must both keep honouring the legacy name —
     # every pre-move .mcp.json and OAuth grant depends on it.
-    from treg import mcp, mcp_oauth
+    from treg import mcp
+    from treg.domain.identity import mcp_oauth
 
     # List MEMBERSHIP (exact strings), not substring checks — .count() keeps CodeQL from reading
     # these as URL-substring sanitization.
@@ -169,7 +170,8 @@ async def test_env_revert_is_a_complete_rollback(monkeypatch):
     treg.to is never a redirect SOURCE, so a browser-cached old→new 301 meets no new→old answer."""
     from httpx import ASGITransport, AsyncClient
 
-    from treg import mcp, mcp_oauth
+    from treg import mcp
+    from treg.domain.identity import mcp_oauth
     from treg.api import app
     from treg.routers.auth import _login_callback_base
 

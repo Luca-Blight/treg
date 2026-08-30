@@ -10,7 +10,8 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit, ledger
+from treg import audit
+from treg.domain import money as ledger
 from treg.application.call import route as call_route
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse

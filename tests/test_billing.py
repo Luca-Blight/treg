@@ -27,7 +27,9 @@ from sqlmodel import select
 
 from conftest import make_upstream
 
-from treg import adsconv, billing, ledger
+from treg import adsconv
+from treg.application import billing
+from treg.domain import money as ledger
 from treg.api import app
 from treg.config import get_settings
 from treg.infra.db import reset_db, session_maker

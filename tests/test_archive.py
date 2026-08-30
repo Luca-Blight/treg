@@ -178,7 +178,7 @@ async def test_key_hash_is_unique(clients):
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from treg import catalog_store
+from treg.domain.catalog import store as catalog_store
 from treg.config import get_settings
 from treg.infra.db import session_maker
 

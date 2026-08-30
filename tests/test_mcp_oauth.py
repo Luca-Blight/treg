@@ -16,7 +16,8 @@ import time
 
 import pytest
 
-from treg import mcp, mcp_oauth, session
+from treg import mcp
+from treg.domain.identity import mcp_oauth, session
 from treg.routers import auth as auth_routes
 from treg.config import Settings, get_settings
 
@@ -205,7 +206,7 @@ async def test_loopback_http_is_allowed_because_a_CLI_cannot_hold_a_certificate(
 async def test_redirect_matching_is_EXACT_not_prefix():
     """The classic defeat of this check. `https://good.test/cb.evil` starts with the registered URI,
     and an open redirect under a registered host turns one sloppy page into stolen codes."""
-    from treg.mcp_oauth import redirect_uri_allowed
+    from treg.domain.identity.mcp_oauth import redirect_uri_allowed
 
     class C:
         redirect_uris = ["https://good.test/cb"]
@@ -222,7 +223,7 @@ async def test_loopback_redirect_allows_ANY_port_but_not_other_drift():
     to vary — treg's pure exact-match rejected `http://localhost:3118/callback` against a registered
     `http://localhost/callback` and broke every native client. Port varies; scheme, host and path do
     NOT, and the loopback exception must not leak to public hosts."""
-    from treg.mcp_oauth import redirect_uri_allowed
+    from treg.domain.identity.mcp_oauth import redirect_uri_allowed
 
     class C:  # exactly what Claude Code's client-id metadata document registers
         redirect_uris = ["http://localhost/callback", "http://127.0.0.1/callback"]
@@ -253,7 +254,7 @@ async def test_loopback_redirect_allows_ANY_port_but_not_other_drift():
 async def test_cimd_refuses_unsafe_urls(url):
     """`client_id` is a URL our SERVER fetches, which makes it a request-forgery primitive unless
     fenced. Reuses the same guard the webhook and tool base_url paths already use."""
-    from treg.mcp_oauth import fetch_client_id_metadata
+    from treg.domain.identity.mcp_oauth import fetch_client_id_metadata
 
     assert await fetch_client_id_metadata(url) is None
 
@@ -263,7 +264,8 @@ async def test_cimd_document_must_claim_its_own_url(monkeypatch):
     the consent users granted them."""
     import httpx
 
-    from treg import health, mcp_oauth
+    from treg import health
+    from treg.domain.identity import mcp_oauth
 
     monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
     monkeypatch.setattr(health, "host_is_public", lambda h: True)
@@ -282,7 +284,8 @@ async def test_cimd_accepts_a_well_formed_document(monkeypatch):
     """Not vacuous: the refusals above only mean something if a good document DOES load."""
     import httpx
 
-    from treg import health, mcp_oauth
+    from treg import health
+    from treg.domain.identity import mcp_oauth
 
     monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
     monkeypatch.setattr(health, "host_is_public", lambda h: True)
@@ -335,7 +338,7 @@ async def _signed_in(clients, email="oauth-user@superdesign.dev"):
         clients.headers["X-Treg-Token"] = prev
     from sqlmodel import select
 
-    from treg import session as _sess
+    from treg.domain.identity import session as _sess
     from treg.infra.db import session_maker
     from treg.models import User
 
@@ -1045,7 +1048,7 @@ async def _as(email: str) -> dict:
     """Headers that act as a given user — an identity token, minted the way `treg login` does."""
     from sqlmodel import select
 
-    from treg import session as _sess
+    from treg.domain.identity import session as _sess
     from treg.infra.db import session_maker
     from treg.models import User
 

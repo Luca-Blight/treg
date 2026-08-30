@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .. import convert as _convert
-from .. import crypto, health, injectors, sandbox as demo_sandbox
+from .. import crypto, health, sandbox as demo_sandbox
 from ..infra import db as _db
 from .. import providers as _providers
 from .. import skills as _skills
@@ -33,6 +33,7 @@ from ..domain.identity.access import (
     _role_at_least,
     require_member,
 )
+from ..infra.upstream import injectors
 from ..models import Bundle, Secret, Tool
 from .orgs import _resolve_project
 

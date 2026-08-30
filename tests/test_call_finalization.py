@@ -7,7 +7,7 @@ import asyncio
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from treg import ledger
+from treg.domain import money as ledger
 from treg.application.call import settle as call_settle
 from treg.application.call.resolve import MarketplaceCall
 from treg.infra.db import session_maker
