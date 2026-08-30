@@ -117,8 +117,8 @@ class Org(SQLModel, table=True):
     # out, a metered call may be served through a treg-owned aggregator account on the same endpoint.
     # Default allowed (disclosed via X-Treg-Served-Via); a team that must not have its requests
     # relayed through a third party sets this (`treg org overflow off`). Stored as the opt-out so the
-    # column default is the plain `false` the legacy helper adds — and LAST in the class, because
-    # alembic's add_column appends and the schema-parity test compares column order.
+    # column default is the plain `false` in Python — and LAST in the class, because alembic's
+    # add_column appends, keeping create_all test schemas aligned with the migrated shape.
     platform_overflow_disabled: bool = Field(default=False)
 
 
@@ -295,7 +295,7 @@ class CallRecord(SQLModel, table=True):
     # True when the archive served this answer instead of the vendor (X-Treg-Cache: hit).
     # Money columns stay identical to a live call on purpose — pricing a hit is a deferred
     # founder decision (docs/context/architecture/archive.md). Declared LAST to match the
-    # migration's ALTER TABLE ADD COLUMN position (the baseline parity test compares order).
+    # migration's ALTER TABLE ADD COLUMN append position.
     cached: bool = Field(default=False)
     # Did the provider FIND something? Decided at settle from the response body by the endpoint's
     # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
@@ -1199,7 +1199,7 @@ class ArchiveKey(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
     # The pre-injection request shape, stored so the refresh worker can re-ask the exact question.
     # Credentials cannot appear here: injection happens inside the relay, after this shape is
-    # fixed. Declared LAST to match the migration's ALTER TABLE append position (parity test).
+    # fixed. Declared LAST to match the migration's ALTER TABLE append position.
     req_method: str = Field(default="")
     req_url: str = Field(default="")
     req_body: bytes | None = Field(default=None)

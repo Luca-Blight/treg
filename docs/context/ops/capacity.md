@@ -86,8 +86,8 @@ consulted or affected by anything here.
 DB stack (import-linter contract), and the sweep needs the platform keys in the env plus outbound
 third-party calls, which are worker-profile work — never dataplane lifespan work. In production it
 is a **Render cron job** (`treg-capacity-sweep` in `render.yaml`, hourly) that pulls its env from
-the web service via `fromService`; a run against a database missing the tables creates them
-(`init_db`). `scripts/provider_balances.py` remains the by-hand reconciliation view (balance beside
+the web service via `fromService`; startup calls read-only `verify_db()` and refuses a missing or stale
+schema. `scripts/provider_balances.py` remains the by-hand reconciliation view (balance beside
 ledger spend) over the same collectors.
 
 ## Data
@@ -96,8 +96,7 @@ ledger spend) over the same collectors.
 fields, runway thresholds, `usd_per_unit_micro` NULL = never invent a dollar figure, `rate_limit`
 + `quota` JSON, `enabled` ⇔ a key exists) and `CapacitySnapshot` (append-only observations:
 `remaining`, `total`, `unit`, `resets_at`, `source`, `confidence`, `note`, `error`). Written by the
-worker only. Alembic revision `0005` is authoritative. The frozen legacy `create_all` shape remains
-only for adopting unstamped databases at revision `0009`; future schema changes are Alembic-only.
+worker only. Alembic revision `0005` is authoritative; production schema changes are Alembic-only.
 Numbers only - no key or payment detail.
 
 ## Boundaries
@@ -193,8 +192,8 @@ propagate to the call service for their dedicated cleanup and response handling.
 
 ## Enabling overflow (step F) — the opt-out and the rollout
 
-`Org.platform_overflow_disabled` (Alembic `0008` + legacy `_ensure_bool_col`; last column in the
-class on purpose — alembic appends and the parity test compares order) is the team opt-out:
+`Org.platform_overflow_disabled` (Alembic `0008`; last column in the class on purpose — alembic
+appends, keeping create_all test schemas aligned with the migrated shape) is the team opt-out:
 `GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default true), `treg org overflow
 [on|off]` sets it. Honoured before any aggregator is contacted, on both entry points (the
 post-failure child cycle and the resolver's skip-direct rung); an opted-out team gets the typed 503.

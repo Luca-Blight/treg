@@ -62,8 +62,7 @@ related:
 `api.router` preserves public registration order while concern routers contribute ordered route blocks.
 `bootstrap.create_app()` assembles the combined route table into FastAPI roles.
 `api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
-HTTP call over this. The factory lifespan
-runs `init_db()` and creates the shared keepalive
+HTTP call over this. The factory lifespan runs read-only `verify_db()` and creates the shared keepalive
 `httpx.AsyncClient` at `app.state.http` (and `audit.drain()`s on shutdown). It also starts the Google Ads conversion uploader (`adsconv.worker`) as
 a background task, but only when `adsconv.enabled()` — see
 [ads-conversions](../architecture/ads-conversions.md).

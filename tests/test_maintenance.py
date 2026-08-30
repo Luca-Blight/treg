@@ -47,15 +47,20 @@ def _alembic_upgrade(env: dict[str, str], revision: str) -> subprocess.Completed
     return _run(["-m", "alembic", "upgrade", revision], env)
 
 
-def _legacy_init(env: dict[str, str]) -> None:
+def _create_unstamped_schema(env: dict[str, str]) -> None:
     script = textwrap.dedent(
         """
         import asyncio
 
-        from treg.db import dispose_engine, init_db
+        from sqlmodel import SQLModel
+
+        from treg import models
+        from treg.db import _engine, dispose_engine
 
         async def main():
-            await init_db()
+            async with _engine.begin() as connection:
+                await connection.run_sync(SQLModel.metadata.create_all)
+                await connection.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
             await dispose_engine()
 
         asyncio.run(main())
@@ -99,11 +104,10 @@ def _seed_connection(env: dict[str, str]) -> None:
         import asyncio
 
         from treg import oauth_providers
-        from treg.db import init_db, session_maker
+        from treg.db import session_maker
         from treg.models import Org, Secret, Tool
 
         async def seed():
-            await init_db()
             provider = oauth_providers.get("google-analytics")
             assert provider is not None
             async with session_maker() as db:
@@ -148,6 +152,57 @@ def _free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
+
+def _boot_raw_asgi(env: dict[str, str], tmp_path: Path) -> tuple[bool, str]:
+    port = _free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    env = {**env, "PORT": str(port), "TREG_PUBLIC_URL": base_url}
+    stdout_path = tmp_path / "raw-asgi.stdout"
+    stderr_path = tmp_path / "raw-asgi.stderr"
+    ready = False
+
+    with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "treg.api:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            stdout=stdout,
+            stderr=stderr,
+        )
+        try:
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    break
+                try:
+                    with urllib.request.urlopen(f"{base_url}/meta", timeout=1) as response:
+                        ready = response.status == 200
+                except (OSError, urllib.error.URLError):
+                    pass
+                if ready:
+                    break
+                time.sleep(0.1)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=10)
+
+    return ready, stderr_path.read_text()
 
 
 def test_real_serve_path_can_query_database_after_pre_serve_maintenance(tmp_path):
@@ -235,59 +290,57 @@ def test_empty_database_upgrade_uses_pure_alembic_without_provisioning_a_user(tm
     assert not token_file.exists(), "hosted upgrade must never provision the local user"
 
 
-def test_upgrade_adopts_a_legacy_schema_then_is_idempotent(tmp_path):
+def test_raw_asgi_boots_when_database_is_at_head(tmp_path):
+    env, _, _ = _env(tmp_path)
+    result = _upgrade(env)
+    assert result.returncode == 0, result.stderr
+
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
+
+    assert ready, server_stderr
+
+
+def test_raw_asgi_refuses_a_database_behind_head(tmp_path):
     env, database, _ = _env(tmp_path)
-    _legacy_init(env)
-    assert _alembic_version(database) is None
+    previous = _one_behind_head()
+    result = _alembic_upgrade(env, previous)
+    assert result.returncode == 0, result.stderr
+    assert _alembic_version(database) == previous
 
-    first = _upgrade(env)
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
 
-    assert first.returncode == 0, first.stderr
-    assert "treg schema: adopted legacy database and stamped head" in first.stdout
-    assert _alembic_version(database) == _alembic_head()
-
-    second = _upgrade(env)
-
-    assert second.returncode == 0, second.stderr
-    assert "treg schema: alembic upgrade head (stamped database)" in second.stdout
-    assert _alembic_version(database) == _alembic_head()
+    assert not ready
+    assert "behind this build" in server_stderr
+    assert "python -m treg upgrade" in server_stderr
 
 
-def test_upgrade_refuses_to_stamp_a_drifted_legacy_schema(tmp_path):
+def test_raw_asgi_warns_and_serves_when_database_revision_is_unknown_newer(tmp_path):
     env, database, _ = _env(tmp_path)
-    _legacy_init(env)
+    result = _upgrade(env)
+    assert result.returncode == 0, result.stderr
     with sqlite3.connect(database) as db:
-        db.execute("ALTER TABLE capacitypolicy DROP COLUMN owner_email")
+        db.execute("UPDATE alembic_version SET version_num = '9999'")
+
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
+
+    assert ready, server_stderr
+    # Rich logging wraps the warning and inserts its source location, so pin the semantic pieces.
+    assert "Database revision 9999" in server_stderr
+    assert "additive revisions" in server_stderr
+    assert "contract revision does not" in server_stderr
+
+
+def test_upgrade_refuses_an_unstamped_pre_adoption_database(tmp_path):
+    env, database, _ = _env(tmp_path)
+    _create_unstamped_schema(env)
+    assert _alembic_version(database) is None
 
     result = _upgrade(env)
 
     assert result.returncode != 0
-    assert "column capacitypolicy.owner_email" in result.stderr
-    assert "Alembic stamp was not applied" in result.stderr
-    assert _alembic_version(database) is None
-
-
-def test_upgrade_refuses_a_pre_request_shape_archive(tmp_path):
-    """A database whose archive tables predate revision 0004 (see `_find_adoption_gaps`) is
-    missing the four request-shape columns, and neither `create_all` nor the frozen legacy
-    migrations add a column to an existing table. Only mid-series dev checkouts have this shape,
-    so adoption refuses it by name rather than carrying repair logic nobody deployed needs -
-    stamping head without the columns would put the archivekey ORM permanently ahead of the
-    schema, with revision 0004 never running again."""
-    env, database, _ = _env(tmp_path)
-    initial = _alembic_upgrade(env, "0003")
-    assert initial.returncode == 0, initial.stderr
-    with sqlite3.connect(database) as db:
-        db.execute("DROP TABLE alembic_version")
-        pre = {row[1] for row in db.execute("PRAGMA table_info(archivekey)")}
-    assert "req_method" not in pre
-
-    result = _upgrade(env)
-
-    assert result.returncode != 0
-    for column in ("req_method", "req_url", "req_body", "req_headers"):
-        assert f"column archivekey.{column}" in result.stderr
-    assert "Alembic stamp was not applied" in result.stderr
+    assert "tools-registry[server]==0.14.*" in result.stderr
+    assert "python -m treg upgrade" in result.stderr
+    assert "Nothing was changed" in result.stderr
     assert _alembic_version(database) is None
 
 
@@ -341,6 +394,8 @@ def test_upgrade_backfills_companions_and_is_idempotent(tmp_path):
 
 def test_app_lifespan_does_not_run_release_backfills(tmp_path):
     env, database, _ = _env(tmp_path)
+    initial = _upgrade(env)
+    assert initial.returncode == 0, initial.stderr
     _seed_connection(env)
     assert _companion_count(database) == 0
     script = textwrap.dedent(

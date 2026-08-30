@@ -36,7 +36,7 @@ async def main(days: int, as_json: bool) -> int:
     try:
         async with session_maker() as db:
             spend = await reconcile.provider_spend(db, since)
-    except OperationalError as exc:  # the ledger tables land on first server start (db.init_db)
+    except OperationalError as exc:  # the ledger tables land in the explicit release upgrade
         print(f"no ledger in {get_settings().database_url}: {exc.orig}\n"
               "Point TREG_DATABASE_URL at the deployment's database (the balances below still work).",
               file=sys.stderr)

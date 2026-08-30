@@ -25,6 +25,7 @@ sources:
   - src/treg/ratestore.py
   - src/treg/application/auth.py
   - tests/test_postgres_reset.py
+  - tests/test_alembic_expand_safety.py
 related:
   - architecture/archive.md
   - architecture/proxy-model.md
@@ -236,18 +237,12 @@ One async SQLAlchemy engine (`_engine`, Postgres pool 5 + 10 overflow per instan
 bookkeeping steps of `/call/` — the request session is committed before the relay so none of them
 ever waits on it, see [proxy-model](proxy-model.md) § Connection discipline). The public
 `dispose_engine()` closes pooled connections before an explicit maintenance event loop exits, so a
-later server loop cannot inherit connections bound to the closed loop. `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` -
-see [multi-tenancy](multi-tenancy.md)); that migration also does the small additive `ADD COLUMN` steps for
-columns added after a table shipped (e.g. `tool.examples`, `tool.cli` for local runs, `org.public_demo`
-(A15), the seven `secret` connection-metadata columns (A16), and the eight `pendingoauth` marketplace/quirk
-columns (A17–A20) — guarded by a column-existence check, so it is idempotent on both SQLite and Postgres).
-**Postgres BOOLEAN default fix:** boolean columns added here use `DEFAULT false`, never `DEFAULT 0` —
-Postgres rejects an integer default on a `BOOLEAN` column (SQLite accepts both, so the test suite alone
-cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BOOLEAN NOT NULL DEFAULT
-false`. `reset_db()` is test-only: it disposes the loop-bound pool, then recreates the SQLite schema
-or truncates every application table with identities reset on Postgres. Avoiding per-test Postgres
-DDL keeps the hosted-runner database from accumulating schema WAL until an unrelated commit stalls.
-Schema-specific tests that remove tables still trigger a full rebuild. `get_session()` is the FastAPI
+later server loop cannot inherit connections bound to the closed loop. `verify_db()` is the read-only
+lifespan and worker guard: it keeps the missing-Fernet-key refusal, requires a stamp at head, refuses a
+known older revision, and warns but serves on an unknown-newer revision for additive-era rollback.
+`reset_db()` is test-only: it disposes the loop-bound pool, recreates the SQLite schema or truncates
+application tables on Postgres, then writes the Alembic head stamp. Avoiding per-test Alembic runs and
+Postgres DDL keeps the suite fast without weakening the autogenerate drift guard. `get_session()` is the FastAPI
 dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout.
@@ -255,13 +250,12 @@ Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as
 temporarily as `api._utcnow_naive` and `api._as_naive` during the staged router migration. Query
 parameters compared with timestamp columns follow the same constraint as inserted or updated values.
 
-## Alembic execution and frozen adoption
+## Alembic execution and the adoption floor
 
-Alembic owns schema execution through `maintenance._upgrade_schema`. An empty database runs
-`alembic upgrade head`. A database with `alembic_version` also upgrades to head. A non-empty,
-unstamped database takes the one-time adoption path: frozen legacy `init_db()` brings it to revision
-`0009`, `_find_adoption_gaps` verifies every `SQLModel.metadata` table plus late columns from archive,
-capacity, overflow, and routing, and only then stamps head. A named gap aborts without stamping.
+Alembic owns all production schema execution through `maintenance._upgrade_schema`. An empty or stamped
+database runs `alembic upgrade head`. A non-empty unstamped database is refused without inspection or
+writes and must pass through adoption release 0.14.x. Explicit upgrade also refuses an unknown-newer
+revision because it cannot safely migrate across a rollback floor.
 
 Migration scripts live under `src/treg/alembic/`, inside the shipped wheel. The repo-root
 `alembic.ini` points there for developer CLI use, while `maintenance._alembic_config` resolves the
@@ -269,12 +263,16 @@ installed package resource and supplies the configured database URL. Alembic com
 `asyncio.to_thread` because the environment owns its own `asyncio.run`. On Postgres, `env.py` sets
 `lock_timeout = 5s` before migrations so lock contention fails the deploy cleanly.
 
-`tests/test_alembic_baseline.py` pins the old dual-path comparison to `ADOPTION_REV = "0009"`; it
-retires with the handwritten path in Stage 5 PR3. New schema work is Alembic-revision-only. The
-authoritative drift guard upgrades to head, runs Alembic autogenerate against `SQLModel.metadata`, and
-requires an empty diff. FastAPI lifespan and worker commands still call frozen `init_db()` temporarily,
-but they no longer define where new schema changes go. Both tests run on SQLite in the full suite and
-Postgres in `test-postgres` CI.
+The authoritative drift guard upgrades to head, runs Alembic autogenerate against
+`SQLModel.metadata`, and requires an empty diff. Tests keep fast `create_all` fixtures through
+`reset_db()`, which stamps head in the same transaction. The drift guard runs on SQLite in the full
+suite and Postgres in `test-postgres` CI.
+
+`test_alembic_expand_safety.py` parses only each revision's `upgrade()` body and permits a closed
+set of additive Alembic operations. Any ALTER, DROP, raw execution, or unknown operation must set
+module-level `contract = True` and name its rollback floor in the module docstring. Revisions 0003,
+0004, and 0008 declare theirs: each adds a NOT NULL column and drops its server default, so older
+code can no longer insert rows.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a
@@ -301,7 +299,7 @@ same PostHog person/group the SPA identifies. Emitters: `call_tool`'s `_audit` f
 with the catalog `provider` as vendor or the upstream host for own tools), `billing_topup`
 (`topup_started`), and `billing._credit` (`topup_completed`, gated on `fresh`). Drained in the lifespan
 `finally` after `audit.drain()`. The engine adds Postgres pool
-hygiene (`pool_pre_ping`/`pool_recycle`/sizing) for non-SQLite URLs, and `init_db` refuses to start with
+hygiene (`pool_pre_ping`/`pool_recycle`/sizing) for non-SQLite URLs, and `verify_db` refuses to start with
 no `TREG_SECRET_KEY` on a real DB (an ephemeral key would lose every stored secret on restart).
 
 > **Tenancy:** every resource noun carries `org_id`; access is scoped to the caller's org. Details:

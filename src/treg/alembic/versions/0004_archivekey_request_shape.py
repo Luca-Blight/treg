@@ -6,6 +6,9 @@ Credentials cannot appear — injection happens inside the relay, after this sha
 Backfill is empty strings/NULL: keys recorded before this migration simply cannot be refreshed
 until a caller asks their question again, which re-stores the shape.
 
+Rollback floor: the new NOT NULL columns keep no server default once backfilled, so code older
+than this revision can no longer insert archive rows.
+
 Revision ID: 0004
 Revises: 0003
 Create Date: 2026-08-27
@@ -22,6 +25,7 @@ revision: str = '0004'
 down_revision: str | Sequence[str] | None = '0003'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+contract = True
 
 
 def upgrade() -> None:
