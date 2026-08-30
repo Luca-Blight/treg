@@ -631,3 +631,31 @@ def test_workflow_copy_has_no_em_dashes():
     for key, spec in agent_pages.WORKFLOWS.items():
         for s in _walk_strings(spec):
             assert "—" not in s and "–" not in s, (key, s)
+
+
+@pytest.mark.parametrize("path", [
+    "/agents/chatgpt",
+    "/use-cases/verify-an-email",
+    "/use-cases",
+    "/workflows",
+    "/docs",
+])
+async def test_pages_off_the_shared_shell_carry_adtrack(clients: AsyncClient, path: str):
+    """Every page rendered through `_page()` must load `/adtrack.js` exactly once.
+
+    Without it no `treg_ad` cookie is set, so `org.ad_gclid` stays NULL and `adsconv.queue()`
+    no-ops — a paid click can sign up and make its first call and Google never hears about it,
+    silently. The script lived only on the hand-written marketing HTML until 2026-08-30, which
+    left the whole server-rendered surface unattributable.
+
+    Scope is deliberately `_page()` callers, not "every server-rendered page": `_legal_page()`,
+    `/dashboard-tour/` and the FastAPI Swagger shell at `/docs/api` render their own HTML and are
+    not ad destinations. `/tutorial` is likewise out of scope — it is slated for removal.
+
+    `/sitetrack.js` is deliberately NOT asserted here; see `_page()`'s docstring.
+    """
+    r = await clients.get(path)
+    assert r.status_code == 200, f"{path} -> {r.status_code}"
+    html = r.text
+    assert html.count('<script src="/adtrack.js"></script>') == 1, (
+        f"{path} must load adtrack.js exactly once")

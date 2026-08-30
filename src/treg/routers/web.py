@@ -125,6 +125,19 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     description, the canonical, the og/twitter card and the JSON-LD, so a new page cannot ship
     without them — that omission is exactly what left the landing page bare for a year.
 
+    It owns `/adtrack.js` for the same reason. That script was on the hand-written marketing HTML
+    (landing, usecase-*, resources, index) and on nothing rendered here, so every page off this
+    shell was invisible to paid attribution: no `treg_ad` cookie means
+    `signup._ad_attribution_from` returns empty, `org.ad_gclid` stays NULL, and `adsconv.queue()`
+    no-ops by design — a paid click could sign up and make its first call and Google would never
+    hear about it. It fails silently, with nothing in the logs. Keep it here, not per page.
+
+    `/sitetrack.js` is deliberately NOT here. It already shipped more widely (it is on
+    `tutorial.html` too), but it can load PostHog with pageview/session-recording config, which
+    contradicts what `web/privacy.html` promises and lists no such processor. Broadening it to the
+    whole server-rendered surface is a product/legal call, not a side effect of fixing ad
+    attribution. `treg_ad` and `/adtrack.js` are already documented in that policy, so this is not.
+
     The "Start free" CTA carries `?ref=<page>`: a logged-out visit to bare `/app` is bounced to the
     marketing landing with nothing open, which loses the page the visitor was reading. With `ref`
     the app keeps them and opens sign-in in place (see the boot in index.html), and the page that
@@ -207,6 +220,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     </nav>
   </div>
 </footer>
+<script src="/adtrack.js"></script>
 </body>
 </html>""", headers={"Cache-Control": "public, max-age=600"})
 
