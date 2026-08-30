@@ -27,8 +27,13 @@ related:
 `python -m treg upgrade` runs the explicit release phase. `maintenance._upgrade_schema()` first chooses
 one schema path: empty databases run `alembic upgrade head`; stamped databases upgrade to head; non-empty
 unstamped databases run frozen legacy `init_db()`, pass `_find_adoption_gaps`, then stamp head. A missing
-table or required late column names the gap and exits nonzero without stamping. The ordered, idempotent
-release-task registry runs only after the schema succeeds. It currently contains the provider
+table or required late column names the gap and exits nonzero without stamping. Two support-policy
+consequences: the adoption window is this release vintage - a legacy database can only be adopted while
+the frozen `init_db()` still produces the shape the sweep expects, so a self-hosted install that lags past
+future schema changes must upgrade THROUGH the earliest Alembic-execution release (run `python -m treg
+upgrade` there once) before continuing onward; and a database stamped at a revision the running build does
+not know (a rollback past the rollback floor) refuses with an instruction instead of migrating. The
+ordered, idempotent release-task registry runs only after the schema succeeds. It currently contains the provider
 companion-tool backfill and never provisions a single-user identity.
 
 The default `python -m treg` serve path runs that same upgrade phase and then

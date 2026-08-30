@@ -291,6 +291,23 @@ def test_upgrade_refuses_a_pre_request_shape_archive(tmp_path):
     assert _alembic_version(database) is None
 
 
+def test_upgrade_names_the_rollback_when_the_database_is_newer_than_the_build(tmp_path):
+    """A database stamped at a revision this build does not know is a rollback past the rollback
+    floor (or a stale checkout). The operator gets an instruction, not an Alembic stack trace."""
+    env, database, _ = _env(tmp_path)
+    initial = _upgrade(env)
+    assert initial.returncode == 0, initial.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE alembic_version SET version_num = '9999'")
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    assert "OLDER than the schema" in result.stderr
+    assert "No migration ran" in result.stderr
+    assert _alembic_version(database) == "9999"
+
+
 def test_upgrade_applies_a_pending_revision_from_one_behind_head(tmp_path):
     env, database, _ = _env(tmp_path)
     previous = _one_behind_head()
