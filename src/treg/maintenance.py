@@ -46,7 +46,7 @@ def _find_adoption_gaps(sync_connection) -> list[str]:
     subset already let one gap through (the 0004 request-shape columns); the sweep is total so the
     next gap refuses loudly instead of being stamped past. Deliberately name-level only: types,
     defaults, and indexes legitimately differ between a legacy-built schema and an Alembic-built
-    one (the parity test pins the two builds equal at the adoption revision by name)."""
+    one (the parity test proves the two fresh builds equal at head)."""
     from . import models  # noqa: F401 - populate SQLModel.metadata
 
     inspector = inspect(sync_connection)
@@ -95,9 +95,9 @@ async def _upgrade_schema() -> None:
         raise RuntimeError(
             "Cannot adopt the existing database because its legacy schema is incomplete. "
             f"Missing: {missing}. Alembic stamp was not applied. If this database was built by "
-            "a release older than this one, first install the earliest release that runs "
-            "migrations through Alembic, complete `python -m treg upgrade` there, then upgrade "
-            "onward; otherwise restore the missing objects (or the database) before retrying."
+            "a release older than this one, first install the adoption release - `pip install "
+            "'tools-registry[server]==0.14.*'` - complete `python -m treg upgrade` there, then "
+            "upgrade onward; otherwise restore the missing objects (or the database) first."
         )
     await asyncio.to_thread(command.stamp, config, "head")
     print("treg schema: adopted legacy database and stamped head")
