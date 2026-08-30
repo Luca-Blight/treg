@@ -436,8 +436,13 @@ async def _consume_blocks(
     """
     if amount_micro <= 0:
         return 0, 0
+    # FOR UPDATE: two concurrent settles both read remaining=100, both subtract in memory, last
+    # write wins and one draw is LOST — the blocks then show more credit than the ledger's truth
+    # (found live 2026-08-30: $1.70 of draws lost under an agent's parallel burst, org 2867).
+    # Postgres locks the rows; SQLite ignores FOR UPDATE and is single-writer anyway.
     blocks = (await db.execute(
         select(CreditBlock).where(CreditBlock.org_id == org_id, CreditBlock.remaining_micro > 0)
+        .with_for_update()
     )).scalars().all()
     blocks.sort(key=lambda b: (_KIND_ORDER.get(b.kind, 99), b.created_at or _now(), b.id))
     left, consumed = amount_micro, 0

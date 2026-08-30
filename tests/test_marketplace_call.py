@@ -1665,3 +1665,54 @@ def test_hunter_people_enrich_accepts_linkedin_handle_without_email():
     assert not qp["email"].get("required") and not qp["linkedin_handle"].get("required")
     assert "linkedin_handle" in ep["input"]["note"]
     assert not any(v.get("required") for v in qp.values() if isinstance(v, dict))
+
+
+# ---------------------------------------------------------------------------------------------
+# 2026-08-30 billing forensics (org 2867): three fixes pinned
+
+def test_body_limit_reads_nested_paging():
+    # influencersclub discovery: {"paging": {"limit": 10}} must beat the 20-row default.
+    from treg.application.call.resolve import _body_limit
+    assert _body_limit(json.dumps({"paging": {"limit": 10}, "filters": {}}).encode()) == 10
+    assert _body_limit(json.dumps({"pagination": {"size": 7}}).encode()) == 7
+    assert _body_limit(json.dumps({"filters": {}}).encode()) is None
+
+
+def test_influencersclub_settle_counts_accounts():
+    from types import SimpleNamespace
+    from treg.application.call.settle import _observed_cost_micro
+    mk = SimpleNamespace(cost_type="per_result", unit_micro=5980, billed_oauth=False,
+                         endpoint_id="influencersclub.creators.search", provider="influencersclub")
+    body = json.dumps({"total": 634, "limit": 10,
+                       "accounts": [{"user_id": i} for i in range(10)]}).encode()
+    # 10 creators returned → 10 × 5,980µ$ = $0.0598, NOT the 20-row estimate ($0.1196)
+    assert _observed_cost_micro(mk, body) == 59_800
+    # an envelope with no rows costs nothing
+    assert _observed_cost_micro(mk, json.dumps({"detail": "quota"}).encode()) == 0
+
+
+async def test_concurrent_settles_never_lose_a_block_draw(clients: AsyncClient):
+    """The $1.70 drift: parallel settles both read a block's remaining, last write wins, one draw
+    is lost — blocks then show MORE credit than the ledger's truth. The FOR UPDATE row lock makes
+    parallel draws serialize; after N concurrent settles the block must equal the ledger."""
+    import asyncio
+    from treg.domain import money
+    from treg.db import session_maker
+    from treg.models import CreditBlock
+    from sqlalchemy import select
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+
+    async def one(i: int):
+        async with session_maker() as db:
+            await money.reserve(db, org_id, "x.y", 10_000, call_id=f"drift-{i}")
+        async with session_maker() as db:
+            await money.settle(db, f"drift-{i}", 10_000)
+
+    await asyncio.gather(*[one(i) for i in range(8)])
+    async with session_maker() as s:
+        blocks = (await s.execute(select(CreditBlock).where(CreditBlock.org_id == org_id))).scalars().all()
+        drawn = sum(b.amount_micro - b.remaining_micro for b in blocks)
+    # 8 settles × margin(10,000µ$) each must ALL be drawn from the blocks — none lost.
+    from treg.domain.money import with_margin
+    assert drawn == 8 * with_margin(10_000)

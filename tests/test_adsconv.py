@@ -719,6 +719,35 @@ async def test_every_public_landing_surface_loads_the_capture_script(clients):
     assert not missing, f"pages that do not load the capture script: {missing}"
 
 
+async def test_capture_script_runs_in_head_before_spa_can_redirect(clients):
+    """The capture script must load in <head>, before any app code can navigate away.
+
+    An ad click arriving at /?gclid=... falls through to index.html (the SPA) because of the query
+    string. The SPA's boot then redirects logged-out visitors via `location.replace('/')`, dropping
+    the query string. The capture script must run during HTML parsing — before the Vue app mounts
+    and calls that redirect — or the click ID is lost. Placing it in <head> guarantees this.
+
+    This test pins the ORDERING guarantee. The presence test above catches a missing tag; this one
+    catches a tag that would lose the race against the redirect.
+    """
+    # The SPA is served at /app, but also at /?gclid=... (any query string falls through to it)
+    r = await clients.get("/app")
+    assert r.status_code == 200
+    html = r.text
+    # The script must appear in <head>, not after the Vue app's inline script
+    head_end = html.find("</head>")
+    body_start = html.find("<body")
+    script_pos = html.find('src="/adtrack.js"')
+    assert script_pos != -1, "/adtrack.js not found in SPA"
+    assert script_pos < head_end, (
+        f"adtrack.js must be in <head> to run before the SPA redirects (found at {script_pos}, "
+        f"</head> at {head_end})"
+    )
+    assert script_pos < body_start, (
+        f"adtrack.js must load before <body> to guarantee it runs before Vue mounts"
+    )
+
+
 def test_transaction_id_is_never_purely_numeric():
     """Data Manager rejects a bare numeric transactionId with a 400 on `events[N]`.
 

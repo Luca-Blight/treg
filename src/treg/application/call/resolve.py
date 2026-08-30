@@ -322,12 +322,16 @@ def _body_limit(body: bytes) -> int | None:
         val = doc.get(name)  # one row per item: moz targets, dataforseo keywords, companyenrich domains, brightdata urls
         if isinstance(val, list) and val:
             return len(val)
-    pagination = doc.get("pagination")  # icypeas / lusha: {"pagination": {"size": 10}}
-    if isinstance(pagination, dict):
-        for name in _LIMIT_PARAMS:
-            val = pagination.get(name)
-            if isinstance(val, int) and not isinstance(val, bool) and val > 0:
-                return val
+    # icypeas / lusha: {"pagination": {"size": 10}}; influencersclub: {"paging": {"limit": 10}} —
+    # the miss on `paging` left discovery reserving the 20-row default whatever the caller asked
+    # (found live 2026-08-30, the same calls whose settle over-billed).
+    for envelope in ("pagination", "paging"):
+        nested = doc.get(envelope)
+        if isinstance(nested, dict):
+            for name in _LIMIT_PARAMS:
+                val = nested.get(name)
+                if isinstance(val, int) and not isinstance(val, bool) and val > 0:
+                    return val
     return items
 
 

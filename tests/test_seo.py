@@ -394,3 +394,81 @@ async def test_brand_files_are_hot_linkable(clients: AsyncClient, path: str, cty
 async def test_favicon_is_the_mono_mark(clients: AsyncClient):
     body = (await clients.get("/favicon.svg")).text
     assert 'fill="#000000"' in body and 'fill="#ffffff"' in body
+
+
+# ---- discovery: the hubs are linked from pages Google already crawls -----------------------
+#
+# Before these links existed the 38 job pages and both workflow pages answered "URL is unknown
+# to Google" (Search Console URL inspection, 2026-08-27): they were listed in the sitemap and
+# linked from nothing. Every server-rendered page, the landing and the public catalog now carry
+# the three hubs, /catalog names them in its crawlable prerender, a provider page names the jobs
+# it serves, and a job page names the workflows that chain it.
+
+HUBS = ('href="/use-cases"', 'href="/workflows"', 'href="/agents/claude-code"')
+
+
+async def test_every_surface_links_the_three_hubs(clients: AsyncClient):
+    for path in ("/", "/catalog", "/tools/hunter", "/use-cases/verify-an-email",
+                 "/workflows/find-and-verify-a-lead-list", "/agents/grok-bot"):
+        html = (await clients.get(path)).text
+        for hub in HUBS:
+            assert hub in html, f"{path} does not link {hub}"
+
+
+async def test_hub_links_stay_off_a_self_hosted_registry(monkeypatch):
+    """The job, workflow and agent pages exist on treg.to only (`_hosted`), so a self-hosted
+    registry's footer and catalog must not point at three 404s. The IndexNow key file is generic
+    and stays available everywhere."""
+    from httpx import ASGITransport
+    from treg.api import app
+    from treg.routers.web import INDEXNOW_KEY
+    monkeypatch.setenv("TREG_PUBLIC_URL", "https://registry.example.internal")
+    get_settings.cache_clear()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            for path in ("/", "/catalog", "/tools/hunter"):
+                html = (await c.get(path)).text
+                for hub in HUBS:
+                    assert hub not in html, f"{path} links {hub} off-host"
+            assert (await c.get(f"/{INDEXNOW_KEY}.txt")).status_code == 200
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_provider_page_names_the_jobs_it_serves(clients: AsyncClient):
+    html = (await clients.get("/tools/hunter")).text
+    assert 'id="used-in"' in html
+    assert 'href="/use-cases/verify-an-email"' in html
+    assert 'href="/use-cases/find-professional-emails"' in html
+
+
+async def test_job_page_names_the_workflows_that_chain_it(clients: AsyncClient):
+    html = (await clients.get("/use-cases/verify-an-email")).text
+    assert 'href="/workflows/find-and-verify-a-lead-list"' in html
+
+
+async def test_compare_titles_carry_the_cheapest_price(clients: AsyncClient):
+    html = (await clients.get("/use-cases/verify-an-email")).text
+    title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
+    assert "$" in title and len(title) <= 65, title
+
+
+async def test_provider_title_leads_with_pricing(clients: AsyncClient):
+    html = (await clients.get("/tools/hunter")).text
+    title = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
+    assert title.startswith("Hunter API pricing") and "$" in title, title
+    assert len(title) <= 65, title
+
+
+async def test_indexnow_key_is_served_from_the_root(clients: AsyncClient):
+    from treg.routers.web import INDEXNOW_KEY
+    r = await clients.get(f"/{INDEXNOW_KEY}.txt")
+    assert r.status_code == 200 and r.text == INDEXNOW_KEY
+
+
+async def test_agent_pages_name_the_workflows(clients: AsyncClient):
+    html = (await clients.get("/agents/grok-bot")).text
+    assert 'id="workflows"' in html
+    assert 'href="/workflows/find-and-verify-a-lead-list"' in html
+    md = (await clients.get("/agents/grok-bot.md")).text
+    assert "/workflows/find-and-verify-a-lead-list" in md
