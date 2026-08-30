@@ -121,6 +121,13 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     description, the canonical, the og/twitter card and the JSON-LD, so a new page cannot ship
     without them — that omission is exactly what left the landing page bare for a year.
 
+    It owns `/sitetrack.js` and `/adtrack.js` for the same reason. Both were on the hand-written
+    marketing HTML (landing, usecase-*, resources) and on nothing rendered here, so every agent
+    page, use-case page and hub was invisible to attribution: no `treg_ad` cookie means
+    `signup._ad_attribution_from` returns empty, `org.ad_gclid` stays NULL, and `adsconv.queue()`
+    no-ops by design — a paid click could sign up and call and Google would never hear about it.
+    It fails silently, with nothing in the logs. Keep them here, not per page.
+
     The "Start free" CTA carries `?ref=<page>`: a logged-out visit to bare `/app` is bounced to the
     marketing landing with nothing open, which loses the page the visitor was reading. With `ref`
     the app keeps them and opens sign-in in place (see the boot in index.html), and the page that
@@ -191,6 +198,8 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     ><a href="/terms">terms</a><a href="/privacy">privacy</a>
   </div>
 </footer>
+<script src="/sitetrack.js"></script>
+<script src="/adtrack.js"></script>
 </body>
 </html>""", headers={"Cache-Control": "public, max-age=600"})
 

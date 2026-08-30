@@ -631,3 +631,24 @@ def test_workflow_copy_has_no_em_dashes():
     for key, spec in agent_pages.WORKFLOWS.items():
         for s in _walk_strings(spec):
             assert "—" not in s and "–" not in s, (key, s)
+
+
+@pytest.mark.parametrize("path", [
+    "/agents/chatgpt",
+    "/agents/claude-code",
+    "/use-cases/verify-an-email",
+    "/use-cases",
+    "/workflows",
+])
+async def test_server_rendered_pages_carry_the_attribution_scripts(clients: AsyncClient, path: str):
+    """Every page off the shared shell must load `/sitetrack.js` and `/adtrack.js`.
+
+    Without `adtrack.js` no `treg_ad` cookie is set, so `org.ad_gclid` stays NULL and
+    `adsconv.queue()` no-ops — a paid click can sign up and call and Google never hears about it,
+    silently. The scripts lived only on the hand-written marketing HTML until 2026-08-30, which
+    left the whole server-rendered surface unattributable. Assert it per page so a new route
+    added off `_page()` cannot quietly drop them again.
+    """
+    html = (await clients.get(path)).text
+    assert '<script src="/adtrack.js"></script>' in html, f"{path} is missing adtrack.js"
+    assert '<script src="/sitetrack.js"></script>' in html, f"{path} is missing sitetrack.js"
