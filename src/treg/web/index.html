@@ -477,6 +477,12 @@ addEventListener('load', function(){
   .tour-mat{border-radius:14px;padding:min(4vw,36px);display:flex;justify-content:center;margin:2px 0 4px;transition:background .3s}
   .tour-mat img{width:100%;max-width:960px;height:auto;border-radius:9px;box-shadow:0 16px 44px rgba(0,0,0,.36),0 3px 9px rgba(0,0,0,.22);display:block}
   @media(max-width:760px){.tut-body{grid-template-columns:1fr}.tut-nav{border-right:0;border-bottom:1px solid var(--line);position:static;max-height:210px}}
+  /* Mobile hamburger menu: hidden on desktop, visible on mobile */
+  .mob-menu{display:none;background:none;border:0;color:var(--ink);padding:6px;cursor:pointer;font-size:18px;line-height:1}
+  /* Mobile sidebar overlay backdrop */
+  .mob-backdrop{display:none;position:fixed;inset:0;background:rgba(20,16,10,.55);z-index:40}
+  /* Mobile sidebar close button: hidden on desktop */
+  .mob-close{display:none;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto}
   /* App shell: collapse the fixed sidebar to a single column on narrow viewports + let wide tables
      scroll inside themselves so the page body never scrolls horizontally on mobile. */
   @media(max-width:760px){
@@ -484,14 +490,22 @@ addEventListener('load', function(){
        1fr blowout); min-width:0 + overflow-wrap let long nav text / the "Tools in <email>" heading
        wrap instead of forcing horizontal page scroll. */
     .layout{grid-template-columns:minmax(0,1fr);min-height:0}
-    .side{border-right:0;border-bottom:1px solid var(--line);min-width:0} main{min-width:0}
-    .side-acct{margin-top:12px}  /* on mobile the sidebar is a top strip - don't push account to the bottom */
+    /* Hide sidebar by default on mobile; show it as a slide-in overlay when .mob-open is set */
+    .side{display:none;position:fixed;top:0;left:0;width:min(280px,85vw);height:100vh;z-index:45;border-right:1px solid var(--line);overflow-y:auto}
+    .side.mob-open{display:flex}
+    .mob-backdrop.mob-open{display:block}
+    main{min-width:0}
+    .side-acct{margin-top:auto}
     h1,.tut-head,.brand{overflow-wrap:anywhere}
     .tut-head{flex-wrap:wrap} .tut-head>div:first-child{flex:1 1 100%} .tut-actions{flex:1 1 auto;justify-content:flex-start;margin-left:0}
     table{display:block;overflow-x:auto;white-space:nowrap}td,th{word-break:break-word}
     /* header wraps instead of forcing horizontal page scroll: the search drops to its own full-width
        row and the flex spacer is removed so brand/org/theme/avatar/sign-out fit the viewport. */
-    .top{flex-wrap:wrap;gap:8px;padding:10px 12px}.top .spacer{display:none}.search{flex:1 1 100%;max-width:none;order:9}.orgsel{min-width:0}}
+    .top{flex-wrap:wrap;gap:8px;padding:10px 12px}.top .spacer{display:none}.search{flex:1 1 100%;max-width:none;order:9}.orgsel{min-width:0}
+    /* Show hamburger menu button on mobile */
+    .mob-menu{display:grid;place-items:center;order:-1}
+    /* Show close button in sidebar on mobile */
+    .mob-close{display:block}}
   /* ---- landing page (logged-out) ---- */
   .lp{max-width:1040px;margin:0 auto;padding:0 20px 60px}
   .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:20}
@@ -1308,13 +1322,21 @@ a:hover{text-decoration-color:var(--muted)}
       </nav>
     </div>
     <div class="top" role="banner" v-else>
+      <button class="mob-menu" @click="mobileNav=!mobileNav" aria-label="Toggle navigation" :aria-expanded="mobileNav">☰</button>
       <div class="brand">▚ treg</div>
       <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search the catalog…':'search tools…'" aria-label="Search"/></div>
       <div class="spacer"></div>
     </div>
 
+    <!-- Mobile sidebar backdrop -->
+    <div class="mob-backdrop" :class="{'mob-open':mobileNav}" @click="mobileNav=false"></div>
     <div class="layout" :class="{solo:publicCatalog}">
-      <nav class="side" v-if="!publicCatalog">
+      <nav class="side" :class="{'mob-open':mobileNav}" v-if="!publicCatalog">
+        <!-- Mobile close button (hidden on desktop) -->
+        <div style="display:flex;align-items:center;margin-bottom:8px">
+          <span class="brand" style="font-size:14px">▚ treg</span>
+          <button class="mob-close" @click="mobileNav=false" aria-label="Close navigation">✕</button>
+        </div>
         <!-- ORG (top): name → settings · ▾ → switch -->
         <div class="orgblock" v-if="authed">
           <div class="orgmain" ref="orgmain" @click="toggleOrgMenu" role="button" tabindex="0" @keydown.enter="toggleOrgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
@@ -3908,6 +3930,7 @@ createApp({
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
       theme: localStorage.getItem('treg-theme')||'light',
+      mobileNav: false,  // mobile sidebar toggle
       // True when this load is a PUBLIC catalog URL (/catalog, /catalog/<slug>). The catalog API is
       // unauthenticated, so the same marketplace views render for a signed-out visitor — that is
       // what makes the catalog indexable without maintaining a second copy of the UI. Everything
@@ -5633,7 +5656,7 @@ createApp({
       if(o.slug!==this.activeSlugNow){ if(!this.sessionMode && !this.connected(o.slug)){ this.addOrg=true; return; } this.switchOrg(o); }
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
-    go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
+    go(v, fromPop){ this.resetConfirms(); this.mobileNav=false;  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
       // `usage` is a TAB of the activity page now, not a view of its own — keep the old route
       // working so an existing /app#usage link, and the balance card's deep link, still land right.
       if(v==='usage'){ this.actTab='usage'; v='activity'; this.loadUsage(); }
