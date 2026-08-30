@@ -52,17 +52,28 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 `<title>`, the meta description, the canonical, the og/twitter card and the JSON-LD, so a new page
 cannot ship missing them. That omission is exactly what left the landing bare.
 
-It owns `/sitetrack.js` and `/adtrack.js` for the same reason. Until 2026-08-30 both sat only on the
-hand-written marketing HTML (`landing.html`, `usecase-*.html`, `resources.html`, `index.html`), so
-every agent page, programmatic use-case page and hub — the whole pSEO surface — was invisible to
+It owns `/adtrack.js` for the same reason. Until 2026-08-30 that script sat only on the hand-written
+marketing HTML (`landing.html`, `usecase-*.html`, `resources.html`, `index.html`), so every page off
+this shell — agent pages, programmatic use-case pages, the hubs, `/docs` — was invisible to paid
 attribution. The failure is silent and total: no `adtrack.js` means no `treg_ad` cookie, so
 `signup._ad_attribution_from()` returns empty, `org.ad_gclid` stays NULL, and `adsconv.queue()`
 no-ops by design, so a paid click could sign up and make its first call with Google never hearing
 about it. Nothing errors and nothing logs. It surfaced from the ads side: the Agent × job campaign
 spent A$125 over three days landing every click on `/agents/*` for zero recorded conversions, while
-campaigns pointing at the static use-case pages recorded normally. `sitetrack.js` was missing too,
-so those pages had no first-touch source either — that half cost the organic surface, not just paid.
-`tests/test_agent_pages.py` asserts both tags per path so a new route off `_page()` cannot drop them.
+campaigns pointing at the static use-case pages recorded normally.
+
+The scope is **`_page()` callers**, not "every server-rendered page". `_legal_page()` (`/terms`,
+`/privacy`, `/support`, `/contact`), `/dashboard-tour/` and the FastAPI Swagger shell at `/docs/api`
+render their own HTML and remain uninstrumented — none is an ad destination. `/tutorial` is likewise
+out of scope; it is slated for removal. The `.md` variants are `text/plain` and cannot run scripts.
+
+`/sitetrack.js` is deliberately NOT in the shell. It already shipped more widely than `adtrack.js`
+(it is on `tutorial.html` too), but it can load PostHog with pageview/session-recording config while
+`web/privacy.html` promises no analytics or session-replay scripts and lists no such processor.
+Broadening it across the pSEO surface is a product/legal decision, not a side effect of fixing ad
+attribution — `treg_ad` and `/adtrack.js` are already documented in that policy, so shipping those
+alone changes nothing about it. `tests/test_agent_pages.py` asserts exactly one `adtrack.js` per
+path so a new route off `_page()` cannot drop it.
 
 ## The public catalog is the marketplace, not a copy of it
 
