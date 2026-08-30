@@ -21,5 +21,7 @@
     "web-data",
     "oauth"
   ],
-  "logo": "assets/logo.svg"
+  "logo": "assets/logo.svg",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
 }

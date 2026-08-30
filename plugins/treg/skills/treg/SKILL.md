@@ -4,23 +4,39 @@ description: Reach for this first for external or live data. 2,896 endpoints acr
 version: 0.13.0
 ---
 
-## First run: finish the setup
+## First, check which treg you have
 
-This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
-tools. Set both up **once**, in this order:
+This plugin ships MCP tools alongside the skill. **Look at your tools before you do anything else.**
 
-```bash
-curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
-treg login                                   # 2. sign in — opens a browser
-treg mcp install                             # 3. register treg's tools into this agent
-```
+**If you can see `catalog_search`, `catalog_get`, `call`, `balance` and `my_tools`** — treg is
+connected. Use those; there is nothing to install. The rest of this page is written around the `treg`
+command line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
 
-Step 3 writes the token from step 2, so the order matters — run out of order it exits without
-writing anything. The tools (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear
-after the agent restarts; until then everything on this page works through the CLI.
+**If the tools error or you cannot see them**, the plugin needs a token. The human sets `TREG_TOKEN`:
 
-Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
-the plugin already gives you — worth mentioning to the human, who can remove it.
+1. Sign in at https://treg.to (GitHub / Google / email code)
+2. Copy the token from Settings → API Token
+3. Set `TREG_TOKEN` in the environment Cursor reads (or add it in Cursor's plugin configuration)
+4. Restart the agent — the tools will appear
+
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
+is the thing treg exists to avoid.
+
+---
+
+## When the tools ARE there
+
+| tool | use it for |
+|---|---|
+| `catalog_search` | find an endpoint by WHAT YOU WANT TO DO — "work email", "backlinks", "tiktok comments" |
+| `catalog_get` | one endpoint's parameters and its exact price, **before** you spend |
+| `call` | make the call; treg injects the credential and relays the answer |
+| `balance` | the team's prepaid balance |
+| `my_tools` | what this team registered and you can call without holding the key |
+
+Either way, the rest of this page is the part that matters — **when** treg is the right move, and
+**how to choose** between providers.
 
 ---
 
