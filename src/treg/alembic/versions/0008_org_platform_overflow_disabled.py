@@ -7,6 +7,9 @@ Create Date: 2026-08-28
 Added with a server default so existing rows are valid, then the default is dropped to match the
 legacy create_all shape (no server default; the default lives in Python), which the parity test
 compares.
+
+The default-removal ALTER makes this revision a declared rollback floor under the expand-safety
+policy.
 """
 from collections.abc import Sequence
 
@@ -18,6 +21,7 @@ revision: str = '0008'
 down_revision: str | Sequence[str] | None = '0007'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+contract = True
 
 
 def upgrade() -> None:

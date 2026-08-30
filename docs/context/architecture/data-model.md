@@ -25,6 +25,7 @@ sources:
   - src/treg/ratestore.py
   - src/treg/application/auth.py
   - tests/test_postgres_reset.py
+  - tests/test_alembic_expand_safety.py
 related:
   - architecture/archive.md
   - architecture/proxy-model.md
@@ -266,6 +267,11 @@ The authoritative drift guard upgrades to head, runs Alembic autogenerate agains
 `SQLModel.metadata`, and requires an empty diff. Tests keep fast `create_all` fixtures through
 `reset_db()`, which stamps head in the same transaction. The drift guard runs on SQLite in the full
 suite and Postgres in `test-postgres` CI.
+
+`test_alembic_expand_safety.py` parses only each revision's `upgrade()` body and permits a closed
+set of additive Alembic operations. Any ALTER, DROP, raw execution, or unknown operation must set
+module-level `contract = True` and name its rollback floor in the module docstring. Revisions 0003
+and 0008 declare their default-removal ALTERs; revision 0004 is the sole explicit grandfather entry.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a

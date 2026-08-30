@@ -19,6 +19,7 @@ sources:
   - src/treg/routers/referrals.py
   - src/treg/routers/web.py
   - scripts/dump_surface.py
+  - tests/test_app_roles.py
 related:
   - architecture/import-boundaries.md
   - interface/api.md
