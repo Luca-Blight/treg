@@ -1,9 +1,11 @@
 ---
-title: Archive — every platform answer, kept and versioned (cache = the newest layer)
+title: Archive - every platform answer, kept and versioned (cache = the newest layer)
 status: building
 sources:
   - src/treg/archive.py
-  - alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0003_callrecord_cached.py
+  - src/treg/alembic/versions/0004_archivekey_request_shape.py
   - src/treg/api.py
   - src/treg/bootstrap.py
   - src/treg/catalog_store.py

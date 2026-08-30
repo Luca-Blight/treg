@@ -17,7 +17,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, signup.py, adtrack.js |
-| [Archive — every platform answer, kept and versioned (cache = the newest layer)](architecture/archive.md) | building | archive.py, 0002_archive_tables.py, api.py, bootstrap.py, … |
+| [Archive - every platform answer, kept and versioned (cache = the newest layer)](architecture/archive.md) | building | archive.py, 0002_archive_tables.py, 0003_callrecord_cached.py, 0004_archivekey_request_shape.py, … |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, injectors.py, ssrf.py, crypto.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | contracts.yaml, adapters.yaml, findymail.search.business-profile.json, __init__.py, … |
 | [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, bootstrap_handlers.py, bootstrap_http.py, connect.py, … |
@@ -51,7 +51,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Provider capacity — knowing what treg's own vendor accounts have left](ops/capacity.md) | shipped (steps B–F built; production rollout = the shadow week, then TREG_OVERFLOW_MODE=on) | __init__.py, collectors.py, policy.py, sweep.py, … |
-| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, maintenance.py, worker.py, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, maintenance.py, env.py, … |
 
 ## Reference
 
