@@ -217,8 +217,7 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
   DERIVED `enabled`. Filled by `treg-worker overflow sync` only (Alembic `0006`); read-only for the call
   path. See `ops/capacity.md`.
-- `Org.platform_overflow_disabled` - the team's overflow opt-out (Alembic `0008`, legacy `_ensure_bool_col`;
-  the legacy-org backfill INSERT names it explicitly like every NOT NULL column). See `ops/capacity.md`.
+- `Org.platform_overflow_disabled` - the team's overflow opt-out (Alembic `0008`). See `ops/capacity.md`.
 - **`OverflowSpend`** — per aggregator per UTC day: calls, the aggregator's charge, the delta against
   treg's direct price. Written inside the overflow child's settle transaction (and by the shadow probe);
   the $20/day budget reads it. Alembic `0007`. Not a balance.

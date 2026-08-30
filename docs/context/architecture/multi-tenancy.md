@@ -55,7 +55,7 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
 - **`Project`** — an OPTIONAL sub-scope inside an org (`org_id`, `name`, `slug`, unique `(org_id, slug)`).
   The org stays the hard isolation boundary; a project is a softer grouping on top. Deliberately a
   **label + ACL scope, NOT a namespace**: `Tool.name` stays unique per `(org_id, name)`, so no unique
-  constraint had to be rebuilt (`_fix_tool_uniqueness` had to do that once already, and SQLite cannot
+  constraint had to be rebuilt (the flat-to-orgs migration had to do that once already, and SQLite cannot
   alter constraints portably). `Tool.project_id` NULL = **org-wide**, which is every tool that predates
   projects — so this shipped purely additive. Secrets stay org-level on purpose: one shared credential
   legitimately backs tools in several projects.
