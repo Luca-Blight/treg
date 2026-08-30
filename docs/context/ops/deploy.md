@@ -30,8 +30,8 @@ unstamped databases run frozen legacy `init_db()`, pass `_find_adoption_gaps`, t
 table or required late column names the gap and exits nonzero without stamping. Two support-policy
 consequences: the adoption window is this release vintage - a legacy database can only be adopted while
 the frozen `init_db()` still produces the shape the sweep expects, so a self-hosted install that lags past
-future schema changes must upgrade THROUGH the earliest Alembic-execution release (run `python -m treg
-upgrade` there once) before continuing onward; and a database stamped at a revision the running build does
+future schema changes must upgrade THROUGH the adoption release, 0.14.x (`pip install 'tools-registry[server]==0.14.*'`,
+run `python -m treg upgrade` there once) before continuing onward; and a database stamped at a revision the running build does
 not know (a rollback past the rollback floor) refuses with an instruction instead of migrating. The
 ordered, idempotent release-task registry runs only after the schema succeeds. It currently contains the provider
 companion-tool backfill and never provisions a single-user identity.
@@ -63,8 +63,9 @@ bound to a closed maintenance loop. Calling `maintenance.upgrade()` directly doe
   maintenance phase it runs only for a non-empty database without `alembic_version`. Every model table
   and selected late columns must exist before `stamp head`; otherwise the command names the missing
   object and exits nonzero. Lifespan and worker entry points retain redundant frozen calls temporarily.
-- **New schema changes are revision-only:** the legacy parity test stays pinned to adoption revision
-  `0009` until PR3 removes that path. An autogenerate drift guard requires Alembic head and
+- **New schema changes are revision-only:** the legacy parity test compares fresh `init_db` output
+  against Alembic HEAD (both sides track live metadata, so it stays green across revisions) until PR3
+  removes that path. An autogenerate drift guard requires Alembic head and
   `SQLModel.metadata` to match exactly.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
