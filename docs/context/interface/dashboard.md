@@ -57,9 +57,12 @@ a reload button, and the issues link. Anything that stops Vue mounting now says 
 pageviews on; `initAnalytics()` in the SPA defers to it (`window.__phInit`) and only identifies, keeping
 its inline init as the fallback for a stale bundle. Landing-page visitors used to be invisible to
 analytics — PostHog first met them on `/app` after OAuth, as `$direct` — so this ordering is the whole
-point. The next `<script src="/adtrack.js">` loads the first-party ad-click capture script on
-every page render (dashboard included, since a visitor can arrive on `/app` from an ad) — no Google
-tag, first-party cookie only; see [ads-conversions](../architecture/ads-conversions.md).
+point. `<script src="/adtrack.js">` — the first-party ad-click capture — loads **in `<head>`** on every
+page, guaranteed to run during HTML parsing before any app code can navigate away. An ad click landing
+on `/?gclid=…` falls through to the SPA (because of the query string), whose boot redirects logged-out
+visitors via `location.replace('/')`. Placing capture in `<head>` ensures the click id is stored before
+that redirect can drop the query string. No Google tag, first-party cookie only; see
+[ads-conversions](../architecture/ads-conversions.md).
 
 ## Shell & design system (2026 rework)
 The design tokens are now **shared across every served page** (`index.html`, `tutorial.html`,
