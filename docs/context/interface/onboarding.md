@@ -114,7 +114,7 @@ tool seeding, and teammate acceptance run in short use-case-owned sessions.
   a login. `admin_stats` excludes the whole demo footprint (demo users, demo orgs, and everything
   scoped to them) so platform totals stay honest.
 - **Schema:** `User.onboarded` / `User.demo` / `Org.demo` (see [data-model](../architecture/data-model.md);
-  additive migrations in `db.py`, and `_rebuild_user_table` + the legacy org backfill carry the new cols).
+  additive migrations in `src/treg/infra/db.py`, and `_rebuild_user_table` + the legacy org backfill carry the new cols).
 
 ## CLI face (`treg onboard`)
 

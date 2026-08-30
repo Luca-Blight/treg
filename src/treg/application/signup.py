@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .. import adsconv, health, ledger, referrals, sandbox as demo_sandbox
-from ..db import session_maker
+from ..infra.db import session_maker
 from ..domain.governance.teams import _make_org_membership, _slugify
 from ..domain.identity.access import _is_machine_email, _norm_email
 from ..models import Org, User

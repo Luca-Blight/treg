@@ -10,7 +10,7 @@ from sqlmodel import select
 from ... import billing, catalog_store, ledger
 from ...caller_metadata import TAG_DEFAULT
 from ...config import get_settings
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.governance import budgets as budget_policy
 from ...domain.governance.usage import _day_start_utc
 from ...domain.identity.access import Caller

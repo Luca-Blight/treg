@@ -271,7 +271,7 @@ async def _store(
         from sqlalchemy.exc import IntegrityError
 
         from . import catalog_store
-        from .db import session_maker
+        from .infra.db import session_maker
         from .models import ArchiveKey, ArchiveSnapshot
 
         entry = catalog_store.load().by_id.get(endpoint_id)
@@ -430,7 +430,7 @@ async def lookup(
         from sqlalchemy import select
 
         from . import catalog_store
-        from .db import session_maker
+        from .infra.db import session_maker
         from .models import ArchiveKey, ArchiveSnapshot
 
         entry = catalog_store.load().by_id.get(endpoint_id)
@@ -492,7 +492,7 @@ async def _touch_write(key_hash: str) -> None:
     try:
         from sqlalchemy import update
 
-        from .db import session_maker
+        from .infra.db import session_maker
         from .models import ArchiveKey
 
         async with session_maker() as s:
@@ -640,7 +640,7 @@ async def refresh_once(client) -> int:
     from sqlalchemy import func, select
 
     from . import catalog_store
-    from .db import session_maker
+    from .infra.db import session_maker
     from .models import ArchiveKey, ArchiveSnapshot
 
     now = _utcnow()

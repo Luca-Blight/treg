@@ -33,7 +33,7 @@ from ..application.call.intake import (
 from ..application.call.types import CallerSnapshot, CallFailure, CallInput, UpstreamResponse
 from ..caller_metadata import _client_of
 from ..config import get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..domain.governance import access as access_policy
 from ..domain.governance import publicdemo as publicdemo_policy
 from ..domain.identity.access import Caller, require_member

@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy import inspect as sa_inspect
 
-from ..db import session_maker
+from ..infra.db import session_maker
 from ..domain import referrals
 from ..models import User
 

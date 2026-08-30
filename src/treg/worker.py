@@ -26,7 +26,7 @@ def _need_server() -> None:
 
 
 async def _capacity_sweep(args) -> int:
-    from .db import session_maker, verify_db
+    from .infra.db import session_maker, verify_db
     from .domain.capacity.sweep import run_sweep
 
     await verify_db()
@@ -63,7 +63,7 @@ def _our_endpoints() -> list[dict]:
 
 async def _overflow_sync(args) -> int:
     from .config import get_settings
-    from .db import session_maker, verify_db
+    from .infra.db import session_maker, verify_db
     from .domain.capacity import routes as R
     from .domain.catalog import store as catalog_store
 
@@ -97,7 +97,7 @@ async def _overflow_verify(args) -> int:
     from sqlalchemy import select
     from .config import get_settings, platform_setting_name
     from . import oauth_providers
-    from .db import session_maker, verify_db
+    from .infra.db import session_maker, verify_db
     from .domain.capacity import verify as V
     from .domain.capacity import routes as R
     from .domain.catalog import store as catalog_store

@@ -34,6 +34,7 @@ Regenerate via `scripts/build-map.py`.
 | `scripts/catalog_validate.py` | architecture/catalog.md |
 | `scripts/dev-local.sh` | ops/deploy.md |
 | `scripts/dump_surface.py` | architecture/composition.md |
+| `scripts/indexnow_submit.py` | interface/seo.md |
 | `scripts/minimax_plugin.py` | interface/skill.md |
 | `scripts/provider_balances.py` | ops/capacity.md |
 | `src/treg/__main__.py` | ops/deploy.md |
@@ -131,7 +132,6 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
 | `src/treg/crypto.py` | architecture/auth-secrets.md |
-| `src/treg/db.py` | architecture/data-model.md, architecture/multi-tenancy.md, ops/deploy.md |
 | `src/treg/demo.py` | interface/onboarding.md |
 | `src/treg/domain/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/domain/capacity/__init__.py` | architecture/import-boundaries.md, ops/capacity.md |
@@ -175,11 +175,12 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/domain/tools/bundles.py` | architecture/auth-secrets.md, architecture/multi-tenancy.md |
 | `src/treg/egress.py` | architecture/local-run.md |
 | `src/treg/email.py` | interface/api.md, ops/deploy.md |
-| `src/treg/endpoint_stats.py` | architecture/catalog.md |
+| `src/treg/endpoint_stats.py` | architecture/catalog.md, interface/seo.md |
 | `src/treg/fsjail.py` | architecture/local-run.md |
 | `src/treg/health.py` | architecture/auth-secrets.md |
 | `src/treg/infra/__init__.py` | architecture/money.md |
 | `src/treg/infra/catalog_observations.py` | architecture/catalog.md |
+| `src/treg/infra/db.py` | architecture/data-model.md, architecture/multi-tenancy.md, ops/deploy.md |
 | `src/treg/infra/oauth_refresh.py` | architecture/auth-secrets.md |
 | `src/treg/infra/stripe.py` | architecture/money.md |
 | `src/treg/infra/upstream/__init__.py` | architecture/import-boundaries.md |
@@ -236,6 +237,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
 | `src/treg/web/landing.html` | interface/seo.md |
+| `src/treg/web/llms.txt` | interface/seo.md |
 | `src/treg/web/robots.txt` | interface/seo.md |
 | `src/treg/web/selfhost.sh` | ops/deploy.md |
 | `src/treg/web/sitetrack.js` | architecture/data-model.md, interface/api.md, interface/dashboard.md |
@@ -245,6 +247,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/tour/tour.js` | interface/dashboard.md |
 | `src/treg/web/tutorial.html` | interface/dashboard.md |
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
+| `src/treg/web/usecase.css` | interface/seo.md |
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
 | `src/treg/worker.py` | ops/capacity.md, ops/deploy.md |
@@ -300,7 +303,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `sandbox_identity.py`, `pubfeed.py`, `pubfeed.py`, `sandbox.py`, `__init__.py`, `sandbox.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `auth.py`, `__init__.py`, `demo.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
-| `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
+| `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `usecase.css`, `index.html`, `landing.html`, `llms.txt`, `endpoint_stats.py`, `indexnow_submit.py`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
 | `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `marks.py`, `test_capacity_protect.py`, `limiter.py`, `overflow_spend.py`, `routes_view.py`, `overflow.py`, `0007_overflow_spend.py`, `test_capacity_overflow.py`, `test_capacity_overflow_spend.py`, `0008_org_platform_overflow_disabled.py`, `test_capacity_smoothing.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0006_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0005_capacity_policy_snapshot.py`, `test_capacity_know.py` |

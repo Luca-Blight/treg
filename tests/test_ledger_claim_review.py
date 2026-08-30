@@ -8,7 +8,7 @@ from sqlalchemy import delete
 from sqlmodel import select
 
 from treg import ledger
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Hold, LedgerEntry
 
 

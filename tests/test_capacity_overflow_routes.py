@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.domain.capacity import routes as R
 from treg.domain.capacity import signatures as S
 from treg.domain.capacity import verify as V

@@ -73,7 +73,7 @@ async def test_update_tool_grandfathers_an_admin_added_shared_binding(clients: A
 
 
 async def test_delete_org_removes_run_records(clients: AsyncClient):
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import RunRecord
     # a server-runnable tool + a server run → writes a RunRecord
     await clients.post("/skills", json={"name": "r3", "recipe": "r", "secrets": [],

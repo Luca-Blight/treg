@@ -11,7 +11,8 @@ from alembic.migration import MigrationContext
 from sqlalchemy import text
 from sqlmodel import SQLModel
 
-from treg import audit, db
+from treg import audit
+from treg.infra import db
 from treg.maintenance import _alembic_config
 
 

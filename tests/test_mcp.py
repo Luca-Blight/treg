@@ -157,7 +157,7 @@ async def test_search_says_so_when_nothing_matches(clients):
     from sqlmodel import select
 
     from treg import audit
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import SearchMiss
 
     await audit.drain()
@@ -172,7 +172,7 @@ async def test_catalog_request_files_the_gap_with_attribution(clients):
     and the stored row says who asked (the bearer), not just that someone did."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import ToolRequest
 
     token = (await clients.post("/users", json={"email": "wisher@superdesign.dev"})).json()["token"]
@@ -847,7 +847,7 @@ async def test_a_402_THROUGH_THE_CALL_TOOL_carries_no_link(clients, monkeypatch)
     from sqlmodel import select
 
     from treg.config import get_settings
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
@@ -971,7 +971,7 @@ async def test_the_same_key_through_MCP_bills_once(clients, monkeypatch):
     from sqlmodel import select
 
     from treg.config import get_settings
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
@@ -1392,7 +1392,7 @@ async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clie
     call sites and every ranking test would still have passed, because they call the helper
     directly. This one goes through the MCP tool with real rows in the database."""
     from treg import endpoint_stats
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import CallRecord
 
     broken = "apify.meta-ads.library.search"  # earlier in file order: rerank must move it

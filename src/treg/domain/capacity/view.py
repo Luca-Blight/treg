@@ -12,7 +12,7 @@ import time
 
 from sqlalchemy import select
 
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...models import Ephemeral
 from ...timeutil import utcnow_naive
 from .policy import _RATE_LIMITS, LatestState

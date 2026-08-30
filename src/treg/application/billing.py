@@ -43,7 +43,7 @@ from sqlmodel import select
 
 from .. import adsconv
 from .. import analytics
-from .. import db as _db
+from ..infra import db as _db
 from .. import email as email_mod
 from .. import ledger
 from .. import referrals
@@ -838,7 +838,7 @@ def maybe_schedule_autotopup(org: Org) -> bool:
 async def _run_autotopup(org_id: int) -> None:
     """The scheduled task's body: its OWN session, because the request that scheduled it will have
     closed its session (and committed or rolled back) long before this runs."""
-    from .db import session_maker
+    from ..infra.db import session_maker
     try:
         async with session_maker() as db:
             result = await attempt_auto_topup(db, org_id)

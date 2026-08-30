@@ -12,7 +12,7 @@ from conftest import make_upstream
 from treg import adsconv
 from treg.api import app
 from treg.config import get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import AdConversion, Org
 from treg.timeutil import utcnow_naive
 

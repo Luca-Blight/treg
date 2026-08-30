@@ -14,7 +14,7 @@ from ... import adsconv, catalog_store, ledger
 from ...domain.capacity import marks as capacity_marks
 from ...domain.capacity import overflow_spend as overflow_spend_ledger
 from ...domain.capacity import signatures as capacity_signatures
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...models import Org
 from ...timeutil import utcnow_naive as _utcnow_naive
 from .idempotency import _release_idempotent_claim

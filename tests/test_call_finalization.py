@@ -10,7 +10,7 @@ from sqlalchemy import select
 from treg import ledger
 from treg.application.call import settle as call_settle
 from treg.application.call.resolve import MarketplaceCall
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Hold, LedgerEntry, TagSpend
 
 

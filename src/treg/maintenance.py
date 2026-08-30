@@ -12,7 +12,7 @@ from alembic.config import Config
 from sqlalchemy import inspect
 
 from .application.connect import _backfill_provider_extra_tools
-from .db import _db_url, _engine
+from .infra.db import _db_url, _engine
 
 
 ReleaseTask = tuple[str, Callable[[], Awaitable[int]]]

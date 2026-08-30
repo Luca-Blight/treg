@@ -22,7 +22,7 @@ from treg.application.call.intake import CallMeta
 from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.governance import budgets as budget_policy
 from treg.models import CallRecord, CreditBlock, Hold, LedgerEntry, Membership, Org, TagSpend, User
 

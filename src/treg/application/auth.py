@@ -14,7 +14,8 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import audit, crypto, db as database, demo as demo_seed, email as email_sender, ratestore
+from .. import audit, crypto, demo as demo_seed, email as email_sender, ratestore
+from ..infra import db as database
 from ..config import get_settings
 from ..domain.identity import session as sess
 from ..domain.identity import mcp_oauth

@@ -22,7 +22,7 @@ from sqlalchemy.exc import OperationalError  # noqa: E402
 
 from treg import ledger, reconcile  # noqa: E402
 from treg.config import get_settings  # noqa: E402
-from treg.db import session_maker  # noqa: E402
+from treg.infra.db import session_maker  # noqa: E402
 from treg.domain.capacity.collectors import (  # noqa: E402,F401 — re-exported for older callers
     AUX_SLOTS, BALANCE_ROUTES, NO_BALANCE_API, all_platform_providers, provider_balance,
 )

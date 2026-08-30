@@ -15,7 +15,7 @@ from treg.application.call import route as call_route
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.catalog import store as catalog_store
 from treg.domain.catalog.routing import paths as P
 from treg.domain.catalog.routing.contracts import canonical_identity

@@ -16,7 +16,7 @@ from treg.application.call import overflow as O
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.routes_view import view as routes_view
 from treg.domain.capacity.sweep import STATE_NS

@@ -14,7 +14,7 @@ from treg import api, maintenance, session as sess
 from treg.__main__ import _prepare_serve
 from treg.api import LOCAL_ORG_NAME, LOCAL_USER_EMAIL, app
 from treg.config import Settings, get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import Membership, Org, User
 from treg.routers import web
 

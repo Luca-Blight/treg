@@ -59,7 +59,7 @@ async def assert_outcome(
         await asyncio.wait_for(audit.drain(), timeout=90)
     except asyncio.TimeoutError:
         import traceback
-        from treg.db import _engine
+        from treg.infra.db import _engine
         lines = [f"audit.drain stalled; pending={len(audit._pending)}"]
         try:
             lines.append(f"pool: {_engine.pool.status()}")

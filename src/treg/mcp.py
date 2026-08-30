@@ -408,7 +408,7 @@ async def _internal_auth(token: str) -> dict[str, str]:
     from sqlmodel import select
 
     from .domain.identity import session
-    from .db import session_maker
+    from .infra.db import session_maker
     from .models import Org, User
 
     async with session_maker() as db:

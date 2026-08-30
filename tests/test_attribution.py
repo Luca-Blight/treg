@@ -11,7 +11,7 @@ import pytest
 from sqlmodel import select
 
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Org
 
 COOKIE = quote("botdirectory.ai|sponsor|edge||p1|botdirectory.ai", safe="")

@@ -14,7 +14,7 @@ from httpx import AsyncClient
 
 from treg import endpoint_stats
 from treg.api import app
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.infra.catalog_observations import CachedEndpointObservationReader
 from treg.models import CallRecord
 

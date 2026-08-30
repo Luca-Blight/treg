@@ -16,7 +16,7 @@ from httpx import ASGITransport, AsyncClient
 
 from treg import session as sess
 from treg.api import app
-from treg.db import reset_db
+from treg.infra.db import reset_db
 
 
 @pytest.fixture

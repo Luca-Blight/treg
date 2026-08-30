@@ -29,7 +29,7 @@ from treg.application.call import service as call_service
 from treg.application.call.types import ResolutionFailed, UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Org
 
 EP = "tikhub.tiktok.video.comments"          # GET /api/v1/tiktok/web/fetch_post_comment, aweme_id required
@@ -923,7 +923,7 @@ async def test_the_same_key_can_belong_to_two_different_CALLERS(clients: AsyncCl
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     # A second AGENT in the SAME team: the exact case this scoping is for. Two agents belonging to
@@ -956,7 +956,7 @@ async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
     import sqlalchemy.exc
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     async with session_maker() as db:
@@ -991,7 +991,7 @@ async def _seed_answer(clients: AsyncClient, key: str, *, body: bytes = b'{"seed
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1069,7 +1069,7 @@ async def test_one_callers_label_is_invisible_to_another(clients: AsyncClient, p
     second caller using the same label must reach the provider, not read the first one's answer."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     await _seed_answer(clients, "shared-label", body=b'{"owner":"first"}')
@@ -1118,7 +1118,7 @@ async def test_an_unmetered_call_is_not_stored(clients: AsyncClient):
     protect, and treg has no business holding their response."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall
 
     await clients.post("/secrets", json={"name": "tikhub", "value": "OWNKEY"})
@@ -1135,7 +1135,7 @@ async def test_a_FAILED_call_frees_its_label(clients: AsyncClient, platform_on):
     the caller retrying out of it. The label must be usable again immediately."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall
 
     bad = await clients.get(f"/call/{EP}", headers={"Idempotency-Key": "will-fail"})
@@ -1157,7 +1157,7 @@ async def test_a_second_call_while_the_first_is_IN_FLIGHT_is_refused(clients: As
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1186,7 +1186,7 @@ async def test_a_stale_label_reused_later_starts_fresh(clients: AsyncClient, pla
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1226,7 +1226,7 @@ async def test_the_sweep_clears_labels_NOBODY_COMES_BACK_FOR(clients: AsyncClien
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1257,7 +1257,7 @@ async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, p
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1697,7 +1697,7 @@ async def test_concurrent_settles_never_lose_a_block_draw(clients: AsyncClient):
     parallel draws serialize; after N concurrent settles the block must equal the ledger."""
     import asyncio
     from treg.domain import money
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import CreditBlock
     from sqlalchemy import select
 

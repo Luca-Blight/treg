@@ -13,7 +13,7 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import audit, ledger
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.ledger import with_margin
 from treg.models import CallRecord
 

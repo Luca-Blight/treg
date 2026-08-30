@@ -18,7 +18,7 @@ from conftest import make_upstream
 from treg import sandbox
 from treg.routers.onboard import SANDBOX_RATE_MAX
 from treg.api import app
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import Secret, Tool, User
 
 

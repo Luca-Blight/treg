@@ -16,11 +16,11 @@ from sqlmodel import select
 
 from .. import convert as _convert
 from .. import crypto, health, injectors, sandbox as demo_sandbox
-from .. import db as _db
+from ..infra import db as _db
 from .. import providers as _providers
 from .. import skills as _skills
 from ..config import get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..domain.governance import access as access_policy
 from ..domain.governance import sandbox as sandbox_policy
 from ..domain.tools import SecretOwnershipError, ToolConfigError
@@ -706,7 +706,7 @@ async def import_skill_folder(
             select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()}
         existing_secrets = {s.name for s in (await db.execute(
             select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()}
-        from .db import session_maker
+        from ..infra.db import session_maker
         results = []
         for d in chosen:
             if d.gaps:

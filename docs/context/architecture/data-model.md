@@ -17,7 +17,7 @@ sources:
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
-  - src/treg/db.py
+  - src/treg/infra/db.py
   - src/treg/referrals.py
   - src/treg/domain/referrals.py
   - src/treg/audit.py
@@ -231,7 +231,7 @@ applies **all** of a tool's bindings (e.g. google-ads = an oauth bearer + a `dev
 The API builds a single-binding tool from flat fields via `_flat_binding()`; injection is in
 [auth-secrets](auth-secrets.md).
 
-## Async DB (`db.py`)
+## Async DB (`src/treg/infra/db.py`)
 One async SQLAlchemy engine (`_engine`, Postgres pool 5 + 10 overflow per instance, `pool_timeout=5`)
 + a public `session_maker` (the audit writer opens its own session here; so do the post-relay
 bookkeeping steps of `/call/` — the request session is committed before the relay so none of them
@@ -365,7 +365,7 @@ records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `
 idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).
 `Membership` gains `pinned_tags`.
 
-Migrations `A30`-`A32` in `db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
+Migrations `A30`-`A32` in `src/treg/infra/db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
 tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
 `INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
 NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).

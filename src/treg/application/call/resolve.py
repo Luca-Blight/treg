@@ -17,7 +17,7 @@ from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
 from ...domain.capacity.routes_view import view as overflow_routes_view
 from ...domain.capacity.view import view as capacity_view
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
 from ...models import CapabilityPin, Org, Secret, Tool

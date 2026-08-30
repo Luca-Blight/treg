@@ -408,7 +408,7 @@ async def test_v2_search_and_catalog_request_keep_directory_attribution(clients)
     from sqlmodel import select
 
     from treg import audit
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import SearchMiss, ToolRequest
 
     token = clients.headers["X-Treg-Token"]
@@ -489,7 +489,7 @@ async def test_v2_write_call_and_insufficient_balance_errors_use_shared_behavior
 ):
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     await clients.post("/secrets", json={"name": "dataforseo", "value": "user:password"})

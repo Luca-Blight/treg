@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import billing, ledger
 from ..config import get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..domain.identity.access import Caller, _role_at_least, require_member
 from ..models import Org
 from .auth_helpers import _is_https

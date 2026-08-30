@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.identity.access import Caller
 from ...models import IdempotentCall
 from .types import IdempotencyFailed, IdempotentReplay

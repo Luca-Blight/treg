@@ -52,17 +52,17 @@ _EXPECTED_BACKGROUND_TASKS = {
 }
 _READ_ONLY_STARTUP_CHECKS = {
     "all": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "dataplane": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "control": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
     ),
 }

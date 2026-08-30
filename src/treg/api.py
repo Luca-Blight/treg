@@ -29,7 +29,7 @@ from sqlmodel import select
 from . import audit, catalog_store, crypto, localrun, ratestore, runner, sandbox as demo_sandbox
 from .caller_metadata import _client_of
 from .config import get_settings
-from .db import get_session, session_maker
+from .infra.db import get_session, session_maker
 from .domain.governance.teams import _unique_slug
 from .domain.identity.access import (
     Caller,

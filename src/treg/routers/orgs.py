@@ -17,7 +17,7 @@ from .. import providers as _providers
 from ..application import signup as signup_use_cases
 from ..caller_metadata import TAG_DEFAULT, _MAX_BUDGET_DIMS, _META_KEY_RE, _client_of, _norm_client
 from ..config import get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..domain.governance import budgets as budget_policy
 from ..domain.governance import access as access_policy
 from ..domain.governance import usage as usage_policy

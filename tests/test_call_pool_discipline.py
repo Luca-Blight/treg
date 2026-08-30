@@ -31,7 +31,7 @@ from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import audit, ledger
 from treg.config import get_settings
-from treg.db import _engine, session_maker
+from treg.infra.db import _engine, session_maker
 from treg.infra.upstream.relay import relay as upstream_relay
 from treg.models import CallRecord, Hold
 

@@ -9,7 +9,7 @@ sources:
   - src/treg/worker.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
-  - src/treg/db.py
+  - src/treg/infra/db.py
   - src/treg/email.py
   - src/treg/audit.py
   - scripts/dev-local.sh
@@ -347,7 +347,7 @@ from the web service via `fromService` — so a new platform key is added in ONE
 way. `TREG_OVERFLOW_MODE` (`off` default | `shadow` | `on`) and `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
 govern the overflow child cycle (`ops/capacity.md`); the keys serve nothing while the mode is `off`.
 
-## A db.py change needs a Postgres-shaped deploy plan
+## A `src/treg/infra/db.py` change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
 2026-08-15 outage (an ALTER on `callrecord` queued behind live traffic, every new query queued behind

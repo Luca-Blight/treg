@@ -18,7 +18,7 @@ sources:
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
   - src/treg/domain/tools/bundles.py
-  - src/treg/db.py
+  - src/treg/infra/db.py
   - tests/test_router_dependencies.py
 related:
   - architecture/data-model.md
