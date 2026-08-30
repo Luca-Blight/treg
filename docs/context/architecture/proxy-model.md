@@ -2,7 +2,6 @@
 title: The proxy — faithful credential-injecting relay + tool resolution
 status: shipped
 sources:
-  - src/treg/proxy.py
   - src/treg/infra/upstream/relay.py
   - src/treg/infra/upstream/ssrf.py
   - src/treg/api.py
@@ -39,7 +38,7 @@ related:
 
 # The proxy (the whole product in one function)
 
-The relay is `relay()` in `src/treg/infra/upstream/relay.py`; `treg.proxy` is its compatibility facade.
+The relay is `relay()` in `src/treg/infra/upstream/relay.py`.
 `application.call.resolve` resolves which tool or
 marketplace endpoint a request targets, and the call path loads its secrets; `relay()` injects and
 streams. It runs no business logic and never buffers the body.
@@ -107,7 +106,7 @@ identical on BYOK and platform-key calls (see [api](../interface/api.md)).
 
 A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
 uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued
-`/call/` request at all, so it never reaches `relay()` or `injectors.py` — it reads the platform org's
+`/call/` request at all, so it never reaches `relay()` or `infra/upstream/injectors.py` — it reads the platform org's
 stored OAuth secret directly and builds its own headers. See [ads-conversions](ads-conversions.md).
 
 **Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream

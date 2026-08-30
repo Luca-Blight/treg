@@ -5,7 +5,7 @@ reserves against a balance that only affords K yield exactly K successes — the
 conditional UPDATE exists for); a settle below the reserve refunding the difference; promotional
 credit burning before purchased; the stale-hold reaper; and the balance endpoint's auth gate.
 
-The invariant asserted throughout is the one from ledger.py:
+The invariant asserted throughout is the one from domain/money:
     org.balance_micro == sum(block.remaining_micro) - sum(open hold.amount_micro)
 """
 

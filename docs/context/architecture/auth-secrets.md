@@ -2,7 +2,6 @@
 title: Auth & secrets — injectors, encryption, OAuth freshness, health
 status: shipped
 sources:
-  - src/treg/injectors.py
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/ssrf.py
   - src/treg/crypto.py

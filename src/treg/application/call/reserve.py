@@ -129,7 +129,7 @@ async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
     the cap; the overshoot is bounded by concurrency × per-call estimate. That is acceptable ONLY
     because the hard gates sit behind this one: the org balance and the platform daily cap. Making it
     exact would need a second materialized authority on spend, reset daily, decremented on release and
-    corrected on settle divergence — four new ways to disagree with ledger.py, which is the one module
+    corrected on settle divergence — four new ways to disagree with domain/money, which is the one module
     allowed to move money. Never document these caps to builders as hard limits.
     """
     if not meta.tags:

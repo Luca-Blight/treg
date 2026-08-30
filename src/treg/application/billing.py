@@ -1,4 +1,4 @@
-"""The ONE module that talks to Stripe — the mirror of `ledger.py`, which is the one module that
+"""The ONE module that talks to Stripe — the mirror of `domain/money`, which is the one module that
 moves money. Neither reaches into the other's job: Stripe authorizes a payment here, and the ledger
 credits balance there, and the only thing that crosses between them is
 `ledger.topup(org, amount_micro, payment_ref)`.
@@ -1082,7 +1082,7 @@ async def _on_payment_reversed(db: AsyncSession, charge_or_dispute: dict, kind: 
     landed yet — and does NOTHING to the balance itself.
 
     That split is deliberate and it is the reason the hold window exists. treg has never reversed a
-    top-up automatically: `ledger.py` has no path that drives a balance negative, blocks burn
+    top-up automatically: `domain/money` has no path that drives a balance negative, blocks burn
     promotional-first precisely to keep the disputable pool small, and refund policy is a human
     decision. What IS safe to automate is not paying a third party a bounty funded by money that
     just went away. A bonus already granted is logged for a human instead (see

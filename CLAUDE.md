@@ -76,8 +76,9 @@ uv run --frozen python -m treg          # the server
 
 ## Money code
 
-`ledger.py` is the **only** code path that moves money; `billing.py` is the only one that talks to
-Stripe; `reconcile.py` is read-only. Everything is **integer micro-USD** — never floats, never cents.
+The ledger lives inside `domain/money` and is the **only** code path that moves money; the Stripe SDK
+lives only in `infra/stripe.py`, with orchestration in `application/billing.py`; `reconcile.py` is
+read-only. Everything is **integer micro-USD** — never floats, never cents.
 Never route a ledger write through `audit.py`: it drops rows past its queue bound, which is right for
 analytics and fatal for money. See `docs/context/architecture/money.md`.
 

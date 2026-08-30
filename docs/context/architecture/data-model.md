@@ -18,7 +18,6 @@ sources:
   - src/treg/models.py
   - src/treg/timeutil.py
   - src/treg/infra/db.py
-  - src/treg/referrals.py
   - src/treg/domain/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
@@ -346,7 +345,7 @@ lives in [money](money.md); this is the shape.
 
 | Table | Row means | Written by |
 |---|---|---|
-| `TagSpend` | what one call cost, attributed to ONE of its tags | `ledger.py` only, in the money transaction |
+| `TagSpend` | what one call cost, attributed to ONE of its tags | `domain/money` only, in the money transaction |
 | `TagBudget` | one builder-set limit on one `(dim, val)`, and the registry entry that bounds cardinality | `api.py` (auto-created on first sighting) |
 
 `CallRecord` gains `call_ref` (the `X-Treg-Call-Id` echoed to the caller and used as the ledger's

@@ -1,6 +1,6 @@
 """The referral program: who invited whom, whether we owe for it, and paying it out.
 
-This module DECIDES; `ledger.py` MOVES. The only money crossing is `ledger.grant(...)`, exactly
+This module DECIDES; `domain/money` MOVES. The only money crossing is `ledger.grant(...)`, exactly
 as `billing.py`'s only crossing is `ledger.topup(...)`. Nothing here writes `creditblock`,
 `ledgerentry` or `org.balance_micro`, and nothing here goes through `audit.py` (which sheds rows
 under load — right for analytics, fatal for money).
@@ -12,7 +12,7 @@ PAID TOP-UP, never their signup: `promo_grant_micro` is granted per ORG and a us
 unlimited orgs, so a signup-triggered bounty is a faucet pointed at itself.
 
 Payment is held for `referral_hold_days` and then granted lazily. There is no scheduler anywhere
-in treg by design (see ledger.py's reaper), so `sweep()` is called from paths someone is already
+in treg by design (see domain/money's reaper), so `sweep()` is called from paths someone is already
 paying for: every top-up, and the Referrals page itself.
 
 WHAT ARBITRATES A DOUBLE PAYOUT

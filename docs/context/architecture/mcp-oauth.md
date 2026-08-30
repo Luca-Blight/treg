@@ -4,7 +4,6 @@ status: shipped
 sources:
   - src/treg/application/auth.py
   - src/treg/mcp.py
-  - src/treg/mcp_oauth.py
   - src/treg/domain/identity/health.py
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
@@ -295,7 +294,7 @@ account). Here it is the thing that **issues** tokens. Different direction, diff
 `routers.auth` owns OAuth HTTP translation and consent rendering. `application.auth` sequences client
 registration, authorization, code exchange, refresh rotation/replay response, revocation, and grant-team
 changes; it opens each session and owns every commit. The identity leaf owns token/resource validation and
-grant-family primitives in `domain.identity.mcp_oauth`; `treg.mcp_oauth` remains a compatibility alias.
+grant-family primitives in `domain.identity.mcp_oauth`.
 Its client-metadata fetch imports `health` lazily, and `domain.identity.health` aliases the root
 credential-network safety module so both paths retain one module object and monkeypatch target.
 

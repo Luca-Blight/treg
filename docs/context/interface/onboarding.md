@@ -5,7 +5,6 @@ sources:
   - src/treg/application/auth.py
   - src/treg/application/onboard/__init__.py
   - src/treg/application/onboard/demo.py
-  - src/treg/demo.py
   - src/treg/cli.py
   - src/treg/routers/auth.py
   - src/treg/routers/onboard.py
