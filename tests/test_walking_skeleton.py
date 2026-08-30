@@ -136,17 +136,10 @@ def test_migrations_fail_fast_rather_than_queueing_the_world():
     traffic, and every new query then queues behind IT — both instances starve and the shared
     database wedges (2026-08-15, root cause). The startup path must set the timeout before running
     migrations so a contended deploy fails cleanly instead."""
-    import inspect as _inspect
     from importlib.resources import files
-
-    import treg.db as db
-
-    src = _inspect.getsource(db.init_db)
-    assert "lock_timeout" in src, "init_db must set lock_timeout before _migrate_to_orgs"
-    assert src.index("lock_timeout") < src.index("_migrate_to_orgs"), (
-        "the timeout must be set BEFORE the migrations run")
 
     env_src = files("treg").joinpath("alembic", "env.py").read_text()
     assert "lock_timeout = '5s'" in env_src
+    assert "statement_timeout = '120s'" in env_src
     assert env_src.index("lock_timeout = '5s'") < env_src.index("run_sync(_run_migrations)"), (
         "the timeout must be set BEFORE Alembic migrations run")

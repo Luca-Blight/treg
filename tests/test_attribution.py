@@ -8,11 +8,10 @@ the script is served on every public page with the PostHog key templated in (or 
 from urllib.parse import quote
 
 import pytest
-from sqlalchemy import create_engine, inspect
 from sqlmodel import select
 
 from treg.config import get_settings
-from treg.db import _migrate_to_orgs, session_maker
+from treg.db import session_maker
 from treg.models import Org
 
 COOKIE = quote("botdirectory.ai|sponsor|edge||p1|botdirectory.ai", safe="")
@@ -89,15 +88,3 @@ async def test_public_pages_load_sitetrack_before_the_ad_script(clients, path):
     r = await clients.get(path, follow_redirects=True)
     assert r.status_code == 200, (path, r.status_code)
     assert '<script src="/sitetrack.js"></script>' in r.text, path
-
-
-def test_existing_org_table_receives_utm_columns():
-    # A database that predates the feature gets the columns additively (migration A40).
-    from sqlalchemy import text
-    eng = create_engine("sqlite://")
-    with eng.begin() as c:
-        c.execute(text("CREATE TABLE org (id INTEGER PRIMARY KEY, name VARCHAR, slug VARCHAR)"))
-    with eng.begin() as c:
-        _migrate_to_orgs(c)
-    cols = {col["name"] for col in inspect(eng).get_columns("org")}
-    assert {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer"} <= cols

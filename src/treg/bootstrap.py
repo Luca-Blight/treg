@@ -25,7 +25,7 @@ from .bootstrap_http import (
     _SecurityHeadersMiddleware,
 )
 from .config import get_settings
-from .db import init_db, session_maker
+from .db import session_maker, verify_db
 from .infra.catalog_observations import (
     CachedEndpointObservationReader,
     PostgresEndpointObservationReader,
@@ -268,17 +268,17 @@ ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
 }
 ROLE_STARTUP_CHECKS: dict[AppRole, tuple[str, ...]] = {
     "all": (
-        "treg.db.init_db",
+        "treg.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "dataplane": (
-        "treg.db.init_db",
+        "treg.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "control": (
-        "treg.db.init_db",
+        "treg.db.verify_db",
         "app.state.http",
     ),
 }
@@ -407,7 +407,7 @@ def _route_manifest(routes: Sequence[BaseRoute]) -> list[str]:
 def _lifespan(role: AppRole):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await init_db()
+        await verify_db()
 
         limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
         app.state.http = httpx.AsyncClient(

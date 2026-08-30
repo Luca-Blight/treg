@@ -208,50 +208,10 @@ dependencies, role comparison, and machine classification. Session signing and v
 - **Slug vs id.** `_resolve_org` resolves `X-Treg-Org` by slug first (an all-digit slug like `2024` is
   producible and must not be reinterpreted as a primary key).
 
-## Frozen adoption migration (`db.py`)
-The handwritten `init_db()` migration tail is frozen at Alembic revision `0009`. For a non-empty,
-unstamped database, `maintenance._upgrade_schema` runs it once, verifies the complete table set and
-late adoption columns, then stamps head. It remains temporarily in the FastAPI lifespan and standalone
-worker commands until later cleanup, but no new schema change is added here.
-
-`init_db()` runs `_migrate_to_orgs` inside its `begin()` block — **guarded + idempotent**. It (A) adds
-`org_id` columns to legacy resource tables (`ALTER TABLE ADD COLUMN`), and (B), only when the `org` table
-is empty and a legacy `user.token_hash` column exists, creates the default `superdesign` org, turns each
-flat-era user's token into an **owner Membership**, backfills `org_id` on all resources, relaxes the
-global `tool.name` unique index to the composite (`_fix_tool_uniqueness`), and rebuilds the `user` table
-identity-only (`_rebuild_user_table`, since SQLite can't drop columns portably). A fresh DB (create_all
-already the new shape) short-circuits. **`_rebuild_user_table` must preserve every current-schema column**
-(`is_superadmin`/`suspended` from `_ensure_bool_col`, plus `token_version` — the additive `ALTER "user"
-ADD COLUMN token_version` at (A9)) when it copies rows — recreating `user` with only `(id,email,created_at)`
-silently drops them and, because a re-run short-circuits, permanently 500s every User load on a legacy
-upgrade. (`"user"` is quoted in the `ALTER` — a reserved word in Postgres, where this runs in-place.)
-(A12) adds `tool_access` (JSON, nullable) + `local_run_enabled` (`BOOLEAN NOT NULL DEFAULT true`) to
-**both** `membership` and `invite`; the legacy owner-backfill INSERT names `local_run_enabled` explicitly
-(create_all builds it NOT NULL with no server default). Verified in-place on Postgres. Later additive steps
-follow the same guarded pattern: (A14) `invite.landing`, (A15) `org.public_demo`, (A16) the seven `secret`
-connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resource_name`/`expires_at`/
-`last_refresh_at`/`last_error`), (A17–A20) the eight `pendingoauth` OAuth-marketplace/quirk columns
-(`provider`/`code_verifier`/`auth_params`/`token_endpoint_auth_method`/`client_id_param`/`scope_separator`/
-`long_lived_exchange`/`replaces_secret_id`). **Postgres BOOLEAN default fix (PR #22):** every boolean added
-in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
-column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
-is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
-`public_demo` explicitly with a `false` literal. **(A35) OAuth grant authority** backfills the new
-`oauthgrant` table from each refresh family's oldest row with a portable, idempotent
-`INSERT … SELECT … WHERE NOT EXISTS`; future team moves update that family row and leave historical
-token `org_id` values untouched. Because a rolling deploy can run an old binary after A35 and create
-only `OAuthRefresh`, request-time `_ensure_grant` repeats that oldest-row reconstruction with a
-concurrency-safe upsert before refresh, grant listing, or a team move. **(A21) PROJECTS** follows the
-same shape: the `project` table itself needs no ALTER (a brand-new table is created by `create_all`),
-so the step only adds the three
-columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
-**both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an
-existing deployment behaves exactly as before until someone creates a project; and because none of them is a
-BOOLEAN, the Postgres integer-default trap does not apply here. Note what (A21) deliberately does NOT do:
-`Tool.name` keeps its `(org_id, name)` unique constraint, because projects are a **label + ACL scope, not a
-namespace** — making them a namespace would have meant rebuilding that constraint, which `_fix_tool_uniqueness`
-already had to do once and which SQLite cannot express portably. **`DenyRule`** (policy) needs no migration
-step at all for the same new-table reason.
+## Schema ownership
+Alembic owns the multi-tenant schema. The 0.14.x adoption release converted and stamped legacy
+databases; current releases refuse a non-empty unstamped database and direct the operator through that
+floor. `db.verify_db()` checks revision compatibility without creating or repairing tenancy tables.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).
