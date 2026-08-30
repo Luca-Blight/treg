@@ -4,6 +4,8 @@ status: shipped
 sources:
   - pyproject.toml
   - src/treg/__main__.py
+  - src/treg/maintenance.py
+  - src/treg/alembic/env.py
   - src/treg/worker.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
@@ -22,15 +24,49 @@ related:
 # Running & deploying
 
 ## Entry point (`__main__.py`)
-`python -m treg` → `main()` → `uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))`
-(`--reload` optional). It honors `$PORT` (Render/Heroku route + health-check that port). `python -m treg
-keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
-`bootstrap.create_app(role="all")`; the compatibility import and deployed behavior are unchanged.
+`python -m treg upgrade` runs the explicit release phase. `maintenance._upgrade_schema()` first chooses
+one schema path: empty databases run `alembic upgrade head`; stamped databases upgrade to head; non-empty
+unstamped databases run frozen legacy `init_db()`, pass `_find_adoption_gaps`, then stamp head. A missing
+table or required late column names the gap and exits nonzero without stamping. Two support-policy
+consequences: the adoption window is this release vintage - a legacy database can only be adopted while
+the frozen `init_db()` still produces the shape the sweep expects, so a self-hosted install that lags past
+future schema changes must upgrade THROUGH the adoption release, 0.14.x (`pip install 'tools-registry[server]==0.14.*'`,
+run `python -m treg upgrade` there once) before continuing onward; and a database stamped at a revision the running build does
+not know (a rollback past the rollback floor) refuses with an instruction instead of migrating. The
+ordered, idempotent release-task registry runs only after the schema succeeds. It currently contains the provider
+companion-tool backfill and never provisions a single-user identity.
 
-## Startup safety (`db.py init_db`)
-- **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated
-  current-schema baseline, but startup still runs `init_db`. No existing database is stamped or
-  upgraded through Alembic in stage 1; that execution switch is reserved for refactor stage 5.
+The default `python -m treg` serve path runs that same upgrade phase and then
+`api._bootstrap_single_user()`, then disposes the async engine inside the pre-serve event loop before calling
+`uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))` (`--reload` optional). It honors
+`$PORT` (Render/Heroku route + health-check that port). `python -m treg keygen` prints a Fernet key for
+`TREG_SECRET_KEY` without importing the server maintenance stack. `treg.api:app` is
+`bootstrap.create_app(role="all")`.
+
+The FastAPI lifespan still calls `init_db()` until the next Stage 5 cleanup PR. That
+idempotent second call is harmless, and role startup manifests no longer contain data backfills or
+single-user provisioning. Operators serving `treg.api:app` directly through a raw ASGI command must run
+`python -m treg upgrade` once for every release. Render runs it as `preDeployCommand`; the existing
+`startCommand: python -m treg` repeats the fast idempotent upgrade for self-hosted parity.
+
+Both pre-Uvicorn entry paths dispose the engine before their `asyncio.run()` loop closes: the default
+serve path does so after single-user bootstrap, and `python -m treg upgrade` does so after all release
+tasks. The next event loop therefore creates fresh pooled connections instead of receiving connections
+bound to a closed maintenance loop. Calling `maintenance.upgrade()` directly does not dispose the engine.
+
+## Schema upgrade safety
+- **Alembic is authoritative:** migration scripts ship inside `src/treg/alembic/` in the wheel.
+  `maintenance._alembic_config()` resolves that installed package resource, supplies the escaped
+  configured URL, and runs Alembic in a worker thread so its internal event loop never nests inside
+  the maintenance loop.
+- **Adoption is checked, never blind:** legacy `init_db()` is frozen at revision `0009`. Within the
+  maintenance phase it runs only for a non-empty database without `alembic_version`. Every model table
+  and selected late columns must exist before `stamp head`; otherwise the command names the missing
+  object and exits nonzero. Lifespan and worker entry points retain redundant frozen calls temporarily.
+- **New schema changes are revision-only:** the legacy parity test compares fresh `init_db` output
+  against Alembic HEAD (both sides track live metadata, so it stays green across revisions) until PR3
+  removes that path. An autogenerate drift guard requires Alembic head and
+  `SQLModel.metadata` to match exactly.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.
@@ -106,7 +142,7 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
   [api](../interface/api.md).
 - **Frictionless local mode** (`single_user`, `single_user_token_file`): `curl {BASE}/selfhost.sh | sh`
   brings up a registry on the caller's own machine that they are **already signed into** — no account,
-  email or password. `lifespan` calls `_bootstrap_single_user()`, which idempotently creates the
+  email or password. The default serve pre-phase calls `_bootstrap_single_user()`, which idempotently creates the
   `you@local.treg` owner + `personal` team and writes the token (0600) for the installer to hand to the
   CLI; the token is **stable across restarts** (re-minted only if the file is deleted), and `dashboard()`
   attaches a session when there is none. It adopts an org **only through a membership this identity
@@ -184,22 +220,24 @@ its own sqlite DB and email dev mode.
 `render.yaml` at the repo root deploys the whole thing as **one web service + a managed Postgres**
 (region `oregon`): `buildCommand: pip install ".[server]"` — the base install is the **CLI only**, so the
 server deploy needs the `[server]` extra (FastAPI/DB/crypto); the wheel ships every web asset via the package.
-`startCommand: python -m treg`, health check on `/meta`. The DB URL is auto-wired via `fromDatabase`
+`preDeployCommand: python -m treg upgrade`, `startCommand: python -m treg`, and health check on `/meta`.
+The pre-deploy migration must succeed before Render replaces the serving instance; the start command
+repeats the idempotent phase for installations without a pre-deploy facility. The DB URL is auto-wired via `fromDatabase`
 (config's validator adds the asyncpg driver). Secrets are **dashboard-managed** (`sync: false` — the
 Fernet key, session/admin tokens, GitHub OAuth pair, Resend key, and the optional landing live-wire pair
 `TREG_DEMO_STRIPE_KEY` + `TREG_DEMO_STRIPE_WEBHOOK_SECRET`); `TREG_PUBLIC_URL`,
 `TREG_EMAIL_DEV_MODE=false`, and `TREG_EMAIL_FROM` are set inline. `asyncpg` is a dependency (Postgres
 async driver, alongside `aiosqlite`).
 
-**Fresh-Postgres verified:** `init_db`'s `create_all` + the guarded `_migrate_to_orgs` no-op cleanly on
-a fresh Postgres (all tables/columns present, idempotent on re-run) — the migration's SQLite-flavoured
-raw SQL only fires on a legacy/missing-column DB. **Timestamps must be naive UTC:** the datetime columns
+**Fresh-Postgres verified:** an empty database runs the pure Alembic chain to head. Existing unstamped
+deployments run frozen legacy `init_db()` and are stamped only after the adoption sanity check.
+**Timestamps must be naive UTC:** the datetime columns
 are `TIMESTAMP WITHOUT TIME ZONE`, and asyncpg rejects tz-aware values, so `models._now()` returns naive
 UTC (SQLite is lax and hid this; it only bites on Postgres — the deploy target).
 
-**Migration portability (Postgres-safe additive columns).** The additive `ALTER TABLE … ADD COLUMN`
-steps in `_migrate_to_orgs` run on **every** startup and are idempotent (guarded by a column-existence
-check), so they must be written in SQL that both SQLite and Postgres accept. The rules the code follows:
+**Frozen legacy migration portability.** The additive `ALTER TABLE … ADD COLUMN` steps in
+`_migrate_to_orgs` remain idempotent and portable for adoption and the temporarily redundant lifespan
+call. They are frozen at revision `0009`; future schema changes belong only in Alembic. The rules are:
 use `TIMESTAMP` (not `DATETIME` — Postgres has no `DATETIME` type); declare booleans as
 `BOOLEAN … DEFAULT false` (not `DEFAULT 0` — Postgres rejects an integer default on a boolean column);
 and write boolean literals as `true` / `false` (not `0` / `1`) in any `INSERT`. SQLite accepts all of
@@ -264,6 +302,19 @@ provider named here has its registry-connect calls metered against the org balan
 in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Currently `x`.
 BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
 `tier: oauth`; the burn from the free period is only in console.x.com.
+
+## Routed discovery — the steering switch (2026-08-29)
+
+`TREG_ROUTED_DISCOVERY` (`on` by default, `off` to disable) decides whether DISCOVERY steers to
+`treg.<capability>` rows. Off, search and the platform browse view stop showing them and
+`/skill.md` + `/llms.txt` stop teaching them — while the endpoints stay generated, priced,
+`catalog get`-able and callable by id, so agents that already hold one keep working. A dashboard
+flip, no redeploy, like `TREG_PLATFORM_PROVIDERS` and `TREG_OVERFLOW_MODE`.
+
+It exists because two questions are separate: whether the router ANSWERS well (measured — the
+people-search bench puts the routed path at parity with the hand-written policy it replaces) and
+whether every agent should be LED to it by default (only traffic answers that). Flip it rather than
+reverting the feature.
 
 ## Market data platform keys (2026-08-16)
 
@@ -332,7 +383,8 @@ SQLite cannot catch this class: it has no connection pool and no lock queue. Two
 2026-08-15 outage (an ALTER on `callrecord` queued behind live traffic, every new query queued behind
 the ALTER, both instances starved, and the shared Postgres stayed wedged until a database restart):
 
-- Startup migrations run with `lock_timeout = 5s` (set in `init_db`, postgres only). A contended
+- Alembic migrations and frozen legacy adoption run with `lock_timeout = 5s` (set in `env.py` and
+  `init_db`, Postgres only). A contended
   deploy therefore FAILS CLEANLY — prod keeps serving the old code — and the right response is to
   redeploy at a quieter moment, not to raise the timeout.
 - The pool is per instance and a rolling deploy runs two: keep `pool_size + max_overflow` such that

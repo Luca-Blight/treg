@@ -138,7 +138,7 @@ async def test_aggregates_pool_across_orgs_but_carry_nothing_identifying(clients
         await _record(EP, 200, org_id=2)
     got = (await _observed([EP]))[EP]
     assert got["samples"] == 6                                   # pooled across tenants
-    assert set(got) == {"samples", "ok_rate", "p50_ms", "p95_ms", "last_ok_days", "hit_rate", "hit_samples"}
+    assert set(got) == {"samples", "decided", "ok_rate", "p50_ms", "p95_ms", "last_ok_days", "hit_rate", "hit_samples"}
     assert not any(k in got for k in ("org_id", "user_email", "params_hash", "client"))
 
 

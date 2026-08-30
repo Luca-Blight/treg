@@ -78,7 +78,7 @@ ALL_MANIFESTS = {"codex": MANIFEST, "claude": CLAUDE_MANIFEST, "cursor": CURSOR_
 # The one line that positions the product. It is the same sentence `llms.txt` opens with, and it is
 # hand-maintained in three places across two stores — which is exactly the shape of thing that
 # drifts, so it is pinned rather than trusted.
-POSITIONING = ("OpenRouter for tools - 2,600 agent-friendly tools, "
+POSITIONING = ("OpenRouter for tools - 2,896 agent-friendly tools, "
                "pay for the usage, not subscription")
 
 

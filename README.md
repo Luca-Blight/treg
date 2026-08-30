@@ -269,6 +269,7 @@ Or run the server directly, without tmux:
 
 ```bash
 uv sync                        # create the venv from uv.lock (pulls the server deps for dev)
+uv run python -m treg upgrade  # prepare schema + run idempotent release tasks without serving
 uv run python -m treg          # serve on 0.0.0.0:18790 (add --reload for dev)
 uv run python -m treg keygen   # print a fresh Fernet key for TREG_SECRET_KEY
 ```

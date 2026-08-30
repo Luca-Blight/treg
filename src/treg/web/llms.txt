@@ -11,6 +11,12 @@ social and trends, enrichment, ads, scraping. Ask for the task, not the tool: yo
 know which vendor sells backlink data, or to hold an account with them. Search the catalog for what
 you want to do, read the price, call it.
 
+Three readable indexes, each also served as Markdown by appending `.md`: `{BASE}/use-cases`
+(one page per job, every provider that does it compared on price, measured success rate and
+speed), `{BASE}/workflows` (several jobs chained into one prompt, each step priced, with the
+receipt from a real run) and `{BASE}/tools/<provider>` (one provider's endpoints and per-call
+prices). Start there when you want the comparison rather than one endpoint.
+
 Why this exists: the tools an agent needs for real work are behind subscriptions nobody buys for a
 single run (Semrush $139/mo, Moz $99/mo, Crunchbase $99/mo, Apollo $59/seat), behind signup walls,
 or behind no public API at all — invite-only, partner-only, app-review-only. treg carries those
@@ -194,6 +200,7 @@ endpoint** through a treg-owned relay account — same request, same response sh
 real price — with `X-Treg-Served-Via: overflow:<name>` on the response (a team can opt out with
 `treg org overflow off`). Your own keys are never relayed.
 
+<!--routed-->
 **Routed endpoints — when you WANT treg to choose.** `treg.<capability>` rows (today:
 `treg.people.email.find`) are first-party endpoints generated from the providers of one capability.
 `POST /call/treg.people.email.find` with `{full_name, domain}` (or `first_name`+`last_name`+`domain`,
@@ -205,6 +212,7 @@ provider error OR a miss falls through to the next provider, cheapest first, wit
 ranked plan and prices before you spend.
 Call a specific provider's endpoint when you need a particular one.
 
+<!--/routed-->
 Money notes for agents:
 - The price is visible before you call (`treg catalog get`, or `estimated_cost_usd` in
   `GET {BASE}/catalog/endpoints/<id>/access`). No confirmation ritual — costs are fractions

@@ -647,7 +647,9 @@ the entire point of giving them a scoped token.
 
 ### The per-org daily cap has two owners
 
-`Org.daily_cap_micro` is the team's own ceiling; `platform_daily_cap_usd` is ours. The effective cap is
+`Org.daily_cap_micro` is the team's own ceiling; `platform_daily_cap_usd` is ours (**$500/day**
+since 2026-08-29 — at $100 a normal agent workload tripped it while the team still held balance).
+The effective cap is
 `min(the two)` (`api._effective_daily_cap`). A team may lower theirs freely and see it at
 `GET /orgs/{id}/settings` — a limit nobody can see becomes a support ticket the first time an agent
 trips it. Raising past our ceiling is **refused, not clamped**: a builder who thinks they set $500/day
@@ -809,3 +811,25 @@ The overflow child (`application.call.overflow`) is an ordinary metered cycle on
 and `cost_source: "aggregator"` + `served_via` in the ledger `meta`, so `reconcile` needs no join.
 `OverflowSpend` (per aggregator per UTC day) is updated inside that same settle transaction; it is
 accounting for the $20/day budget, not a balance. Shadow mode places no hold and charges nothing.
+
+## A per_success miss the adapter cannot see (2026-08-29)
+
+`per_success` settles at the estimate unless something can say "this body is a miss". The routing
+adapter's predicate covers routed children — but **1330 of 1517** per_success endpoints have no
+adapter, and they are the scrapers, whose failure mode IS an HTTP 200 carrying an error code.
+
+Those providers publish a success rule and the catalog already records it as `expect`
+(`{json_path, equals}`), read until now only by `scripts/catalog_verify.py`. `settle.py` consults it
+when no adapter applies, and `store.py` carries it onto the endpoint — including inherited from the
+provider FILE, the way `cache` already is, because a vendor's "HTTP 200 always, read `code`"
+convention is one fact about the whole provider and an ingest that adds routes must not ship them
+ruleless (33 of justoneapi's 260 were).
+
+Found live: `justoneapi.x.linkedin-search-user-v1` answered `{"code": 301, "message": "COLLECT
+FAILED, SEND REQUEST AGAIN"}` — free on the vendor's own published terms ("only a code-0 response is
+billed") — and treg settled $0.0295 against the caller. Adapter first, `expect` second, estimate
+last; an undecidable rule still settles at the estimate rather than guessing in the caller's favour.
+
+STILL OPEN: tikhub's 919 per_success endpoints have neither an adapter nor an `expect` anywhere.
+That is the larger half of the exposure and needs its success convention verified against the
+vendor's docs before a file-level rule is written.

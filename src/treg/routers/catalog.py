@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
 from .. import audit, catalog_store, oauth_providers
+from ..config import get_settings
 from ..domain.catalog import stats as endpoint_stats
 
 
@@ -87,6 +88,11 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     hidden_count = len([e for e in eps if e["kind"] in catalog_store.HIDDEN_KINDS])
     if not include_hidden:
         eps = [e for e in eps if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    # The BROWSE view steers too — it sorts the routed parent to the top of its capability group —
+    # so it honours the same switch as search. Otherwise a deployment with routed discovery off
+    # would hide the row in search and still lead with it one click later.
+    if str(get_settings().routed_discovery).strip().lower() in ("off", "0", "false", "no"):
+        eps = [e for e in eps if e.get("kind") != "routed"]
     grouped: dict[str, list[dict]] = {}
     extended: list[dict] = []
     pairs: list[tuple[dict, dict]] = []
@@ -231,6 +237,28 @@ async def catalog_search(q: str = "", limit: int = 25,
     return out
 
 
+def _related_capabilities(ep: dict, cat) -> list[dict]:
+    """Adjacent JOBS on the same subject, as routed rows the caller can call next.
+
+    `siblings` answers "who else does THIS job"; nothing answered "this is the wrong job, the one
+    you want is next door". A caller that lands on `people.enrich` wanting an email gets a 200 with
+    a job title and no way to learn `people.email.find` exists — the contract has no `email` field
+    at all, because every provider sells profile data and email lookup as separate products
+    (measured 2026-08-29: 0 of 403 enriched rows carried one). Discovery vocabulary fixes the
+    caller who SEARCHES; this fixes the caller who arrived by id."""
+    cap = ep.get("capability") or ""
+    subject = cap.split(".")[0]
+    if not subject:
+        return []
+    out = []
+    for row in cat.by_id.values():
+        c = row.get("capability") or ""
+        if (row.get("kind") == "routed" and c != cap and c.startswith(subject + ".")
+                and cat.capabilities.get(c)):
+            out.append({"endpoint_id": row["id"], "capability": c, "does": cat.capabilities[c]})
+    return sorted(out, key=lambda r: r["capability"])[:5]
+
+
 @app.get("/catalog/endpoints/{endpoint_id}")
 async def catalog_endpoint(
     endpoint_id: str,
@@ -307,6 +335,7 @@ async def catalog_endpoint(
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
                      **cat.provider_meta.get(ep["provider"], {})},
         "siblings": siblings,
+        **({"related_capabilities": rel} if (rel := _related_capabilities(ep, cat)) else {}),
         **({"routing": routing} if routing is not None else {}),
         "call_template": catalog_store.call_template(ep),
         "example_response": example,

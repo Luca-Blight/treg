@@ -3,13 +3,17 @@ title: Data model — the registry tables, async DB, audit writer
 status: shipped
 sources:
   - alembic.ini
-  - alembic/env.py
-  - alembic/versions/0001_baseline_current_schema.py
-  - alembic/versions/0002_archive_tables.py
-  - alembic/versions/0005_capacity_policy_snapshot.py
-  - alembic/versions/0006_overflow_route.py
-  - alembic/versions/0007_overflow_spend.py
-  - alembic/versions/0008_org_platform_overflow_disabled.py
+  - src/treg/alembic/env.py
+  - src/treg/alembic/versions/0001_baseline_current_schema.py
+  - src/treg/alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0003_callrecord_cached.py
+  - src/treg/alembic/versions/0004_archivekey_request_shape.py
+  - src/treg/alembic/versions/0005_capacity_policy_snapshot.py
+  - src/treg/alembic/versions/0006_overflow_route.py
+  - src/treg/alembic/versions/0007_overflow_spend.py
+  - src/treg/alembic/versions/0008_org_platform_overflow_disabled.py
+  - src/treg/alembic/versions/0009_callrecord_hit.py
+  - src/treg/maintenance.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -208,16 +212,16 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `treg-worker capacity sweep` only, never by the call path; the sweep also publishes a per-provider
   latest state into `Ephemeral` under `capacity:state:<provider>`, which the dataplane will read on a
   TTL from plan step D. Numbers only — never a credential. See `ops/capacity.md`. Alembic revision
-  `0002` pairs with the `create_all` path for these two tables.
+  `0005` creates these two tables.
 - **`OverflowRoute`** — one `(endpoint_id, aggregator)` pair: the same vendor endpoint served through a
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
-  DERIVED `enabled`. Filled by `treg-worker overflow sync` only (alembic `0003`); read-only for the call
+  DERIVED `enabled`. Filled by `treg-worker overflow sync` only (Alembic `0006`); read-only for the call
   path. See `ops/capacity.md`.
-- `Org.platform_overflow_disabled` — the team's overflow opt-out (alembic `0005`, legacy `_ensure_bool_col`;
+- `Org.platform_overflow_disabled` - the team's overflow opt-out (Alembic `0008`, legacy `_ensure_bool_col`;
   the legacy-org backfill INSERT names it explicitly like every NOT NULL column). See `ops/capacity.md`.
 - **`OverflowSpend`** — per aggregator per UTC day: calls, the aggregator's charge, the delta against
   treg's direct price. Written inside the overflow child's settle transaction (and by the shadow probe);
-  the $20/day budget reads it. Alembic `0004`. Not a balance.
+  the $20/day budget reads it. Alembic `0007`. Not a balance.
 
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is
@@ -230,7 +234,9 @@ The API builds a single-binding tool from flat fields via `_flat_binding()`; inj
 One async SQLAlchemy engine (`_engine`, Postgres pool 5 + 10 overflow per instance, `pool_timeout=5`)
 + a public `session_maker` (the audit writer opens its own session here; so do the post-relay
 bookkeeping steps of `/call/` — the request session is committed before the relay so none of them
-ever waits on it, see [proxy-model](proxy-model.md) § Connection discipline). `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` —
+ever waits on it, see [proxy-model](proxy-model.md) § Connection discipline). The public
+`dispose_engine()` closes pooled connections before an explicit maintenance event loop exits, so a
+later server loop cannot inherit connections bound to the closed loop. `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` -
 see [multi-tenancy](multi-tenancy.md)); that migration also does the small additive `ADD COLUMN` steps for
 columns added after a table shipped (e.g. `tool.examples`, `tool.cli` for local runs, `org.public_demo`
 (A15), the seven `secret` connection-metadata columns (A16), and the eight `pendingoauth` marketplace/quirk
@@ -249,23 +255,26 @@ Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as
 temporarily as `api._utcnow_naive` and `api._as_naive` during the staged router migration. Query
 parameters compared with timestamp columns follow the same constraint as inserted or updated values.
 
-## Alembic baseline
+## Alembic execution and frozen adoption
 
-Revisions after the baseline (`0002` capacity tables, `0003` overflow routes, `0004` overflow spend) must be paired with the legacy startup path
-until stage 5; the parity test compares a fresh `init_db` schema with `alembic upgrade head`.
+Alembic owns schema execution through `maintenance._upgrade_schema`. An empty database runs
+`alembic upgrade head`. A database with `alembic_version` also upgrades to head. A non-empty,
+unstamped database takes the one-time adoption path: frozen legacy `init_db()` brings it to revision
+`0009`, `_find_adoption_gaps` verifies every `SQLModel.metadata` table plus late columns from archive,
+capacity, overflow, and routing, and only then stamps head. A named gap aborts without stamping.
 
+Migration scripts live under `src/treg/alembic/`, inside the shipped wheel. The repo-root
+`alembic.ini` points there for developer CLI use, while `maintenance._alembic_config` resolves the
+installed package resource and supplies the configured database URL. Alembic commands run through
+`asyncio.to_thread` because the environment owns its own `asyncio.run`. On Postgres, `env.py` sets
+`lock_timeout = 5s` before migrations so lock contention fails the deploy cleanly.
 
-`alembic/versions/0001_baseline_current_schema.py` is the migration baseline for the current
-`SQLModel.metadata` schema. `alembic/env.py` uses the same async SQLite or Postgres URL as the server
-and exposes that metadata for future revision generation. The baseline is validation-only in refactor
-stage 1: application startup still calls `db.init_db()`, existing databases are not stamped, and the
-execution switch remains stage 5 work.
-
-`tests/test_alembic_baseline.py` creates a fresh database through each path and compares every
-application table's columns, primary and foreign keys, unique and check constraints, and indexes. It
-runs on SQLite in the full suite and on Postgres in the `test-postgres` CI subset. The comparison
-excludes only Alembic's own `alembic_version` bookkeeping table. Until stage 5, each schema change must
-update both the guarded startup migration and an Alembic revision while this parity test stays green.
+`tests/test_alembic_baseline.py` pins the old dual-path comparison to `ADOPTION_REV = "0009"`; it
+retires with the handwritten path in Stage 5 PR3. New schema work is Alembic-revision-only. The
+authoritative drift guard upgrades to head, runs Alembic autogenerate against `SQLModel.metadata`, and
+requires an empty diff. FastAPI lifespan and worker commands still call frozen `init_db()` temporarily,
+but they no longer define where new schema changes go. Both tests run on SQLite in the full suite and
+Postgres in `test-postgres` CI.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a

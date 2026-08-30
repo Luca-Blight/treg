@@ -1,9 +1,11 @@
 ---
-title: Archive — every platform answer, kept and versioned (cache = the newest layer)
+title: Archive - every platform answer, kept and versioned (cache = the newest layer)
 status: building
 sources:
   - src/treg/archive.py
-  - alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0003_callrecord_cached.py
+  - src/treg/alembic/versions/0004_archivekey_request_shape.py
   - src/treg/api.py
   - src/treg/bootstrap.py
   - src/treg/catalog_store.py
@@ -112,7 +114,10 @@ Hooked in `call_tool` immediately after `_buffer_response` — the one line wher
 call, body already in memory" is a fact, which IS eligibility gate 3. Metered 2xx only; the
 `X-Treg-Cache`-style serve headers do not exist yet. `archive.record()` is fire-and-forget with
 audit's discipline: bounded pending set (512), failures swallowed with a log line, `drain()` on
-shutdown (bootstrap) and in tests. A recorder crash cannot fail a call (tested).
+shutdown (bootstrap) and in tests. A recorder crash cannot fail a call (tested). `drain()` removes
+the tasks it gathered itself rather than waiting on their done callbacks — audit's exact drain
+discipline; the busy-spin both avoid (the 2026-08 serial-Postgres CI hang) is explained and pinned
+for both modules in `tests/test_audit.py`.
 
 **Counted vs kept.** Statistics and the raw-body `content_hash` are recorded for every observed
 answer (a hash is an identity, not the content); body BYTES are kept only when the entry's cache
@@ -137,8 +142,10 @@ enable. Rollback in production is a dashboard env edit, no deploy.
 1. **Kind.** `kind: action` entries are never stored; only data reads pass.
 2. **License.** Per catalog entry: `cache: forbidden | transient | archive` — either a bare
    string or a provenance dict `{mode, license_quote, source_url, checked}`, exactly like `cost`
-   provenance. **Absent ⇒ forbidden**: an unjudged provider is never stored (the same posture as
-   the platform offer's free-only guard — the safe answer is the silent one).
+   provenance. **Absent ⇒ `archive_default_policy`**, which is `transient` since the founder's
+   keep-all decision (2026-08-29): unjudged providers' bodies ARE kept as short-lived cache, and
+   the env flips it back to `forbidden` without a deploy. A JUDGED forbidden (a licence that was
+   read and says no — Finnhub) is always respected, and a missing entry is never stored.
 3. **Tier.** Only METERED PLATFORM calls are recorded. Those responses are already fully buffered
    for the settle (`_buffer_response` needs the provider's reported cost), so recording adds no
    latency and no new data path. Own-key and own-tool calls stream and are never touched — that

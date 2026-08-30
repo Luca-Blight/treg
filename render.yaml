@@ -24,6 +24,7 @@ services:
     plan: starter
     branch: main
     buildCommand: pip install ".[server]"
+    preDeployCommand: python -m treg upgrade
     startCommand: python -m treg
     healthCheckPath: /meta
     autoDeploy: true
@@ -354,4 +355,3 @@ services:
           type: web
           name: treg
           envVarName: TREG_PLATFORM_KEY_TOMBA_SECRET
-

@@ -17,9 +17,9 @@ the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (
 
 from __future__ import annotations
 
-import re
 
 import json
+import re
 import logging
 from dataclasses import dataclass, field
 from urllib.parse import urlencode
@@ -34,7 +34,7 @@ from ...domain.catalog import stats as endpoint_stats
 from ...domain.catalog import store as catalog_store
 from ...domain.catalog.routing.contracts import canonical_identity
 from ...domain.catalog.routing.plan import (
-    MAX_ERROR_FALLBACKS, Candidate, Plan, candidates_for, cost_at, rank,
+    MAX_ERROR_FALLBACKS, Candidate, Plan, candidates_for, cost_at, ignored_filters, rank,
 )
 from .resolve import _host_of, _marketplace_secret
 from .types import CallContext, CallFailure, GatewayFailed, ResolutionFailed, UpstreamResponse
@@ -71,15 +71,19 @@ WATERFALL_HEADER = "x-treg-route-waterfall"
 MAX_COST_HEADER = "x-treg-route-max-cost"
 PREFER_HEADER = "x-treg-route-prefer"
 EXCLUDE_HEADER = "x-treg-route-exclude"
+MIN_RESULTS_HEADER = "x-treg-route-min-results"
+MERGE_HEADER = "x-treg-route-merge"
 _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-encoding", b"idempotency-key",
                               b"x-treg-route-waterfall", b"x-treg-route-max-cost", b"x-treg-route-prefer",
-                              b"x-treg-route-exclude", b"host"})
+                              b"x-treg-route-exclude", b"x-treg-route-min-results",
+                              b"x-treg-route-merge", b"host"})
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 _CANDIDATE_LOCAL_FAILURES = frozenset({"tool_access_denied", "policy_denied", "capability_pinned"})
 _GLOBAL_REFUSALS = frozenset({"insufficient_balance", "tag_spend_cap_reached",
                               "platform_daily_cap_reached", "daily_cap_reached"})
 
 
+MAX_WEAK_FALLBACKS = 2   # extra providers asked after a thin-but-real answer (see min_results)
 CHEAP_RETRY_MICRO = 10_000  # ≤ 1¢: a per_call provider cheap enough to be asked after another's 4xx
 
 
@@ -103,6 +107,8 @@ class RouteOptions:
     max_cost_micro: int | None = DEFAULT_MAX_COST_MICRO
     prefer: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
+    min_results: int = 1     # a hit with fewer rows than this is WEAK: keep looking, keep the best
+    merge: bool = False      # union the rows of every attempt that returned some (list answers only)
 
     @classmethod
     def from_headers(cls, get, default_max_cost_micro: int | None = None) -> "RouteOptions":
@@ -116,8 +122,15 @@ class RouteOptions:
             raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
                                    detail=f"{MAX_COST_HEADER} must be a USD number, got {mc!r}")
         wf = str(get(WATERFALL_HEADER) or "").strip().lower()
+        try:
+            mr = max(1, int(get(MIN_RESULTS_HEADER) or 1))
+        except ValueError:
+            raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
+                                   detail=f"{MIN_RESULTS_HEADER} must be a whole number, got {get(MIN_RESULTS_HEADER)!r}")
+        mg = str(get(MERGE_HEADER) or "").strip().lower()
         return cls(waterfall=wf not in ("0", "false", "no", "off"),
-                   max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)))
+                   max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)),
+                   min_results=mr, merge=mg in ("1", "true", "yes", "on"))
 
 
 class _Bytes:
@@ -145,6 +158,58 @@ class Attempt:
         return {"endpoint_id": self.endpoint_id, "provider": self.provider, "outcome": self.outcome,
                 "status": self.status, "charged_micro": self.charged_micro, **({"detail": self.detail} if self.detail else {}),
                 **({"ignored_filters": list(self.ignored)} if self.ignored else {})}
+
+
+def _list_field(contract) -> str | None:
+    """The contract's ONE list-shaped required output (`people`, `companies`). Merging only makes
+    sense for these: two answers to "this person's email" is a conflict, not a union."""
+    for k in contract.required_output:
+        if (contract.output.get(k) or {}).get("type") == "list":
+            return k
+    return None
+
+
+def _norm_url(v: str) -> str:
+    """Scheme, `www.` and trailing slashes are noise a provider adds or omits at will — two rows for
+    one person differ by exactly that (`https://linkedin.com/in/ada` vs `www.linkedin.com/in/Ada/`)."""
+    u = v.strip().lower()
+    u = re.sub(r"^https?://", "", u)
+    u = re.sub(r"^www\.", "", u)
+    return u.rstrip("/")
+
+
+def _row_key(row) -> str:
+    """Dedup across PROVIDER-NATIVE rows, which share no schema. A profile URL is the only value
+    two providers reliably agree on; a normalised name is the fallback, and a row with neither is
+    kept (dropping it would silently lose an answer we already paid for)."""
+    if not isinstance(row, dict):
+        return ""
+    for path in ("linkedin_url", "profileUrl", "url", "linkedinUrl", "profile_url"):
+        v = row.get(path)
+        if isinstance(v, str) and v.strip():
+            return _norm_url(v)
+    urls = row.get("URLs")
+    if isinstance(urls, dict) and isinstance(urls.get("linkedin"), str):
+        return _norm_url(urls["linkedin"])
+    name = row.get("fullName") or row.get("full_name") or row.get("name") or " ".join(
+        str(row.get(k) or "") for k in ("firstname", "lastname")).strip()
+    return re.sub(r"[^a-z0-9]+", "", str(name).lower()) if name else ""
+
+
+def _merge_rows(field: str, answers: list[tuple], limit: int | None):
+    """Union in ATTEMPT order — the ranking of the provider that answered first leads, later
+    providers append what they add. The caller already paid for every one of these rows
+    (`spent` sums every attempt), so discarding them is pure waste."""
+    seen, out = set(), []
+    for _cand, _doc, core, _raw in answers:
+        for r in (core.get(field) or []):
+            k = _row_key(r)
+            if k and k in seen:
+                continue
+            if k:
+                seen.add(k)
+            out.append(r)
+    return out[:limit] if limit else out
 
 
 async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptions) -> Plan:
@@ -196,7 +261,8 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         price = 0 if tier != "platform" else cost_at(cv, identity)
         c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=st.get("hit_rate"),
                       ok_rate=st.get("ok_rate"), p50_ms=st.get("p50_ms"), last_ok_days=st.get("last_ok_days"),
-                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])))
+                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])),
+                      ignored=ignored_filters(ad, contract, identity))
         if tier == "platform" and not cat.platform_eligible(e):
             dropped.append({"endpoint_id": e["id"], "why": "not platform-eligible and no own key"})
             continue
@@ -272,6 +338,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
     errors = 0
     rejected_by: set[str] = set()  # providers that answered a vendor 4xx
     winner: tuple[Candidate, dict, dict, bytes] | None = None
+    answers: list[tuple] = []      # every attempt that returned rows, for X-Treg-Route-Merge
+    weak_hits = 0
+    best: tuple[int, tuple[Candidate, dict, dict, bytes]] | None = None   # best WEAK answer seen
     for n, cand in enumerate(plan.candidates):
         if options.max_cost_micro is not None and spent + (cand.price_micro or 0) > options.max_cost_micro:
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0, "would exceed max cost"))
@@ -284,9 +353,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
         # A filter the caller sent that this adapter never mentions is silently NOT applied — say so
         # on the attempt (live 2026-08-29: `country: fr` reached icypeas as nothing, rows came from
-        # anywhere; the bench had post-filtered in the agent).
-        used = set(cand.adapter.in_map) | {n for e in (cand.adapter.in_expr or {}).values() for n in re.findall(r"[A-Za-z_]\w*", e)}
-        ignored = tuple(k for k in plan.contract.filters if plan.identity.get(k) not in (None, "") and k not in used)
+        # anywhere; the bench had post-filtered in the agent). Computed at planning time, where it
+        # also ranks the candidate down.
+        ignored = cand.ignored
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
         try:
             response = await execute_child(child, upstream_client)
@@ -346,11 +415,36 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                 continue
             winner = (cand, doc if doc is not None else {}, {}, raw)
             break
-        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "hit", response.status, charged, ignored=ignored))
+        # A HIT that answers thinly is not the end of the search. `min_results` lets the caller say
+        # how many rows make an answer; below it the waterfall keeps going and the best result so
+        # far is kept, so a weak first provider can still win if nothing better turns up. Without
+        # this the router stops at the first non-empty body — three rows of the wrong people end a
+        # search that a later provider would have answered (bench 2026-08-29, recruiting).
+        n_rows = max((len(v) for v in core.values() if isinstance(v, list)), default=1)
+        weak = options.waterfall and n_rows < options.min_results
+        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "weak" if weak else "hit",
+                             response.status, charged, f"{n_rows} < min_results {options.min_results}" if weak else "",
+                             ignored=ignored))
+        if weak:
+            if best is None or n_rows > best[0]:
+                best = (n_rows, (cand, doc, core, raw))
+            answers.append((cand, doc, core, raw))
+            weak_hits += 1
+            # Bounded like the error fallback, and for the same reason: a brief whose honest answer
+            # IS one or two people (a lookup — "who runs engineering at X") never clears the bar, so
+            # an unbounded rule walks the whole paid ladder on every such call. Measured on the
+            # bench's deterministic set, unbounded cost 12.7x ($1.76 -> $22.35 over 28 queries) for
+            # answers that were already correct.
+            if weak_hits > MAX_WEAK_FALLBACKS:
+                break
+            continue
+        answers.append((cand, doc, core, raw))
         winner = (cand, doc, core, raw)
         break
+    if winner is None and best is not None:
+        winner = best[1]          # nobody cleared min_results — the fullest answer we paid for wins
     if winner is None:
-        outcome = "miss" if tried and all(t.outcome in ("miss", "skipped") for t in tried) else "error"
+        outcome = "miss" if tried and all(t.outcome in ("miss", "skipped", "weak") for t in tried) else "error"
         if outcome == "miss":
             last = next(t for t in reversed(tried) if t.outcome == "miss")
             body_out = {"output": {k: None for k in plan.contract.output}, "raw": None,
@@ -366,12 +460,32 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                        f"every candidate for {ep['id']} failed"})
     cand, doc, output, raw = winner
     served = cand.endpoint["id"]
+    merged_from: list[str] = []
+    if options.merge and len(answers) > 1:
+        # A LIST answer is the only shape a union makes sense for, and the caller has already been
+        # charged for every attempt (`charged_micro` is the running sum) — so without this the
+        # router throws away rows the team paid for. Bench 2026-08-29: a `people.search` that fell
+        # through returned the fullest SINGLE provider's rows, never icypeas' 5 plus exa's 10.
+        field = _list_field(plan.contract)
+        if field:
+            rows = _merge_rows(field, answers, plan.identity.get("limit"))
+            if len(rows) > len(output.get(field) or []):
+                output = {**output, field: rows}
+                merged_from = [c.endpoint["id"] for c, _, core_i, _ in answers if (core_i.get(field) or [])]
+                served = merged_from[0]
+    # The rows answer a LOOSER question than the caller asked when the winner could not express a
+    # filter. It is on the attempt, but no caller reads `tried[]` — say it where the answer is, and
+    # on a header, or the agent post-filters nothing and never knows why the geography is wrong.
     body_out = {"output": output or {k: None for k in plan.contract.output}, "raw": doc,
                 "_treg": {"served_by": served, "provider": cand.endpoint["provider"], "tier": cand.tier,
+                          **({"merged_from": merged_from} if merged_from else {}),
                           "outcome": tried[-1].outcome, "tried": [t.view() for t in tried], "charged_micro": spent,
+                          **({"ignored_filters": list(cand.ignored)} if cand.ignored else {}),
                           **({"dropped": plan.dropped} if plan.dropped else {})}}
     _audit_parent(parent, ep, 200, spent, audit_client)
     return _json(body_out, 200, {"X-Treg-Served-By": served, "X-Treg-Providers-Tried": ",".join(t.provider for t in tried),
+                                 **({"X-Treg-Merged-From": ",".join(merged_from)} if merged_from else {}),
+                                 **({"X-Treg-Ignored-Filters": ",".join(cand.ignored)} if cand.ignored else {}),
                                  "X-Treg-Route-Outcome": tried[-1].outcome}), spent
 
 

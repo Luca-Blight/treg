@@ -457,6 +457,15 @@
       "GET",
       "HEAD"
     ],
+    "name": "indexnow_key",
+    "path": "/7c2e4a91b5d3f8e6treg2026.txt"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "install_sh",
     "path": "/install.sh"
   },

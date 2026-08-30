@@ -257,6 +257,13 @@ def _parse(directory: Path) -> Catalog:
                 continue
             if "cache" not in raw and meta.get("cache") is not None:
                 raw = {**raw, "cache": meta["cache"]}
+            # Same inheritance for the provider's SUCCESS rule. A vendor's "HTTP 200 always, read
+            # `code`" convention is one fact about the whole provider, and stating it per endpoint
+            # means an ingest that adds routes silently ships them without one — 33 of justoneapi's
+            # 260 were missing it, and settle.py bills the estimate when it cannot tell a failure
+            # from a hit.
+            if "expect" not in raw and doc.get("expect") is not None:
+                raw = {**raw, "expect": doc["expect"]}
             ep = _normalize(raw, provider, directory)
             if ep["id"] in by_id:  # first file wins; ids are unique by validator contract
                 continue
@@ -456,6 +463,11 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # the request the verifier actually made — a proven set of values, which is what makes
         # `call_template` a paste-ready line rather than a shape with placeholders in it
         "test_request": raw.get("test_request") or {},
+        # The provider's OWN success rule ("HTTP 200 always; `code` 0 means it worked"). It was a
+        # verification-only field (scripts/catalog_verify.py); settle.py now reads it so a
+        # per_success endpoint with no routing adapter can still tell a vendor-side failure from a
+        # hit. Without it treg bills the estimate for a body the VENDOR gave away free.
+        "expect": raw.get("expect") or None,
         "cost": _effective_cost(raw),
         # Absent `tier` means core: the curated first wave predates the split, and treating an
         # unmarked endpoint as extended would hide it from the platform view entirely.
@@ -574,7 +586,19 @@ def group_routed(rows: list[dict], key=lambda r: r, max_children: int | None = N
     providers must not eat the whole result budget (`find leads`, 2026-08-28: people.search's
     children pushed people.email.find to one line and people.enrich off the page). The children
     kept are the best-ranked ones; the parent row is stamped `children_hidden` = how many were cut,
-    and the full ranked list is one `catalog get <parent>` away."""
+    and the full ranked list is one `catalog get <parent>` away.
+
+    `TREG_ROUTED_DISCOVERY=off` turns the STEERING off and returns the rows untouched: routed
+    endpoints stay callable, priced and reachable by id — search simply stops leading with them, as
+    it did before routing shipped. Whether the router answers well and whether every agent should
+    be pointed at it by default are different questions; this is the switch for the second one."""
+    from ...config import get_settings
+    if str(get_settings().routed_discovery).strip().lower() in ("off", "0", "false", "no"):
+        # Not merely "do not group": before routing shipped these rows did not exist, and a routed
+        # row still MATCHES a keyword search on its own summary, so leaving it in would keep
+        # steering by the back door. Off means search never surfaces one; `catalog get <id>` and
+        # `POST /call/<id>` are untouched.
+        return [r for r in rows if key(r).get("kind") != "routed"]
     routed_caps = {key(r)["capability"] for r in rows if key(r).get("kind") == "routed"}
     if not routed_caps:
         return rows

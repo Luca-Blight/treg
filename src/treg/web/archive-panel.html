@@ -221,7 +221,7 @@
         <table>
           <thead><tr>
             <th data-tip="The catalog endpoint. Only metered platform calls are observed — own-key traffic never enters the archive.">Endpoint</th>
-            <th data-tip="What the provider's licence allows. transient/archive = may be stored and served. forbidden (unjudged) = nobody has read the licence yet, so only statistics are counted. forbidden (judged) = the licence was read and it says no.">Policy</th>
+            <th data-tip="Storage policy. transient/archive = stored and servable (unjudged providers default to transient under the keep-all setting). forbidden (judged) = the licence was read and it says no; never stored.">Policy</th>
             <th data-tip="How long an answer is served before the vendor is asked again. Learned per key: unchanged answers stretch it ×1.5, changed answers halve it. Range = coldest to hottest key.">Learned TTL</th>
             <th data-tip="Of the times we re-asked the same question, how often the answer had actually changed. 0 = frozen data. 1 = changes every time (such keys mark themselves never-cache).">Change ratio</th>
             <th data-tip="Distinct questions observed for this endpoint.">Keys</th>
@@ -274,7 +274,7 @@
       return '<span class="pill p-transient" data-tip="The licence was read and allows storing. transient = short-lived cache; archive = long-term history too.">' + pol + '</span>';
     if (judged)
       return '<span class="pill p-never" data-tip="The licence was read and it forbids storing or sharing. Counted for statistics, never kept, never served.">forbidden (judged)</span>';
-    return '<span class="pill p-forbidden" data-tip="Nobody has judged this provider\'s licence yet, so the safe default applies: count statistics, keep nothing.">forbidden (unjudged)</span>';
+    return '<span class="pill p-forbidden" data-tip="Nobody has judged this provider\'s licence yet. Under the keep-all default these are still stored as transient; only a judged forbidden blocks storage.">forbidden (unjudged)</span>';
   }
 
   function renderReport(d) {

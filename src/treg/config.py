@@ -199,12 +199,26 @@ class Settings(BaseSettings):
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
     # Render dashboard turns the whole feature off without a redeploy.
     platform_providers: str = ""
+    # Whether DISCOVERY steers to routed rows: `treg.<capability>` first in search, and a routed
+    # parent pulled in whenever one of its children matched. `off` leaves every routed endpoint
+    # callable and priced — only the steering stops, and search looks as it did before routing
+    # shipped. Same runtime-switch shape as `platform_providers`: flip it in the dashboard, no
+    # redeploy. It exists because "does the router answer well" and "should every agent be led to
+    # it by default" are separate questions, and the second one is answered by traffic, not by
+    # argument.
+    routed_discovery: str = "on"
     # Per-org, per-UTC-day ceiling on tier-4 spend, and the CEILING a team may raise its own
     # `Org.daily_cap_micro` to. Enforced FAIL-CLOSED (unlike the soft per-user call cap): a query
     # error refuses the call rather than letting an unbounded amount of our money out. It is a
     # blast-radius limit on a runaway agent or a mispriced catalog entry, not a billing control —
     # the balance is what a team actually spends against.
-    platform_daily_cap_usd: float = 100.0
+    #
+    # Raised 100 -> 500 on 2026-08-29. At 100 an ordinary day's work tripped it: a benchmark agent
+    # exploring the catalog spends ~$0.10 a query, and 26 of 32 briefs came back empty because every
+    # call after the ceiling 429'd — the team had $92 of balance and could not use it. The rail is
+    # still here, and it is still ours to raise per team; it just should not fire before a real
+    # workload does.
+    platform_daily_cap_usd: float = 500.0
     # OAuth providers whose UPSTREAM bill lands on treg's developer app rather than the connected
     # user (X moved to pay-per-use in Feb 2026: the app owner is billed per resource read / per post
     # written, whoever's token made the call). Calls through a registry connect of a provider named
@@ -262,6 +276,11 @@ class Settings(BaseSettings):
     # Bodies above this size are hash-counted but never stored (skipped whole, not truncated):
     # the archive is for API JSON answers, not downloads. Statistics still record size_bytes.
     archive_max_body_bytes: int = 2_000_000
+    # What happens to an endpoint WITHOUT a judged `cache:` field (the founder's 2026-08-29
+    # decision): "transient" keeps every answer body as short-lived cache; "forbidden" is the old
+    # keep-nothing posture. A judged forbidden (a licence that was read and says no) is always
+    # respected, and actions are never stored, whatever this says.
+    archive_default_policy: str = "transient"
     # The refresh worker (serve mode only): how often it scans for due keys, and how many
     # refresh calls ONE provider may spend per UTC day. A refresh is treg's own vendor spend with
     # no caller attached, so the cap is the brake — 0 disables refreshing without touching serving.

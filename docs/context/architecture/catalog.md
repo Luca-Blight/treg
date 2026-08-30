@@ -1195,6 +1195,53 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   goes to a title-aware search, not a free domain-only one that would answer the whole company.
   Only caller-supplied keys count (`rank(given=…)`), never keys reached through `derive`. Price
   decides among equals.
+- **Ranking, dropped filters (2026-08-29)**: a candidate whose adapter cannot express a filter the
+  caller SENT ranks below every candidate that can — `len(candidate.ignored)` sits in `rank()`'s key
+  between specificity and price. It answers a LOOSER question, and a non-empty answer to the looser
+  question still passes `adapter.miss`, so cheapness alone must never buy it. Found live: a
+  `people.search` for `{q, title, location: "London, United Kingdom", country: GB}` went to the
+  cheapest child, which mapped neither geo filter, and returned people in Bengaluru and San
+  Francisco — reported as a hit, $0.0025, no signal to the caller. `ignored_filters()` is pure and
+  computed at PLANNING time (`routing/plan.py`), so the ranking and the per-attempt report read the
+  same set. The provider stays reachable: it still wins when nothing better is callable, and price
+  still decides among candidates that ignore equally much.
+  **Coverage caveat**: of 16 `people.search` children, only icypeas maps geo today, so the rule
+  currently floats one provider. lusha, crustdata, companyenrich and leadmagic all filter on
+  location upstream — their adapters just do not map it. Until they do, the rule is doing more work
+  than it should have to.
+- **A contract that cannot say what the brief says (2026-08-29)**: `people.search` exposed only
+  `{q, company_domain, title, full_name}` + `{country, location, limit}`, while icypeas natively
+  filters on `keyword`, `skills`, `pastJobTitle`, `school`, `languages` and
+  `totalYearsOfExperience`. And `q` is IDENTITY, so when icypeas matched the `{title}` variant the
+  free text was never sent — a routed search for "backend developers in London with microservices"
+  reached the provider as `title + location`, with the requirement dropped. Every failing bench
+  query had this shape ("football scouting analysts" → `title="Football Analyst"`, 15 rows, 0
+  qualified). `keywords` is now a FILTER (filters always travel; identity does not) mapped to
+  icypeas `query.keyword.include`, leadsforge's keyword field, and folded into exa's semantic query.
+  Measured on the bench's 30 recruiting briefs: **55.4 → 69.2 overall** (nDCG@10 51.2 → 64.3,
+  coverage 49.7 → 68.1), failing queries 8 → 2.
+  A `titles` list filter was tried at the same time and **REVERTED**: paired over the same 30
+  queries it cost −0.068 ± 0.022 (95% CI [−0.112, −0.024]). Broader title variants ("Software
+  Engineer" for a backend brief) buy recall the metric does not want and lose precision.
+- **min_results, and why it is bounded (2026-08-29)**: `X-Treg-Route-Min-Results: N` records a hit
+  with fewer than N rows as `weak` and keeps going, returning the fullest answer seen. It is what
+  the hand-written bench policy did (`if len(rows) < 3 -> semantic fallback`) and the routed path
+  could not express. Unbounded it is ruinous on LOOKUP briefs, whose honest answer IS one person:
+  nothing ever clears the bar, so every call pays the whole ladder — the bench's deterministic set
+  went **$1.76 → $22.35 over 28 queries, 12.7x**, for answers that were already right. Bounded at
+  `MAX_WEAK_FALLBACKS = 2`, mirroring the error fallback, the same set costs ~$0.39 — cheaper than
+  the baseline — and recruiting keeps its gain (it never needed more than one fall-through).
+  Pair it with `X-Treg-Route-Max-Cost` on any capability where thin answers are normal.
+- **Routed parity with a hand-written policy (2026-08-29)**: after the two changes above, paired
+  over the same 30 recruiting briefs against the 08-27 hand-written icypeas policy, the routed path
+  is indistinguishable — nDCG@10 −2.40 (95% CI [−7.12, +2.33]), utility −0.80 ([−3.10, +1.51]),
+  qualified/query −0.53 ([−1.84, +0.77]) — and ahead of the published Lessie 68.2, Exa 64.7 and
+  Claude Code 50.5. The remaining differences are agent-side, not routing: the hand-written policy
+  post-filtered rows on location and over-fetched (`size: 20`, trimmed to 15).
+- **The answer says what it ignored (2026-08-29)**: `ignored_filters` was on `_treg.tried[]` only,
+  which no caller reads. It is now also on `_treg` itself for the child that served and on an
+  `X-Treg-Ignored-Filters` response header, so an agent can post-filter, or say why the rows are
+  wrong, without walking the attempt list.
 - **people.\* sweep (2026-08-29)**: people.search 6 → 16 children (aviato dsl/simple, companyenrich
   scroll, crustdata, fiber-ai, leadsforge, leadmagic search + role-finder, findymail employees +
   domain — the last retagged from email.find, it returns a list), people.enrich 9 → 14 (aviato bulk,
@@ -1210,6 +1257,35 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   is listed on the attempt as `ignored_filters` — silently unapplied was the worst outcome (the bench
   had post-filtered in the agent because of it). Bench re-run, recruiting 30: same icypeas rows as the
   hand-written policy, one automatic fall-through, region briefs rescued by the pass-through.
+- **Routed DISCOVERY is a runtime switch (2026-08-29)**: `TREG_ROUTED_DISCOVERY=off` (default `on`)
+  stops search leading with `treg.<capability>` and stops a routed parent riding in when a child
+  matches — the endpoints stay callable, priced and reachable by id, and `catalog get`/`POST /call/`
+  are untouched. Off also HIDES routed rows from search results, not merely ungroups them: a routed
+  row matches a keyword query on its own summary, so leaving it in would steer by the back door.
+  One choke point (`group_routed`) serves both callers (`mcp.py`, `routers/catalog.py`); MCP also
+  narrows its rank band back to `limit` when off, since the widening exists only so groups can
+  collapse. Same dashboard-flip shape as `platform_providers` and `TREG_OVERFLOW_MODE` — no
+  redeploy. It covers every surface that steers, not just search: the platform BROWSE view
+  (`/catalog/platforms/{slug}`, which sorts the routed parent to the top of its capability group)
+  drops routed rows too, and `/skill.md` and `/llms.txt` strip their routed section — a deployment
+  that hides the row from search must not keep TEACHING agents to call it, or the docs and the
+  catalog disagree and the agent believes the docs. The section is delimited in those two files by
+  `<!--routed-->…<!--/routed-->`; the markers are stripped either way, and the unrelated overflow /
+  `provider_capacity_unavailable` guidance in the same paragraphs is kept (it came from the capacity
+  work, not from routing — which is also why a `git revert` of #242 would be the wrong instrument). It exists because "does the router answer well" and "should every agent be led to it by
+  default" are separate questions: the bench answered the first (55.4 → 69.2 on recruiting, parity
+  with a hand-written policy), and only traffic can answer the second.
+- **creators.search routed (2026-08-29)**: the capability that most needed it and never had it. Two
+  providers answer "find creators" and they are not comparable: influencersclub takes `location`,
+  `keywords_in_bio` and `number_of_followers {min,max}` as REAL filters and returns followers,
+  engagement and location inline; `exa.creators.search` takes a sentence and returns a URL and a
+  title. Unrouted, an agent picks one blind. On the bench it picked exa, then made **115
+  `instagram.user.profile` calls** checking follower counts by hand, discarded everyone it could not
+  confirm, and returned 1 row where the hand-written pipeline returned 15 qualified — influencer was
+  the ONLY category the agent lost (54.4 vs the pipeline's 60.2). With the contract, exa reports
+  `ignored_filters: [platform, followers_min, followers_max]` and ranks below a provider that can
+  express them. `followers_min`/`followers_max` are contract filters because an audience band is the
+  constraint a creator brief almost always carries, and the one a URL-only result cannot answer.
 - **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
   and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
   apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the
@@ -1217,6 +1293,11 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   them under ALSO with the rest of the same-job endpoints that have no adapter; the search page's
   "+N more" points there. The routed row's example body and `/access` dry-run use the identity
   variant MOST children accept, and the dry-run tries every variant before saying "unservable".
+  That dry-run is ONE identity shape, so its drops are mostly "this adapter takes another identity",
+  not "your team cannot reach this provider" — `/access` used to label them "not available here",
+  which read as a missing key and sent a reader hunting for one (2026-08-29: aviato, callable on
+  treg's platform key and serving live calls, was listed as unavailable). It now names the shape and
+  gives each drop its own `why`.
 - **Coverage (2026-08-28)**: 74 routed capabilities = 80.9% of 30-day platform calls (88% was the
   routable ceiling). The per-capability ledger — what shipped with which children, what is 🚫 and
   why (one usable vendor, async task-post engines, identity-less feeds), and the 49 zero-traffic

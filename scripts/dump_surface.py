@@ -151,11 +151,6 @@ def _lifespan() -> dict[str, Any]:
         ],
         "startup": [
             {"action": "await", "task": "treg.db.init_db"},
-            {
-                "action": "await",
-                "task": "treg.api._backfill_provider_extra_tools",
-            },
-            {"action": "await", "task": "treg.api._bootstrap_single_user"},
             {"action": "create", "task": "app.state.http (httpx.AsyncClient)"},
         ],
     }
