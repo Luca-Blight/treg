@@ -82,7 +82,7 @@ to a live call (an api-side belt catches even a fault in lookup's own plumbing; 
 it explode).
 
 `CallRecord.cached` (migration 0003) is declared LAST in the model to match ALTER TABLE's
-append position — the baseline parity test compares column order.
+append position, keeping `create_all` test schemas aligned with the migrated production shape.
 
 ## The catalog `cache` field (PR 3)
 

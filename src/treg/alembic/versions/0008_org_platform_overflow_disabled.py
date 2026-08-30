@@ -4,12 +4,11 @@ Revision ID: 0008
 Revises: 0007
 Create Date: 2026-08-28
 
-Added with a server default so existing rows are valid, then the default is dropped to match the
-legacy create_all shape (no server default; the default lives in Python), which the parity test
-compares.
+Added with a server default so existing rows are valid, then the default is dropped so the shape
+matches the model (no server default; the default lives in Python).
 
-The default-removal ALTER makes this revision a declared rollback floor under the expand-safety
-policy.
+Rollback floor: the new NOT NULL column keeps no server default once backfilled, so code older
+than this revision can no longer insert orgs.
 """
 from collections.abc import Sequence
 

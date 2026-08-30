@@ -270,8 +270,9 @@ suite and Postgres in `test-postgres` CI.
 
 `test_alembic_expand_safety.py` parses only each revision's `upgrade()` body and permits a closed
 set of additive Alembic operations. Any ALTER, DROP, raw execution, or unknown operation must set
-module-level `contract = True` and name its rollback floor in the module docstring. Revisions 0003
-and 0008 declare their default-removal ALTERs; revision 0004 is the sole explicit grandfather entry.
+module-level `contract = True` and name its rollback floor in the module docstring. Revisions 0003,
+0004, and 0008 declare theirs: each adds a NOT NULL column and drops its server default, so older
+code can no longer insert rows.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a

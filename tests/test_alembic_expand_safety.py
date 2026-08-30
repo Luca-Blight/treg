@@ -17,11 +17,6 @@ ADDITIVE_OPERATIONS = frozenset({
     "create_unique_constraint",
     "f",
 })
-# Revision 0004 predates this policy. Keep the exception narrow and visible instead of teaching the
-# general rule that ALTER is additive.
-GRANDFATHERED_OPERATIONS = {
-    "0004_archivekey_request_shape.py": frozenset({"alter_column"}),
-}
 
 
 def _module_contract(tree: ast.Module) -> bool:
@@ -76,31 +71,23 @@ def _alembic_operations(upgrade: ast.FunctionDef) -> list[tuple[str, int]]:
 
 def test_alembic_upgrades_are_expand_only_or_declare_a_rollback_floor():
     failures: list[str] = []
-    used_grandfather_entries: set[str] = set()
 
     for path in sorted(VERSIONS.glob("*.py")):
         tree = ast.parse(path.read_text(), filename=str(path))
         contract = _module_contract(tree)
         docstring = ast.get_docstring(tree) or ""
-        non_additive: list[tuple[str, int]] = []
 
-        for operation, line in _alembic_operations(_upgrade_function(tree)):
-            if operation in ADDITIVE_OPERATIONS:
-                continue
-            if operation in GRANDFATHERED_OPERATIONS.get(path.name, ()):
-                used_grandfather_entries.add(path.name)
-                continue
-            non_additive.append((operation, line))
+        non_additive = [
+            (operation, line)
+            for operation, line in _alembic_operations(_upgrade_function(tree))
+            if operation not in ADDITIVE_OPERATIONS
+        ]
 
         if non_additive and not contract:
             details = ", ".join(f"{operation} at line {line}" for operation, line in non_additive)
             failures.append(f"{path.name}: non-additive upgrade operation(s): {details}")
         if contract and "rollback floor" not in docstring.lower():
             failures.append(f"{path.name}: contract revision docstring lacks 'rollback floor'")
-
-    unused = set(GRANDFATHERED_OPERATIONS) - used_grandfather_entries
-    if unused:
-        failures.append(f"unused grandfather entries: {', '.join(sorted(unused))}")
 
     assert not failures, (
         "\n".join(failures)

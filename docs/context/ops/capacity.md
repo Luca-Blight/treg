@@ -192,8 +192,8 @@ propagate to the call service for their dedicated cleanup and response handling.
 
 ## Enabling overflow (step F) — the opt-out and the rollout
 
-`Org.platform_overflow_disabled` (Alembic `0008` + legacy `_ensure_bool_col`; last column in the
-class on purpose — alembic appends and the parity test compares order) is the team opt-out:
+`Org.platform_overflow_disabled` (Alembic `0008`; last column in the class on purpose — alembic
+appends, keeping create_all test schemas aligned with the migrated shape) is the team opt-out:
 `GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default true), `treg org overflow
 [on|off]` sets it. Honoured before any aggregator is contacted, on both entry points (the
 post-failure child cycle and the resolver's skip-direct rung); an opted-out team gets the typed 503.

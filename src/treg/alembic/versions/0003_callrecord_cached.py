@@ -5,8 +5,8 @@ columns stay identical to a live call on purpose — pricing a hit is a deferred
 that will attach to this tag. server_default false backfills every historical row correctly:
 nothing before this migration was ever served from the store.
 
-The default-removal ALTER makes this revision a declared rollback floor under the expand-safety
-policy.
+Rollback floor: the new NOT NULL column keeps no server default once backfilled, so code older
+than this revision can no longer insert call records.
 
 Revision ID: 0003
 Revises: 0002
