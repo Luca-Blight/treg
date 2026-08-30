@@ -83,6 +83,10 @@ async def init_db() -> None:
 def _migrate_to_orgs(conn) -> None:
     """Sync migration run inside `init_db`'s begin() block. Idempotent + guarded.
 
+    FROZEN (stage-5 PR2): schema changes are Alembic revisions only - never add another step
+    here. This path survives solely for legacy adoption (`maintenance._upgrade_schema`) and the
+    temporarily redundant lifespan `init_db()`, and is deleted in stage-5 PR3.
+
     (A) Additive DDL: ensure `org_id` exists on the resource tables (older SQLite DBs created
         before the orgs model won't have it; ADD COLUMN is safe + nullable).
     (B) Legacy backfill (only when the `org` table is empty AND a legacy `user.token_hash`

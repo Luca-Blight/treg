@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import socket
 import sqlite3
@@ -40,6 +41,56 @@ def _run(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[st
 
 def _upgrade(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return _run(["-m", "treg", "upgrade"], env)
+
+
+def _alembic_upgrade(env: dict[str, str], revision: str) -> subprocess.CompletedProcess[str]:
+    return _run(["-m", "alembic", "upgrade", revision], env)
+
+
+def _legacy_init(env: dict[str, str]) -> None:
+    script = textwrap.dedent(
+        """
+        import asyncio
+
+        from treg.db import dispose_engine, init_db
+
+        async def main():
+            await init_db()
+            await dispose_engine()
+
+        asyncio.run(main())
+        """
+    )
+    result = _run(["-c", script], env)
+    assert result.returncode == 0, result.stderr
+
+
+@functools.cache
+def _script_directory():
+    from alembic.script import ScriptDirectory
+
+    from treg.maintenance import _alembic_config
+
+    return ScriptDirectory.from_config(_alembic_config())
+
+
+def _alembic_head() -> str:
+    return _script_directory().get_current_head()
+
+
+def _one_behind_head() -> str:
+    return _script_directory().get_revision(_alembic_head()).down_revision
+
+
+def _alembic_version(database: Path) -> str | None:
+    with sqlite3.connect(database) as db:
+        version_table = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'alembic_version'"
+        ).fetchone()
+        if version_table is None:
+            return None
+        row = db.execute("SELECT version_num FROM alembic_version").fetchone()
+        return row[0] if row else None
 
 
 def _seed_connection(env: dict[str, str]) -> None:
@@ -165,21 +216,111 @@ def test_real_serve_path_can_query_database_after_pre_serve_maintenance(tmp_path
     )
 
 
-def test_upgrade_on_a_fresh_database_creates_schema_without_provisioning_a_user(tmp_path):
+def test_empty_database_upgrade_uses_pure_alembic_without_provisioning_a_user(tmp_path):
     env, database, token_file = _env(tmp_path, single_user=True)
 
     result = _upgrade(env)
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "treg upgrade complete"
+    assert "treg schema: alembic upgrade head (empty database)" in result.stdout
+    assert "treg upgrade complete" in result.stdout
     with sqlite3.connect(database) as db:
         tables = {row[0] for row in db.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )}
         users = db.execute('SELECT COUNT(*) FROM "user"').fetchone()[0]
     assert {"org", "secret", "tool"} <= tables
+    assert _alembic_version(database) == _alembic_head()
     assert users == 0
     assert not token_file.exists(), "hosted upgrade must never provision the local user"
+
+
+def test_upgrade_adopts_a_legacy_schema_then_is_idempotent(tmp_path):
+    env, database, _ = _env(tmp_path)
+    _legacy_init(env)
+    assert _alembic_version(database) is None
+
+    first = _upgrade(env)
+
+    assert first.returncode == 0, first.stderr
+    assert "treg schema: adopted legacy database and stamped head" in first.stdout
+    assert _alembic_version(database) == _alembic_head()
+
+    second = _upgrade(env)
+
+    assert second.returncode == 0, second.stderr
+    assert "treg schema: alembic upgrade head (stamped database)" in second.stdout
+    assert _alembic_version(database) == _alembic_head()
+
+
+def test_upgrade_refuses_to_stamp_a_drifted_legacy_schema(tmp_path):
+    env, database, _ = _env(tmp_path)
+    _legacy_init(env)
+    with sqlite3.connect(database) as db:
+        db.execute("ALTER TABLE capacitypolicy DROP COLUMN owner_email")
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    assert "column capacitypolicy.owner_email" in result.stderr
+    assert "Alembic stamp was not applied" in result.stderr
+    assert _alembic_version(database) is None
+
+
+def test_upgrade_refuses_a_pre_request_shape_archive(tmp_path):
+    """A database whose archive tables predate revision 0004 (see `_find_adoption_gaps`) is
+    missing the four request-shape columns, and neither `create_all` nor the frozen legacy
+    migrations add a column to an existing table. Only mid-series dev checkouts have this shape,
+    so adoption refuses it by name rather than carrying repair logic nobody deployed needs -
+    stamping head without the columns would put the archivekey ORM permanently ahead of the
+    schema, with revision 0004 never running again."""
+    env, database, _ = _env(tmp_path)
+    initial = _alembic_upgrade(env, "0003")
+    assert initial.returncode == 0, initial.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("DROP TABLE alembic_version")
+        pre = {row[1] for row in db.execute("PRAGMA table_info(archivekey)")}
+    assert "req_method" not in pre
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    for column in ("req_method", "req_url", "req_body", "req_headers"):
+        assert f"column archivekey.{column}" in result.stderr
+    assert "Alembic stamp was not applied" in result.stderr
+    assert _alembic_version(database) is None
+
+
+def test_upgrade_names_the_rollback_when_the_database_is_newer_than_the_build(tmp_path):
+    """A database stamped at a revision this build does not know is a rollback past the rollback
+    floor (or a stale checkout). The operator gets an instruction, not an Alembic stack trace."""
+    env, database, _ = _env(tmp_path)
+    initial = _upgrade(env)
+    assert initial.returncode == 0, initial.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE alembic_version SET version_num = '9999'")
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    assert "OLDER than the schema" in result.stderr
+    assert "No migration ran" in result.stderr
+    assert _alembic_version(database) == "9999"
+
+
+def test_upgrade_applies_a_pending_revision_from_one_behind_head(tmp_path):
+    env, database, _ = _env(tmp_path)
+    previous = _one_behind_head()
+    assert previous != _alembic_head()
+    initial = _alembic_upgrade(env, previous)
+    assert initial.returncode == 0, initial.stderr
+    assert _alembic_version(database) == previous
+
+    result = _upgrade(env)
+
+    assert result.returncode == 0, result.stderr
+    assert "treg schema: alembic upgrade head (stamped database)" in result.stdout
+    assert _alembic_version(database) == _alembic_head()
 
 
 def test_upgrade_backfills_companions_and_is_idempotent(tmp_path):

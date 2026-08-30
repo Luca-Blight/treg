@@ -486,6 +486,7 @@ addEventListener('load', function(){
     .side{border-right:0;border-bottom:1px solid var(--line);min-width:0} main{min-width:0}
     .side-acct{margin-top:12px}  /* on mobile the sidebar is a top strip - don't push account to the bottom */
     h1,.tut-head,.brand{overflow-wrap:anywhere}
+    .tut-head{flex-wrap:wrap} .tut-head>div:first-child{flex:1 1 100%} .tut-actions{flex:1 1 auto;justify-content:flex-start;margin-left:0}
     table{display:block;overflow-x:auto;white-space:nowrap}td,th{word-break:break-word}
     /* header wraps instead of forcing horizontal page scroll: the search drops to its own full-width
        row and the flex spacer is removed so brand/org/theme/avatar/sign-out fit the viewport. */
