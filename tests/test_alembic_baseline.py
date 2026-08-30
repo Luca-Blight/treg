@@ -16,9 +16,6 @@ from treg.config import get_settings
 from treg.maintenance import _alembic_config
 
 
-# The last revision the frozen legacy path produces - equal to head today, so the boundary
-# becomes observable only when 0010 lands. Retires with the legacy path in Stage 5 PR3.
-ADOPTION_REV = "0009"
 
 
 def _normalized(value: Any) -> Any:
@@ -103,8 +100,10 @@ async def test_alembic_baseline_matches_init_db_on_a_fresh_database(monkeypatch)
         await _drop_everything()
         await db._engine.dispose()
 
-        # Frozen legacy adoption boundary. This comparison retires with init_db in Stage 5 PR3.
-        await _upgrade_to(ADOPTION_REV)
+        # Head, not a pinned revision: BOTH sides track live metadata (create_all builds fresh
+        # tables from the models; the drift guard below keeps head equal to the models), so this
+        # stays green across future revisions. Retires with init_db in Stage 5 PR3.
+        await _upgrade_to("head")
         alembic_schema = await _dump_current_schema()
 
         assert init_db_schema.keys() == alembic_schema.keys()
