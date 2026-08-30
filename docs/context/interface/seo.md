@@ -7,8 +7,12 @@ sources:
   - src/treg/agent_pages.py
   - src/treg/web/robots.txt
   - src/treg/web/catalog.css
+  - src/treg/web/usecase.css
   - src/treg/web/index.html
   - src/treg/web/landing.html
+  - src/treg/web/llms.txt
+  - src/treg/endpoint_stats.py
+  - scripts/indexnow_submit.py
   - src/treg/web/support.html
   - assets/brand/og-card.html
 related:
@@ -51,6 +55,29 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 `_page()` in `routers.web` is the shell for the standalone server-rendered pages (`/docs`) — it owns
 `<title>`, the meta description, the canonical, the og/twitter card and the JSON-LD, so a new page
 cannot ship missing them. That omission is exactly what left the landing bare.
+
+It owns `/adtrack.js` for the same reason. Until 2026-08-30 that script sat only on the hand-written
+marketing HTML (`landing.html`, `usecase-*.html`, `resources.html`, `index.html`), so every page off
+this shell — agent pages, programmatic use-case pages, the hubs, `/docs` — was invisible to paid
+attribution. The failure is silent and total: no `adtrack.js` means no `treg_ad` cookie, so
+`signup._ad_attribution_from()` returns empty, `org.ad_gclid` stays NULL, and `adsconv.queue()`
+no-ops by design, so a paid click could sign up and make its first call with Google never hearing
+about it. Nothing errors and nothing logs. It surfaced from the ads side: the Agent × job campaign
+spent A$125 over three days landing every click on `/agents/*` for zero recorded conversions, while
+campaigns pointing at the static use-case pages recorded normally.
+
+The scope is **`_page()` callers**, not "every server-rendered page". `_legal_page()` (`/terms`,
+`/privacy`, `/support`, `/contact`), `/dashboard-tour/` and the FastAPI Swagger shell at `/docs/api`
+render their own HTML and remain uninstrumented — none is an ad destination. `/tutorial` is likewise
+out of scope; it is slated for removal. The `.md` variants are `text/plain` and cannot run scripts.
+
+`/sitetrack.js` is deliberately NOT in the shell. It already shipped more widely than `adtrack.js`
+(it is on `tutorial.html` too), but it can load PostHog with pageview/session-recording config while
+`web/privacy.html` promises no analytics or session-replay scripts and lists no such processor.
+Broadening it across the pSEO surface is a product/legal decision, not a side effect of fixing ad
+attribution — `treg_ad` and `/adtrack.js` are already documented in that policy, so shipping those
+alone changes nothing about it. `tests/test_agent_pages.py` asserts exactly one `adtrack.js` per
+path so a new route off `_page()` cannot drop it.
 
 ## The public catalog is the marketplace, not a copy of it
 
@@ -474,3 +501,65 @@ and the schema all state them and had drifted apart (2,617/42 and ~2,600/~48). N
 shows the **whole** catalog, not the sum of its tiles: a tile counts only its browse surface, so the
 account/utility endpoints — real inventory, listed on each shelf page — are excluded from tile counts
 by `catalog_store.HIDDEN_KINDS`.
+
+## Discovery — the hubs are linked, not just listed
+
+Search Console on 2026-08-27 showed the 38 job pages, `/workflows` and `/agents` at zero
+impressions, and URL inspection answered "URL is unknown to Google" for
+`/use-cases/find-professional-emails` and `/workflows/find-and-verify-a-lead-list`. They were in
+the sitemap and linked from nothing: the landing linked `/catalog` and `/resources` only, `/catalog`
+linked `/tools/*` only, `/resources` linked the five outcome pages only — and those five were the
+only non-homepage URLs with impressions. A sitemap is not a crawl path.
+
+What links what now, and where it is generated:
+
+| From | To | Where |
+|---|---|---|
+| footer of every server-rendered page (Explore / Build / Company columns; the nav is unchanged by request) | `/use-cases`, `/workflows`, `/agents/claude-code` — **hosted only**: those pages 404 on a self-hosted registry, so the links are gated by `_hosted()` (the landing wraps them in `<!--hosted-->` markers the route strips off-host) | `_page()` in `routers/web.py` |
+| the landing footer (`landing.html`; the public catalog SPA has no footer and links the hubs from its prerender) | same three | hand-kept markup, so `test_every_surface_links_the_three_hubs` walks `/` and `/catalog` |
+| `/catalog` prerender | both hubs, in a sentence | `catalog_index` |
+| `/tools/<provider>` "Used in" | every job page whose capabilities the provider answers | `_jobs_by_provider()`, cached per process from `USE_CASE_PAGES` × the catalog |
+| `/use-cases/<job>` "Run the full sequence" | every workflow with a step on one of the job's capabilities | `_workflows_by_capability()`, cached from `WORKFLOWS[*].steps` |
+| `llms.txt` | the three indexes, with the `.md` twins | hand-kept |
+
+Both reverse indexes are derived from the same tables the pages render from, so a new job or
+workflow is cross-linked the moment it is routed, and nothing is listed by hand.
+
+### Titles: the pricing intent
+
+The non-brand queries that reach the site are "{provider} api pricing" phrasings ("linkedin api
+pricing", "1688 api pricing" — the one non-brand click in 28 days), not "api for agents". So:
+
+- `/tools/<provider>` titles lead with it: `{Provider} API pricing: from $0.00245/result, no signup | treg.to`
+  (the price label carries its own billing unit, so the copy never says "per call" beside it;
+  falls back to `{Provider} API pricing: from $X | treg.to` past 65 characters; own-account
+  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate
+  weighted by each endpoint's DECIDED calls (`decided` in `endpoint_stats`, 2xx + 5xx, never the
+  4xx-inclusive `samples`), median of the endpoint `p50_ms` medians — read through
+  `_observed_or_empty` like the job pages; it is the one fact a vendor's own pricing page cannot
+  print.
+- compare-form job titles get `, from $X` appended when the hand-written title carries no price and
+  the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
+
+### IndexNow
+
+`/{INDEXNOW_KEY}.txt` serves the IndexNow key (not a secret: the protocol only checks the key is
+served from the host named in the submission), on every host, since IndexNow is generic.
+`scripts/indexnow_submit.py` reads the live sitemap and pushes every URL to `api.indexnow.org`
+(Bing, Yandex, Seznam, Naver share the feed). Google retired its sitemap ping; its resubmission goes through Search Console
+(`google-search-console.x.webmasters-sitemaps-submit` in the catalog, owner OAuth). The route is
+registered in `bootstrap.py`'s ownership table like every other public route.
+
+Tests: `test_every_surface_links_the_three_hubs`, `test_provider_page_names_the_jobs_it_serves`,
+`test_job_page_names_the_workflows_that_chain_it`, `test_compare_titles_carry_the_cheapest_price`,
+`test_provider_title_leads_with_pricing`, `test_indexnow_key_is_served_from_the_root`.
+
+### Agent pages name the workflows
+
+`/agents/<agent>` (and its `.md` twin) carries a **Workflows** section listing every entry in
+`agent_pages.WORKFLOWS` with its step count, between "The menu" and the category sections. Before
+this the workflow pages were reachable from `/workflows` alone. `AGENTS["grok-bot"]` also carries
+three Grok-Bot-specific FAQ entries (lead generation, research, what it cannot do yet) because
+"grok bot lead generation" is the one emerging term in the outbound research that passed all seven
+gates; the use-case map lives in `marketing/rebuild/06-grok-bot-use-cases.md`. Test:
+`test_agent_pages_name_the_workflows`.

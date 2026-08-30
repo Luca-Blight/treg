@@ -88,7 +88,8 @@ No role lifespan performs a data backfill or provisions the local single user. T
 `python -m treg upgrade` release phase owns content-driven backfills; the default `python -m treg`
 serve path adds single-user provisioning before Uvicorn starts. Raw ASGI operators must run the
 upgrade command separately on every release. `init_db()` remains in the lifespan temporarily until
-the later Stage 5 migration-execution PR.
+the next Stage 5 cleanup PR removes the redundant legacy startup path; schema execution already belongs
+to Alembic in the explicit release phase.
 
 MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
 dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the
@@ -116,3 +117,6 @@ Each factory call must produce an independent app whose dependency overrides bel
 at the new FastAPI instance, and rebuilds its request handler. This also avoids the internal
 `_IncludedRouter` wrapper added by the current FastAPI `include_router()` implementation, which would
 otherwise change route inspection and the committed surface snapshot.
+
+Public routes added since: `/{INDEXNOW_KEY}.txt` (`indexnow_key`, `routers/web.py`) — the IndexNow
+key file; listed in the ownership table beside `/sitemap.xml`. See `interface/seo.md` § IndexNow.

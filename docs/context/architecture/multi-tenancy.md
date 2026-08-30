@@ -208,7 +208,12 @@ dependencies, role comparison, and machine classification. Session signing and v
 - **Slug vs id.** `_resolve_org` resolves `X-Treg-Org` by slug first (an all-digit slug like `2024` is
   producible and must not be reinterpreted as a primary key).
 
-## Startup migration (`db.py`)
+## Frozen adoption migration (`db.py`)
+The handwritten `init_db()` migration tail is frozen at Alembic revision `0009`. For a non-empty,
+unstamped database, `maintenance._upgrade_schema` runs it once, verifies the complete table set and
+late adoption columns, then stamps head. It remains temporarily in the FastAPI lifespan and standalone
+worker commands until later cleanup, but no new schema change is added here.
+
 `init_db()` runs `_migrate_to_orgs` inside its `begin()` block — **guarded + idempotent**. It (A) adds
 `org_id` columns to legacy resource tables (`ALTER TABLE ADD COLUMN`), and (B), only when the `org` table
 is empty and a legacy `user.token_hash` column exists, creates the default `superdesign` org, turns each
