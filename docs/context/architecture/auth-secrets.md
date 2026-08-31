@@ -110,7 +110,26 @@ has already cleared it. treg's own client id/secret load from `Settings` (named 
 The Meta pair carries three tiers — read / post / **manage** (comments + DMs on Instagram; engagement,
 visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
 pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
-bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
+bundle; Instagram manage includes both `instagram_manage_messages` and its Page-side
+`pages_messaging` rider. `default_capability` is the broadest tier by design, so a plain Connect asks
+for manage.
+Meta initially returns a long-lived **user** token, but Instagram Graph operations—especially the
+Messaging API—must act through the Facebook Page linked to the selected professional account. The
+Instagram provider therefore declares a resource-token lookup. On account selection,
+`select_connection_resource()` privately resolves the linked Page token, stores it as
+`page_access_token` inside the same encrypted OAuth blob (retaining `access_token` for discovery),
+and the provisioned tool's generic OAuth binding injects that derived field. Provider metadata maps
+the linked Page id into the encrypted `page_id` context field and declares a generic resource-setup
+request. For Instagram, that request subscribes the Page to the app's
+`messages,messaging_postbacks` fields. The setup is scope-gated, so read/post-only connections do
+not attempt it. Provider discovery and setup HTTP calls run after the read database session closes;
+the result is written in a new short transaction. Resource listings and
+connection views never include the Page token; existing Instagram connections must reconnect or
+reselect their account once to populate it. The token and object id are separate concerns: Instagram
+profile/media operations still target the Instagram account id, while Facebook-login inbox sync is
+the Page messaging surface—`/{page_id}/conversations?platform=instagram` for listing and
+`/{page_id}/messages` for replies. Calling the conversations edge with the Instagram account id
+produces Meta error `(#3)` despite a valid Page token.
 Google Search Console's hand-written tool example calls out its distinct direct-tool convention:
 substitute `{site_url}` with a value encoded exactly once (`sc-domain%3Aexample.com`), and never encode
 again a property identifier returned by the sites list.

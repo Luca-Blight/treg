@@ -64,7 +64,8 @@ def _provider_bindings(provider, secret: Secret) -> list[dict]:
     else:
         bindings = [{
             "secret_id": secret.id, "injector": "oauth", "location": "header",
-            "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
+            "name": "Authorization", "format": "Bearer {secret}",
+            "secret_field": provider.call_token_field,
         }]
     # A provider-required protocol header is a constant-format binding over the same encrypted
     # secret reference. `format` deliberately contains no {secret}: the existing injector stamps
@@ -724,11 +725,9 @@ async def list_connection_resources(
         rows = body.get(provider.discover_key) or []
         if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
             rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
-        # Business-owned assets (Meta): a second listing whose rows hold nested lists of
-        # primary-shaped rows — an agency member sees [] from /me/accounts yet manages everything
-        # through their Business portfolio. Best-effort by design: the primary listing has already
-        # answered, and a connection that consented before business_management existed in our scopes
-        # gets a clean permission error here, which must read as "no extra assets", not a 502.
+        # Some providers expose delegated assets through a second listing whose rows hold nested
+        # lists of primary-shaped resources. Best-effort by design: an older grant can lack the
+        # extra scope while the primary result remains valid.
         if provider.discover_extra_path:
             try:
                 extra = await client.get(
@@ -753,10 +752,8 @@ async def list_connection_resources(
             for r in rows if isinstance(r, (dict, str))
         ]
         if provider.discover_extra_path:
-            # A directly-managed Page is usually ALSO owned by a Business, so the two listings
-            # overlap — keep the first sighting (the primary listing's). Id-less rows go too: a
-            # Business-owned Page with no linked Instagram account digs to id None, and one None
-            # would survive dedup as a phantom picker row.
+            # Direct and delegated listings can overlap. Keep the first primary sighting. Remove
+            # id-less rows too, or one None value can survive as a phantom picker choice.
             seen: set = set()
             resources = [x for x in resources if x["id"] and not (x["id"] in seen or seen.add(x["id"]))]
         if provider.supports_enrichment:
@@ -779,17 +776,46 @@ async def list_connection_resources(
 
 
 async def select_connection_resource(
-    *, secret_id: int, resource_ref: str, resource_name: str, org_id: int,
+    *, secret_id: int, resource_ref: str, resource_name: str, org_id: int, client_factory,
 ) -> dict:
+    provider = None
+    source_value = ""
+    setup_fields: dict[str, str] | None = None
     async with session_maker() as db:
         secret = await _owned_connection(secret_id, org_id, db)
+        provider = oauth_providers.get(secret.provider) if secret.provider else None
+        if provider and provider.resource_token_path:
+            client = client_factory()
+            await oauth.ensure_fresh(secret, db, client)
+            await db.refresh(secret)
+            source_value = secret.value
+            granted_scopes = secret.granted_scopes
+
+    # Resource discovery and provider setup are external work. Do them after the read session is
+    # closed so provider latency cannot hold a database connection or transaction open.
+    if provider and provider.resource_token_path:
+        setup_fields = await _resolve_resource_call_token(
+            provider, source_value, granted_scopes, resource_ref, client,
+        )
+
+    async with session_maker() as db:
+        secret = await _owned_connection(secret_id, org_id, db)
+        if setup_fields is not None:
+            # A reconnect can replace the OAuth blob while the provider call is in flight. Do not
+            # combine a derived credential from the old grant with the new root credential.
+            if secret.value != source_value:
+                raise ConnectError(
+                    "connection_changed",
+                    "the connection changed during resource setup; select the resource again",
+                )
+            _store_resource_call_token(provider, secret, setup_fields)
+            await _upgrade_resource_call_bindings(provider, secret, db)
         secret.resource_ref = resource_ref
         secret.resource_name = resource_name
         # Picking a property/site/account is the moment we finally KNOW the id every real call needs —
         # so render it straight into the provisioned tool's examples as a ready-made call. Before this,
         # agents went hunting for the id through the vendor's admin API mid-task (GA4: 13 calls/7 orgs
         # dead-ended there). Re-picking replaces the stamped example rather than piling them up.
-        provider = oauth_providers.get(secret.provider) if secret.provider else None
         tmpl = getattr(provider, "resource_example", None) if provider else None
         if tmpl and resource_ref:
             rendered = {
@@ -811,6 +837,161 @@ async def select_connection_resource(
         await db.commit()
         await db.refresh(secret)
         return oauth.connection_view(secret)
+
+
+async def _resolve_resource_call_token(
+    provider, encrypted_value: str, granted_scopes: str, resource_ref: str, client,
+) -> dict[str, str]:
+    """Resolve a resource-scoped call token without exposing it to the picker.
+
+    The root OAuth token remains in ``access_token`` for refresh and future resource discovery.
+    Provider HTTP work is complete before the caller opens the write transaction.
+    """
+    blob = json.loads(crypto.decrypt(encrypted_value))
+    root_token = blob.get("access_token") or blob.get("token")
+    headers = {"Authorization": f"Bearer {root_token}"}
+
+    async def fetch(path: str, *, required: bool) -> list[dict]:
+        try:
+            resp = await client.get(
+                f"{provider.discovery_base.rstrip('/')}{path}", headers=headers)
+            body = resp.json()
+        except Exception as exc:  # noqa: BLE001
+            if not required:
+                return []
+            raise ConnectError(
+                "resource_token_failed", "could not resolve the selected account credential"
+            ) from exc
+        if resp.status_code >= 400:
+            if not required:
+                return []
+            err = body.get("error", {}) if isinstance(body, dict) else {}
+            detail = err.get("message", "") if isinstance(err, dict) else ""
+            raise ConnectError(
+                "resource_token_failed",
+                f"could not resolve the selected account credential ({resp.status_code}): {detail}".rstrip(": "),
+            )
+        return body.get(provider.discover_key) or [] if isinstance(body, dict) else []
+
+    rows = await fetch(provider.resource_token_path, required=True)
+    if provider.resource_token_extra_path:
+        for holder in await fetch(provider.resource_token_extra_path, required=False):
+            for path in provider.resource_token_extra_list_paths:
+                rows.extend(n for n in (_dig(holder, path) or []) if isinstance(n, dict))
+
+    match = next((row for row in rows if isinstance(row, dict)
+                  and str(_dig(row, provider.resource_token_id_field)) == resource_ref), None)
+    call_token = _dig(match, provider.resource_token_value_field) if match else None
+    if not call_token:
+        raise ConnectError(
+            "invalid_resource",
+            f"the selected {provider.resource_label} has no accessible call credential",
+        )
+
+    fields = {provider.call_token_field: str(call_token)}
+    for name, dotted_path in provider.resource_token_context_fields:
+        value = _dig(match, dotted_path)
+        if value is not None:
+            fields[name] = str(value)
+    await _run_resource_setup(
+        provider, granted_scopes, resource_ref, fields, str(call_token), client,
+    )
+    return fields
+
+
+def _store_resource_call_token(provider, secret: Secret, fields: dict[str, str]) -> None:
+    """Merge resolved provider fields into the encrypted OAuth blob."""
+    blob = json.loads(crypto.decrypt(secret.value))
+    blob.update(fields)
+    secret.value = crypto.encrypt(json.dumps(blob))
+
+
+async def _upgrade_resource_call_bindings(provider, secret: Secret, db: AsyncSession) -> None:
+    """Make older provisioned tools inject the provider's selected call credential."""
+
+    # Connections made before resource-scoped tokens existed still have an `access_token` binding
+    # on their provisioned tool. Re-selecting the account must upgrade those in place; requiring a
+    # second OAuth reconnect would be unnecessary friction, and leaving them unchanged would make
+    # the newly stored call token inert. Restrict the rewrite to OAuth bindings for this Secret so
+    # unrelated credentials and constant headers remain untouched.
+    tools = (await db.execute(select(Tool).where(Tool.org_id == secret.org_id))).scalars().all()
+    for tool in tools:
+        changed = False
+        bindings = []
+        for original in tool.bindings or []:
+            binding = dict(original)
+            if (binding.get("secret_id") == secret.id
+                    and binding.get("injector") == "oauth"
+                    and "{secret}" in binding.get("format", "")):
+                binding["secret_field"] = provider.call_token_field
+                changed = True
+            bindings.append(binding)
+        if changed:
+            tool.bindings = bindings
+
+
+async def _run_resource_setup(
+    provider, granted_scopes: str, resource_ref: str, context: dict[str, str],
+    call_token: str, client,
+) -> None:
+    """Run a provider-declared setup request when the selected grant permits it.
+
+    The operation happens before the selected resource is committed, so a failed upstream
+    request cannot leave a connection that looks ready while its required setup is incomplete.
+    The resource-scoped credential stays in the Authorization header and never enters an error or
+    response body.
+    """
+    if not provider.resource_setup_method or not provider.resource_setup_path:
+        return
+    if (provider.resource_setup_scope
+            and provider.resource_setup_scope not in granted_scopes.split()):
+        return
+    values = {"resource_id": resource_ref, **context}
+    try:
+        path = provider.resource_setup_path.format(**values)
+        payload = {
+            name: value.format(**values)
+            for name, value in provider.resource_setup_payload
+        }
+        token_value = provider.resource_setup_token_format.format(token=call_token)
+    except KeyError as exc:
+        raise ConnectError(
+            "resource_setup_failed",
+            f"could not set up the selected {provider.resource_label}: required context is missing",
+        ) from exc
+    kwargs: dict = {"headers": {provider.resource_setup_token_header: token_value}}
+    if provider.resource_setup_payload_location == "json":
+        kwargs["json"] = payload
+    elif provider.resource_setup_payload_location == "form":
+        kwargs["data"] = payload
+    else:
+        kwargs["params"] = payload
+    try:
+        response = await client.request(
+            provider.resource_setup_method,
+            f"{provider.base_url.rstrip('/')}{path}", **kwargs,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise ConnectError(
+            "resource_setup_failed",
+            f"could not set up the selected {provider.resource_label}",
+        ) from exc
+    try:
+        body = response.json()
+    except Exception:  # noqa: BLE001 — a provider can declare that any 2xx response is sufficient
+        body = {}
+    expected = provider.resource_setup_success_value
+    success = response.status_code < 400
+    if provider.resource_setup_success_field:
+        success = success and _dig(body, provider.resource_setup_success_field) == expected
+    if not success:
+        error = body.get("error", {}) if isinstance(body, dict) else {}
+        detail = error.get("message", "") if isinstance(error, dict) else ""
+        suffix = f" ({response.status_code}): {detail}" if detail else f" ({response.status_code})"
+        raise ConnectError(
+            "resource_setup_failed",
+            f"could not set up the selected {provider.resource_label}{suffix}",
+        )
 
 
 async def supply_extra_credential(

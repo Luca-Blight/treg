@@ -52,6 +52,10 @@ _CONNECT_HTTP_ERRORS = {
     "unknown_state": 404,
     "no_resource_discovery": 422,
     "resource_discovery_failed": 502,
+    "resource_token_failed": 502,
+    "resource_setup_failed": 502,
+    "connection_changed": 409,
+    "invalid_resource": 422,
     "no_extra_credential": 422,
     "extra_credential_required": 422,
     "all_orgs_forbidden": 403,
@@ -190,7 +194,7 @@ async def connection_resources(
 
 @resources_router.post("/connections/{secret_id}/resource")
 async def set_connection_resource(
-    secret_id: int, body: ResourceRefIn,
+    secret_id: int, body: ResourceRefIn, request: Request,
     caller: Caller = Depends(require_member),
 ) -> dict:
     try:
@@ -199,6 +203,7 @@ async def set_connection_resource(
             resource_ref=body.resource_ref,
             resource_name=body.resource_name,
             org_id=caller.org_id,
+            client_factory=lambda: request.app.state.http,
         )
     except connect_use_cases.ConnectError as exc:
         raise _connect_http_error(exc) from exc

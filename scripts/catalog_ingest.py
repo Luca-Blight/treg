@@ -1926,15 +1926,13 @@ INSTAGRAM_EDGES: list[tuple[str, str, str, str, str]] = [
     ("comment-replies", "GET", "/{ig_comment_id}/replies",
      "The replies under a comment", ""),
     ("comment-reply-create", "POST", "/{ig_comment_id}/replies",
-     "Reply to a comment as the account", "needs instagram_manage_comments"),
+     "Reply to a comment as the account", ""),
     ("comment-hide", "POST", "/{ig_comment_id}?hide=true",
-     "Hide a comment on the account's own media", "needs instagram_manage_comments"),
+     "Hide a comment on the account's own media", ""),
     ("comment-delete", "DELETE", "/{ig_comment_id}",
-     "Delete a comment on the account's own media", "needs instagram_manage_comments"),
+     "Delete a comment on the account's own media", ""),
     ("media-comment-create", "POST", "/{ig_media_id}/comments",
-     "Comment on the account's own media", "needs instagram_manage_comments"),
-    ("user-messages", "GET", "/{ig_user_id}/conversations",
-     "Instagram Direct threads with the account", "needs instagram_manage_messages"),
+     "Comment on the account's own media", ""),
     ("user-product-appeal", "GET", "/{ig_user_id}/product_appeal",
      "The status of appeals against rejected shopping products", "needs instagram_shopping_tag_products"),
     ("catalog-product-search", "GET", "/{ig_user_id}/catalog_product_search",
@@ -2019,7 +2017,8 @@ META_PROVIDERS = {
                  f"{META_GRAPH_DOCS}/page/"),
     "instagram": ("instagram", INSTAGRAM_EDGES,
                   "instagram_basic, instagram_manage_insights, pages_show_list, pages_read_engagement"
-                  " (+ instagram_content_publish for the `post` capability)",
+                  " (+ instagram_content_publish for `post`; instagram_manage_comments and "
+                  "instagram_manage_messages for `manage`)",
                   "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference"),
     "meta-ads": ("meta-ads", META_ADS_EDGES, "ads_read, business_management"
                                              " (+ ads_management for the `manage` capability)",
@@ -2037,12 +2036,13 @@ def ingest_meta(service: str, refresh: bool) -> tuple[Path, dict]:
     skip = core_routes(service)
     endpoints, gaps = [], 0
     for slug, method, path, summary, gap in edges:
-        if _route_key(method, path) in skip:
+        if (method.upper(), path) in skip:
             continue
         entry: dict = {
             "id": f"{service}.x.{slug}", "tier": "extended", "platform": platform,
             "method": method, "path": path, "summary": summary, "scope": "own_account",
             "cost": {"type": "free", "value": 0.0, "currency": "USD",
+                     "unit": "call",
                      "note": "no per-call charge; counted against the app's Graph API rate limit"},
             "docs_url": docs,
         }
