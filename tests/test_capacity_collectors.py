@@ -47,7 +47,7 @@ class MockClient:
 # ---- brightdata -------------------------------------------------------------------------
 
 async def test_brightdata_collector_parses_balance_and_pending():
-    resp = MockResponse({"balance": 456.78, "pending_balance": 12.34})
+    resp = MockResponse({"balance": 456.78, "credit": 0, "prepayment": 0, "pending_costs": 12.34})
     client = MockClient(get_response=resp)
     result = await collectors._brightdata(client, "test-key")
     assert result["value"] == 456.78
@@ -56,7 +56,7 @@ async def test_brightdata_collector_parses_balance_and_pending():
 
 
 async def test_brightdata_collector_handles_missing_pending():
-    resp = MockResponse({"balance": 100.0})
+    resp = MockResponse({"balance": 100.0, "credit": 0, "prepayment": 0})
     client = MockClient(get_response=resp)
     result = await collectors._brightdata(client, "test-key")
     assert result["value"] == 100.0

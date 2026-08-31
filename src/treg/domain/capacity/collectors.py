@@ -315,10 +315,11 @@ async def _brightdata(c, key):
     # GET /customer/balance returns account balance and pending charges (USD).
     # Requires billing permission on the API token — if the token lacks it, the request
     # returns 403 and the exception path surfaces the permission issue as a note.
+    # Response: {balance, credit, prepayment, pending_costs}
     d = await _get(c, "https://api.brightdata.com/customer/balance",
                    headers={"Authorization": f"Bearer {key}"})
     return {"value": d.get("balance"), "unit": "USD",
-            "note": f"pending ${d.get('pending_balance', 0):.2f} (next billing cycle)"}
+            "note": f"pending ${d.get('pending_costs', 0):.2f} this cycle"}
 
 
 async def _crustdata(c, key):
