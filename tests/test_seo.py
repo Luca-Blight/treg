@@ -404,7 +404,7 @@ async def test_favicon_is_the_mono_mark(clients: AsyncClient):
 # the three hubs, /catalog names them in its crawlable prerender, a provider page names the jobs
 # it serves, and a job page names the workflows that chain it.
 
-HUBS = ('href="/use-cases"', 'href="/workflows"', 'href="/agents/claude-code"')
+HUBS = ('href="/use-cases"', 'href="/workflows"', 'href="/agents"')
 
 
 async def test_every_surface_links_the_three_hubs(clients: AsyncClient):

@@ -162,7 +162,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     # The job, workflow and agent pages exist on the hosted deployment only (`_hosted`): a
     # self-hosted registry must not put three 404s in its own footer.
     hub_links = ('<a href="/use-cases">Use cases</a><a href="/workflows">Workflows</a>'
-                 '<a href="/agents/claude-code">Agents</a>' if _hosted() else "")
+                 '<a href="/agents">Agents</a>' if _hosted() else "")
     return HTMLResponse(f"""<!doctype html>
 <html lang="en">
 <head>
@@ -368,7 +368,7 @@ async def catalog_index():
                  + ('<p>Looking for a job rather than a platform? <a href="/use-cases">The use cases</a> '
                     'compare the providers that do one job, <a href="/workflows">the workflows</a> '
                     'chain several jobs into one prompt with the price of each step, and '
-                    '<a href="/agents/claude-code">the agent pages</a> show the whole menu for one '
+                    '<a href="/agents">the agent pages</a> show the whole menu for one '
                     'agent.</p>' if _hosted() else "")
                  + "".join(sections)
                  + f"<h2>The providers</h2><p>{len(prov_rows)} vendors serve this catalog, each "
@@ -620,6 +620,51 @@ document.querySelectorAll('button[data-copy]').forEach(function(b){
 _MD_ALT = '<link rel="alternate" type="text/markdown" href="{href}"/>'
 
 
+@app.get("/agents", include_in_schema=False)
+async def agents_hub():
+    """The hub the agent pages hang from. Until this existed the nav's "Agents" link pointed at one
+    client's page (/agents/claude-code) because there was nowhere else to point it, and the bare URL
+    404ed while every agent page's breadcrumb implied it existed."""
+    if not _hosted():
+        raise HTTPException(status_code=404, detail="not found")
+    base = get_settings().public_url.rstrip("/")
+    n_eps, n_plats = _catalog_census()
+    n, p = f"{n_eps:,}", str(n_plats)
+    def _blurb(defn: str) -> str:
+        # The card answers "which client, and does it install as a plugin or an MCP server" — the
+        # definition's opening clause. The counts already live on the meta line; printing the whole
+        # definition put them on every card twice and cut it mid-word at the length cap.
+        head = defn.split(" that gives ")[0]
+        if head == defn and len(defn) > 140:  # a future definition without the clause still fits
+            head = defn[:140].rsplit(" ", 1)[0]
+        return head.rstrip(".") + "."
+    cards = "".join(
+        f'<a class="pcard" href="/agents/{slug}"><h3>{_esc_html(spec["name"])}</h3>'
+        f'<p>{_esc_html(_blurb(spec["definition"].format(n=n, p=p)))}</p>'
+        f'<div class="meta">{n} tools &middot; {p} platforms</div></a>'
+        for slug, spec in agent_pages.AGENTS.items())
+    body = (
+        '<main class="wrap"><div class="phead">'
+        '<div class="crumbs"><a href="/">treg.to</a> / <a href="/agents">Agents</a></div>'
+        '<h1>The agents that can use treg.to</h1>'
+        '<p class="lede">One page per client: the install steps for that agent, then the menu of '
+        f'jobs it can do once connected. Every client gets the same {n} tools through one treg.to '
+        'key, at the provider&rsquo;s own rate with $0.000 markup.</p>'
+        f'</div><section class="cat"><div class="grid">{cards}</div></section>'
+        '<section class="cat"><h2>Everything else</h2><div class="cap"><p style="margin:0">The jobs '
+        'themselves are written up at <a href="/use-cases">/use-cases</a>, the multi-step versions '
+        'at <a href="/workflows">/workflows</a>, and the whole catalog is at '
+        '<a href="/catalog">/catalog</a>.</p></div></section></main>')
+    names = [s["name"] for s in agent_pages.AGENTS.values()]
+    ld = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+        {"@type": "ListItem", "position": 2, "name": "Agents", "item": base + "/agents"}]}]
+    return _page("Install treg.to in ChatGPT, Claude, Cursor or Grok",
+                 f"Install steps for {', '.join(names[:-1])} and {names[-1]}, and the menu of jobs "
+                 "each can do once connected. One treg.to key, no markup.",
+                 "/agents", body, ld)
+
+
 @app.get("/agents/{agent}.md", include_in_schema=False)
 @app.get("/agents/{agent}", include_in_schema=False)
 async def agent_page(request: Request, agent: str):
@@ -857,7 +902,8 @@ async def agent_page(request: Request, agent: str):
                                    "provider's own rate with no markup; every new team starts with $1.00 free."}},
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
-            {"@type": "ListItem", "position": 2, "name": name, "item": f"{base}/agents/{agent}"}]},
+            {"@type": "ListItem", "position": 2, "name": "Agents", "item": base + "/agents"},
+            {"@type": "ListItem", "position": 3, "name": name, "item": f"{base}/agents/{agent}"}]},
         {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
             {"@type": "Question", "name": q,
              "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in spec["faq"]]},
@@ -2682,6 +2728,7 @@ async def sitemap_xml():
     # hand-written copy, which is what changes between deploys.
     if _hosted():
         copy_day = _iso_day(Path(agent_pages.__file__).stat().st_mtime)
+        add("/agents", copy_day, "0.8")
         for slug in agent_pages.AGENTS:
             add(f"/agents/{slug}", copy_day, "0.8")
         add("/use-cases", copy_day, "0.8")

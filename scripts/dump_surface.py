@@ -24,6 +24,7 @@ def _configure_test_environment() -> None:
         "sh,echo,true,false,cat,sleep,treg-nonexistent-bin-xyz"
     )
     os.environ["TREG_PROXY_SSRF_CHECK"] = "false"
+    os.environ["TREG_CLAUDE_CONNECTOR_ENABLED"] = "true"
 
     for key in (
         "GOOGLE_CLIENT_ID",
