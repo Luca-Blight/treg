@@ -5,10 +5,11 @@ sources:
   - pyproject.toml
   - src/treg/__main__.py
   - src/treg/maintenance.py
+  - src/treg/alembic/env.py
   - src/treg/worker.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
-  - src/treg/db.py
+  - src/treg/infra/db.py
   - src/treg/email.py
   - src/treg/audit.py
   - scripts/dev-local.sh
@@ -23,10 +24,13 @@ related:
 # Running & deploying
 
 ## Entry point (`__main__.py`)
-`python -m treg upgrade` runs the explicit release phase: `maintenance.upgrade()` first calls the
-idempotent `init_db()`, then runs the ordered, idempotent release-task registry. The registry currently
-contains the provider companion-tool backfill. It does not provision a single-user identity, so a hosted
-pre-deploy command cannot accidentally create a local owner.
+`python -m treg upgrade` runs the explicit release phase. `maintenance._upgrade_schema()` runs
+`alembic upgrade head` for an empty or stamped database. A non-empty unstamped database is now refused
+without writes: adoption ended with 0.14.x, so the operator must install
+`tools-registry[server]==0.14.*`, run `python -m treg upgrade` there once, then continue onward. A
+database stamped at a revision this build does not know is also refused because explicit upgrade may
+not cross the rollback floor. The ordered, idempotent release-task registry runs only after schema
+success; it currently contains the provider companion-tool backfill and never provisions a local user.
 
 The default `python -m treg` serve path runs that same upgrade phase and then
 `api._bootstrap_single_user()`, then disposes the async engine inside the pre-serve event loop before calling
@@ -35,23 +39,32 @@ The default `python -m treg` serve path runs that same upgrade phase and then
 `TREG_SECRET_KEY` without importing the server maintenance stack. `treg.api:app` is
 `bootstrap.create_app(role="all")`.
 
-The FastAPI lifespan still calls `init_db()` until the later Stage 5 migration-execution PR. That
-idempotent second call is harmless, and role startup manifests no longer contain data backfills or
-single-user provisioning. Operators serving `treg.api:app` directly through a raw ASGI command must run
-`python -m treg upgrade` once for every release. Render needs no Blueprint change because its existing
-`startCommand: python -m treg` already executes the pre-serve phase.
+The FastAPI lifespan calls read-only `verify_db()`. It refuses an unstamped database or a known
+revision behind head, directing raw-ASGI operators to `python -m treg upgrade`. An unknown-newer
+revision means this code is older than the schema: startup warns and serves because additive revisions
+tolerate rollback; a revision marked `contract = True` is the documented hard rollback floor. Every
+role startup manifest is schema-write-free. Render runs upgrade as `preDeployCommand`; the existing
+`startCommand: python -m treg` repeats the fast idempotent release phase for self-hosted parity.
 
 Both pre-Uvicorn entry paths dispose the engine before their `asyncio.run()` loop closes: the default
 serve path does so after single-user bootstrap, and `python -m treg upgrade` does so after all release
 tasks. The next event loop therefore creates fresh pooled connections instead of receiving connections
 bound to a closed maintenance loop. Calling `maintenance.upgrade()` directly does not dispose the engine.
 
-## Startup safety (`db.py init_db`)
-- **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated
-  current-schema baseline, but startup still runs `init_db`. No existing database is stamped or
-  upgraded through Alembic yet; that execution switch remains a later refactor Stage 5 PR.
+## Schema upgrade safety
+- **Alembic is authoritative:** migration scripts ship inside `src/treg/alembic/` in the wheel.
+  `maintenance._alembic_config()` resolves that installed package resource, supplies the escaped
+  configured URL, and runs Alembic in a worker thread so its internal event loop never nests inside
+  the maintenance loop.
+- **The adoption floor is final:** an unstamped existing database must pass through release 0.14.x.
+  Current code does not inspect, repair, or stamp it.
+- **Startup is read-only:** `verify_db()` checks the stamped revision through packaged Alembic metadata.
+  It never creates tables, stamps versions, or runs release tasks. Worker commands use the same check.
+- **Schema changes are revision-only:** an autogenerate drift guard requires Alembic head and
+  `SQLModel.metadata` to match exactly. `reset_db()` uses `create_all` only for fast test isolation and
+  stamps that test schema directly at head.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
-  SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
+  SQLite, `verify_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.
 - **Postgres pool hygiene:** for non-SQLite URLs the async engine adds `pool_pre_ping=True`,
   `pool_recycle=300`, sizing (`pool_size=5`, `max_overflow=10` — per instance; a rolling deploy runs two
@@ -203,48 +216,24 @@ its own sqlite DB and email dev mode.
 `render.yaml` at the repo root deploys the whole thing as **one web service + a managed Postgres**
 (region `oregon`): `buildCommand: pip install ".[server]"` — the base install is the **CLI only**, so the
 server deploy needs the `[server]` extra (FastAPI/DB/crypto); the wheel ships every web asset via the package.
-`startCommand: python -m treg`, health check on `/meta`. The DB URL is auto-wired via `fromDatabase`
+`preDeployCommand: python -m treg upgrade`, `startCommand: python -m treg`, and health check on `/meta`.
+The pre-deploy migration must succeed before Render replaces the serving instance; the start command
+repeats the idempotent phase for installations without a pre-deploy facility. The DB URL is auto-wired via `fromDatabase`
 (config's validator adds the asyncpg driver). Secrets are **dashboard-managed** (`sync: false` — the
 Fernet key, session/admin tokens, GitHub OAuth pair, Resend key, and the optional landing live-wire pair
 `TREG_DEMO_STRIPE_KEY` + `TREG_DEMO_STRIPE_WEBHOOK_SECRET`); `TREG_PUBLIC_URL`,
 `TREG_EMAIL_DEV_MODE=false`, and `TREG_EMAIL_FROM` are set inline. `asyncpg` is a dependency (Postgres
 async driver, alongside `aiosqlite`).
 
-**Fresh-Postgres verified:** `init_db`'s `create_all` + the guarded `_migrate_to_orgs` no-op cleanly on
-a fresh Postgres (all tables/columns present, idempotent on re-run) — the migration's SQLite-flavoured
-raw SQL only fires on a legacy/missing-column DB. **Timestamps must be naive UTC:** the datetime columns
+**Fresh-Postgres verified:** an empty database runs the pure Alembic chain to head. Existing unstamped
+deployments are refused and must pass through the 0.14.x adoption release.
+**Timestamps must be naive UTC:** the datetime columns
 are `TIMESTAMP WITHOUT TIME ZONE`, and asyncpg rejects tz-aware values, so `models._now()` returns naive
 UTC (SQLite is lax and hid this; it only bites on Postgres — the deploy target).
 
-**Migration portability (Postgres-safe additive columns).** The additive `ALTER TABLE … ADD COLUMN`
-steps in `_migrate_to_orgs` run on **every** startup and are idempotent (guarded by a column-existence
-check), so they must be written in SQL that both SQLite and Postgres accept. The rules the code follows:
-use `TIMESTAMP` (not `DATETIME` — Postgres has no `DATETIME` type); declare booleans as
-`BOOLEAN … DEFAULT false` (not `DEFAULT 0` — Postgres rejects an integer default on a boolean column);
-and write boolean literals as `true` / `false` (not `0` / `1`) in any `INSERT`. SQLite accepts all of
-these too, so the same statements work on both databases. `_ensure_bool_col` centralizes the boolean case.
-Also **quote a reserved-word table name**: the `token_version` step is `ALTER TABLE "user" ADD COLUMN …`
-(`user` is reserved in Postgres, where this ALTER runs in-place on the live DB — an existing table isn't
-touched by `create_all`, only by the migration). The usage-metering columns (A10 `membership.daily_call_cap
-INTEGER DEFAULT -1`, A11 `callrecord.kind VARCHAR DEFAULT 'call'`) follow the same rules but need no
-quoting (neither table name is reserved); the legacy owner-Membership backfill `INSERT` supplies
-`daily_call_cap` explicitly, since a `create_all` column is NOT NULL with no server default. The later
-additive steps follow the same rules: **A15** `org.public_demo BOOLEAN` (via `_ensure_bool_col`, the
-publishable call-only token; the legacy-org backfill `INSERT` now lists it explicitly); **A16** the
-connection metadata on `secret` (`provider`, `granted_scopes`, `resource_ref`, `resource_name`,
-`expires_at`/`last_refresh_at TIMESTAMP`, `last_error`) so the OAuth marketplace can attribute, scope,
-and expire a credential; **A17–A20** the per-provider auth quirks on `pendingoauth` carried through the
-redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_method`, `client_id_param`,
-`scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
-callback exchanges the code exactly as the consent URL was built; and **A35** backfills one
-`oauthgrant` authority row per existing refresh family from its oldest token, using portable,
-idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
-alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
-refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
-Postgres; the oldest token's `created_at` remains the consent time; **A36** adds nullable
-`callrecord.error_request`/`error_response` evidence; **A37** adds nullable Ads attribution and
-`first_call_at` columns to `org`; and **A38** adds nullable retry/dead-letter timestamps to the Ads
-conversion outbox. The A37/A38 timestamps use portable `TIMESTAMP` DDL and require no backfill.
+**Migration portability.** Every production schema change is an Alembic revision exercised on SQLite
+and in the serial Postgres CI migration set. `env.py` bounds Postgres lock and statement wait time so
+a contended migration fails before it queues the serving database behind DDL.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep
@@ -358,13 +347,14 @@ from the web service via `fromService` — so a new platform key is added in ONE
 way. `TREG_OVERFLOW_MODE` (`off` default | `shadow` | `on`) and `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
 govern the overflow child cycle (`ops/capacity.md`); the keys serve nothing while the mode is `off`.
 
-## A db.py change needs a Postgres-shaped deploy plan
+## A `src/treg/infra/db.py` change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
 2026-08-15 outage (an ALTER on `callrecord` queued behind live traffic, every new query queued behind
 the ALTER, both instances starved, and the shared Postgres stayed wedged until a database restart):
 
-- Startup migrations run with `lock_timeout = 5s` (set in `init_db`, postgres only). A contended
+- Alembic migrations run with `lock_timeout = 5s` and `statement_timeout = 120s` (set in `env.py`,
+  Postgres only). A contended
   deploy therefore FAILS CLEANLY — prod keeps serving the old code — and the right response is to
   redeploy at a quieter moment, not to raise the timeout.
 - The pool is per instance and a rolling deploy runs two: keep `pool_size + max_overflow` such that

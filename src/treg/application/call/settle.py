@@ -10,11 +10,13 @@ from collections.abc import Callable
 from sqlalchemy import update
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
-from ... import adsconv, catalog_store, ledger
+from ... import adsconv
 from ...domain.capacity import marks as capacity_marks
 from ...domain.capacity import overflow_spend as overflow_spend_ledger
 from ...domain.capacity import signatures as capacity_signatures
-from ...db import session_maker
+from ...domain import money as ledger
+from ...domain.catalog import store as catalog_store
+from ...infra.db import session_maker
 from ...models import Org
 from ...timeutil import utcnow_naive as _utcnow_naive
 from .idempotency import _release_idempotent_claim
@@ -191,6 +193,14 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
         data = doc.get("data")
         n = len(data) if isinstance(data, list) else (1 if data else 0)
         return n * mk.unit_micro
+    if provider == "influencersclub" and mk.cost_type == "per_result" and mk.unit_micro > 0:
+        # Discovery bills per creator RETURNED and the rows live under `accounts` — invisible to
+        # the generic counters, so every call settled at the 20-row default estimate (found live
+        # 2026-08-30: 66 searches, ~10 rows each, billed as 20 each — a 2.08x overcharge). An
+        # envelope without `accounts` (an error shape) counts zero: pay-per-result means an answer
+        # with no rows costs nothing.
+        rows = doc.get("accounts")
+        return (sum(item is not None for item in rows) if isinstance(rows, list) else 0) * mk.unit_micro
     if provider == "dataforseo":
         cost = doc.get("cost")
         if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0:
@@ -439,7 +449,7 @@ async def _platform_settle(
             await asyncio.sleep(0.5)
             charged = await _close()
     except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
-        logging.getLogger("treg.ledger").error(
+        logging.getLogger("treg.domain.money").error(
             "settle/release failed for call %s (%s, status %s): %s",
             call_id, mk.endpoint_id, status_code, exc, exc_info=True)
     return charged, observed
@@ -461,7 +471,7 @@ async def _finish_cancelled_call(
             try:
                 await response.close()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
-                logging.getLogger("treg.proxy").error(
+                logging.getLogger("treg.infra.upstream.relay").error(
                     "upstream close failed for cancelled call %s", call_ref, exc_info=True)
         if mk is not None and mk.metered:
             # `ledger.reserve` may have committed without returning, so `mk.call_id` is not an
@@ -483,7 +493,7 @@ async def _finish_cancelled_call(
                         )
                     await cleanup_db.commit()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
-                logging.getLogger("treg.ledger").error(
+                logging.getLogger("treg.domain.money").error(
                     "cancellation release failed for call %s", call_ref, exc_info=True)
         try:
             await _release_idempotent_claim(claim)

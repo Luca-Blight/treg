@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -13,7 +12,7 @@ from conftest import make_upstream
 from treg import adsconv
 from treg.api import app
 from treg.config import get_settings
-from treg.db import _migrate_to_orgs, reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import AdConversion, Org
 from treg.timeutil import utcnow_naive
 
@@ -142,20 +141,6 @@ def test_tracking_is_disabled_when_any_required_setting_is_missing(
 ):
     monkeypatch.setattr(ads_enabled, setting_name, "", raising=False)
     assert adsconv.enabled() is False
-
-
-def test_existing_ads_tables_receive_additive_state_columns():
-    engine = create_engine("sqlite://")
-    with engine.begin() as conn:
-        conn.execute(text("CREATE TABLE org (id INTEGER PRIMARY KEY)"))
-        conn.execute(text("INSERT INTO org (id) VALUES (1)"))
-        conn.execute(text("CREATE TABLE adconversion (id INTEGER PRIMARY KEY)"))
-
-        _migrate_to_orgs(conn)
-
-        assert "ad_click_id_type" in {c["name"] for c in inspect(conn).get_columns("org")}
-        conversion_columns = {c["name"] for c in inspect(conn).get_columns("adconversion")}
-        assert {"next_attempt_at", "failed_at"} <= conversion_columns
 
 
 async def test_ad_conversion_is_unique_per_org_and_action(clients):
@@ -732,6 +717,35 @@ async def test_every_public_landing_surface_loads_the_capture_script(clients):
         if "/adtrack.js" not in r.text:
             missing.append(path)
     assert not missing, f"pages that do not load the capture script: {missing}"
+
+
+async def test_capture_script_runs_in_head_before_spa_can_redirect(clients):
+    """The capture script must load in <head>, before any app code can navigate away.
+
+    An ad click arriving at /?gclid=... falls through to index.html (the SPA) because of the query
+    string. The SPA's boot then redirects logged-out visitors via `location.replace('/')`, dropping
+    the query string. The capture script must run during HTML parsing — before the Vue app mounts
+    and calls that redirect — or the click ID is lost. Placing it in <head> guarantees this.
+
+    This test pins the ORDERING guarantee. The presence test above catches a missing tag; this one
+    catches a tag that would lose the race against the redirect.
+    """
+    # The SPA is served at /app, but also at /?gclid=... (any query string falls through to it)
+    r = await clients.get("/app")
+    assert r.status_code == 200
+    html = r.text
+    # The script must appear in <head>, not after the Vue app's inline script
+    head_end = html.find("</head>")
+    body_start = html.find("<body")
+    script_pos = html.find('src="/adtrack.js"')
+    assert script_pos != -1, "/adtrack.js not found in SPA"
+    assert script_pos < head_end, (
+        f"adtrack.js must be in <head> to run before the SPA redirects (found at {script_pos}, "
+        f"</head> at {head_end})"
+    )
+    assert script_pos < body_start, (
+        f"adtrack.js must load before <body> to guarantee it runs before Vue mounts"
+    )
 
 
 def test_transaction_id_is_never_purely_numeric():

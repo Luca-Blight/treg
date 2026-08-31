@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import socket
 import sqlite3
@@ -42,17 +43,71 @@ def _upgrade(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return _run(["-m", "treg", "upgrade"], env)
 
 
+def _alembic_upgrade(env: dict[str, str], revision: str) -> subprocess.CompletedProcess[str]:
+    return _run(["-m", "alembic", "upgrade", revision], env)
+
+
+def _create_unstamped_schema(env: dict[str, str]) -> None:
+    script = textwrap.dedent(
+        """
+        import asyncio
+
+        from sqlmodel import SQLModel
+
+        from treg import models
+        from treg.infra.db import _engine, dispose_engine
+
+        async def main():
+            async with _engine.begin() as connection:
+                await connection.run_sync(SQLModel.metadata.create_all)
+                await connection.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
+            await dispose_engine()
+
+        asyncio.run(main())
+        """
+    )
+    result = _run(["-c", script], env)
+    assert result.returncode == 0, result.stderr
+
+
+@functools.cache
+def _script_directory():
+    from alembic.script import ScriptDirectory
+
+    from treg.maintenance import _alembic_config
+
+    return ScriptDirectory.from_config(_alembic_config())
+
+
+def _alembic_head() -> str:
+    return _script_directory().get_current_head()
+
+
+def _one_behind_head() -> str:
+    return _script_directory().get_revision(_alembic_head()).down_revision
+
+
+def _alembic_version(database: Path) -> str | None:
+    with sqlite3.connect(database) as db:
+        version_table = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'alembic_version'"
+        ).fetchone()
+        if version_table is None:
+            return None
+        row = db.execute("SELECT version_num FROM alembic_version").fetchone()
+        return row[0] if row else None
+
+
 def _seed_connection(env: dict[str, str]) -> None:
     script = textwrap.dedent(
         """
         import asyncio
 
         from treg import oauth_providers
-        from treg.db import init_db, session_maker
+        from treg.infra.db import session_maker
         from treg.models import Org, Secret, Tool
 
         async def seed():
-            await init_db()
             provider = oauth_providers.get("google-analytics")
             assert provider is not None
             async with session_maker() as db:
@@ -97,6 +152,57 @@ def _free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
+
+def _boot_raw_asgi(env: dict[str, str], tmp_path: Path) -> tuple[bool, str]:
+    port = _free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    env = {**env, "PORT": str(port), "TREG_PUBLIC_URL": base_url}
+    stdout_path = tmp_path / "raw-asgi.stdout"
+    stderr_path = tmp_path / "raw-asgi.stderr"
+    ready = False
+
+    with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "treg.api:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+            ],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            stdout=stdout,
+            stderr=stderr,
+        )
+        try:
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    break
+                try:
+                    with urllib.request.urlopen(f"{base_url}/meta", timeout=1) as response:
+                        ready = response.status == 200
+                except (OSError, urllib.error.URLError):
+                    pass
+                if ready:
+                    break
+                time.sleep(0.1)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=10)
+
+    return ready, stderr_path.read_text()
 
 
 def test_real_serve_path_can_query_database_after_pre_serve_maintenance(tmp_path):
@@ -165,21 +271,109 @@ def test_real_serve_path_can_query_database_after_pre_serve_maintenance(tmp_path
     )
 
 
-def test_upgrade_on_a_fresh_database_creates_schema_without_provisioning_a_user(tmp_path):
+def test_empty_database_upgrade_uses_pure_alembic_without_provisioning_a_user(tmp_path):
     env, database, token_file = _env(tmp_path, single_user=True)
 
     result = _upgrade(env)
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "treg upgrade complete"
+    assert "treg schema: alembic upgrade head (empty database)" in result.stdout
+    assert "treg upgrade complete" in result.stdout
     with sqlite3.connect(database) as db:
         tables = {row[0] for row in db.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )}
         users = db.execute('SELECT COUNT(*) FROM "user"').fetchone()[0]
     assert {"org", "secret", "tool"} <= tables
+    assert _alembic_version(database) == _alembic_head()
     assert users == 0
     assert not token_file.exists(), "hosted upgrade must never provision the local user"
+
+
+def test_raw_asgi_boots_when_database_is_at_head(tmp_path):
+    env, _, _ = _env(tmp_path)
+    result = _upgrade(env)
+    assert result.returncode == 0, result.stderr
+
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
+
+    assert ready, server_stderr
+
+
+def test_raw_asgi_refuses_a_database_behind_head(tmp_path):
+    env, database, _ = _env(tmp_path)
+    previous = _one_behind_head()
+    result = _alembic_upgrade(env, previous)
+    assert result.returncode == 0, result.stderr
+    assert _alembic_version(database) == previous
+
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
+
+    assert not ready
+    assert "behind this build" in server_stderr
+    assert "python -m treg upgrade" in server_stderr
+
+
+def test_raw_asgi_warns_and_serves_when_database_revision_is_unknown_newer(tmp_path):
+    env, database, _ = _env(tmp_path)
+    result = _upgrade(env)
+    assert result.returncode == 0, result.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE alembic_version SET version_num = '9999'")
+
+    ready, server_stderr = _boot_raw_asgi(env, tmp_path)
+
+    assert ready, server_stderr
+    # Rich logging wraps the warning and inserts its source location, so pin the semantic pieces.
+    assert "Database revision 9999" in server_stderr
+    assert "additive revisions" in server_stderr
+    assert "contract revision does not" in server_stderr
+
+
+def test_upgrade_refuses_an_unstamped_pre_adoption_database(tmp_path):
+    env, database, _ = _env(tmp_path)
+    _create_unstamped_schema(env)
+    assert _alembic_version(database) is None
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    assert "tools-registry[server]==0.14.*" in result.stderr
+    assert "python -m treg upgrade" in result.stderr
+    assert "Nothing was changed" in result.stderr
+    assert _alembic_version(database) is None
+
+
+def test_upgrade_names_the_rollback_when_the_database_is_newer_than_the_build(tmp_path):
+    """A database stamped at a revision this build does not know is a rollback past the rollback
+    floor (or a stale checkout). The operator gets an instruction, not an Alembic stack trace."""
+    env, database, _ = _env(tmp_path)
+    initial = _upgrade(env)
+    assert initial.returncode == 0, initial.stderr
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE alembic_version SET version_num = '9999'")
+
+    result = _upgrade(env)
+
+    assert result.returncode != 0
+    assert "OLDER than the schema" in result.stderr
+    assert "No migration ran" in result.stderr
+    assert _alembic_version(database) == "9999"
+
+
+def test_upgrade_applies_a_pending_revision_from_one_behind_head(tmp_path):
+    env, database, _ = _env(tmp_path)
+    previous = _one_behind_head()
+    assert previous != _alembic_head()
+    initial = _alembic_upgrade(env, previous)
+    assert initial.returncode == 0, initial.stderr
+    assert _alembic_version(database) == previous
+
+    result = _upgrade(env)
+
+    assert result.returncode == 0, result.stderr
+    assert "treg schema: alembic upgrade head (stamped database)" in result.stdout
+    assert _alembic_version(database) == _alembic_head()
 
 
 def test_upgrade_backfills_companions_and_is_idempotent(tmp_path):
@@ -200,6 +394,8 @@ def test_upgrade_backfills_companions_and_is_idempotent(tmp_path):
 
 def test_app_lifespan_does_not_run_release_backfills(tmp_path):
     env, database, _ = _env(tmp_path)
+    initial = _upgrade(env)
+    assert initial.returncode == 0, initial.stderr
     _seed_connection(env)
     assert _companion_count(database) == 0
     script = textwrap.dedent(

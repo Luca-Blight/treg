@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import billing, ledger
+from ..application import billing
 from ..config import get_settings
-from ..db import get_session
+from ..domain import money as ledger
 from ..domain.identity.access import Caller, _role_at_least, require_member
+from ..infra.db import get_session
 from ..models import Org
 from .auth_helpers import _is_https
 from .orgs import _require_admin_of
@@ -36,7 +37,7 @@ async def org_balance(
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
     """The org's prepaid balance. Amounts are integer micro-USD (`*_micro`) with a display-only USD
-    twin — never compute against the USD field (see ledger.py on why money is integers here).
+    twin — never compute against the USD field (see domain/money on why money is integers here).
 
     **Two audiences, one route.** Any MEMBER sees the figure and the in-flight holds: they are the
     ones spending it, every agent is told to run `treg balance` after a call, and a 402 already hands

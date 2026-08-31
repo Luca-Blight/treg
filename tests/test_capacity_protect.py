@@ -15,7 +15,7 @@ from treg import audit, ratestore
 from treg.application.call import service as call_service
 from treg.application.call import settle as call_settle
 from treg.application.call.types import CallFailure
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view

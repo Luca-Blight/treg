@@ -4,8 +4,8 @@ Revision ID: 0005
 Revises: 0004
 Create Date: 2026-08-28
 
-Paired with the legacy startup path (db.init_db → create_all) until stage 5; the baseline parity
-test proves both create the same schema.
+Alembic is the only production schema writer. SQLModel create_all remains test-fixture-only, with
+the autogenerate drift guard proving it matches head.
 """
 from collections.abc import Sequence
 

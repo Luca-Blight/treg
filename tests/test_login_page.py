@@ -8,10 +8,11 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from treg import crypto, session as sess
+from treg import crypto
+from treg.domain.identity import session as sess
 from treg.api import app
 from treg.config import get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import Membership, Org, Tool, User
 
 LID = "abcDEF123-_x"  # a valid login_id shape (only for page-render tests; approve needs a started one)

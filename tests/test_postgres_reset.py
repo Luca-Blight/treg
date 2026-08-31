@@ -7,7 +7,7 @@ import os
 import pytest
 from sqlalchemy import text
 
-from treg.db import _engine, reset_db
+from treg.infra.db import _engine, reset_db
 
 
 @pytest.mark.skipif(

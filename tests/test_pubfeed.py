@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 
 import treg.api as api_mod
-from treg import pubfeed
+from treg.application.onboard import pubfeed
 from treg.application import onboard as onboard_use_cases
 
 SECRET = "whsec_test_secret"

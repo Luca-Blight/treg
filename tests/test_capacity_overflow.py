@@ -16,7 +16,7 @@ from treg.application.call import overflow as O
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.routes_view import view as routes_view
 from treg.domain.capacity.sweep import STATE_NS
@@ -326,7 +326,7 @@ async def test_shadow_mode_probes_records_spend_and_returns_the_vendor_error(cli
 
 
 async def test_cancellation_cleanup_releases_both_holds_exactly_once(clients: AsyncClient, overflow_on):
-    from treg import ledger
+    from treg.domain import money as ledger
     from treg.application.call.settle import _finish_cancelled_call
     from treg.application.call.resolve import MarketplaceCall
     from treg.models import Tool

@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.identity.access import Caller
 from ...models import IdempotentCall
 from .types import IdempotencyFailed, IdempotentReplay
@@ -161,7 +161,7 @@ async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Calle
     insert on `(membership_id, key)` and is told to wait rather than duplicating the spend.
     """
     # Sweep this caller's expired labels first. LAZY and caller-scoped, matching the hold reaper in
-    # ledger.py and for the same reasons: a background timer would need a scheduler and a leader
+    # domain/money and for the same reasons: a background timer would need a scheduler and a leader
     # election on a multi-instance deploy, and would still only run on a timer. One indexed DELETE
     # paid by the caller who benefits from it, and a caller who never calls again leaves rows that
     # can no longer answer anything, because a replay checks the window before it serves.

@@ -4,6 +4,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
@@ -54,6 +55,12 @@ async def _run_migrations_online() -> None:
     )
 
     async with connectable.connect() as connection:
+        if connection.dialect.name == "postgresql":
+            # A contended deploy fails fast and clean instead of queueing the world behind an
+            # ACCESS EXCLUSIVE lock, and no migration statement runs unbounded.
+            await connection.execute(text("SET lock_timeout = '5s'"))
+            await connection.execute(text("SET statement_timeout = '120s'"))
+            await connection.commit()
         await connection.run_sync(_run_migrations)
 
     await connectable.dispose()

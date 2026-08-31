@@ -11,7 +11,7 @@ from ... import crypto as _crypto
 from ... import models as _models
 from ... import ratestore
 from ...config import get_settings
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.identity.access import _norm_email
 from ...models import Invite, Org, User
 from ...sandbox_identity import visitor_name

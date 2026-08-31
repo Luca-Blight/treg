@@ -1,12 +1,13 @@
 ---
-title: Archive — every platform answer, kept and versioned (cache = the newest layer)
+title: Archive - every platform answer, kept and versioned (cache = the newest layer)
 status: building
 sources:
   - src/treg/archive.py
-  - alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0002_archive_tables.py
+  - src/treg/alembic/versions/0003_callrecord_cached.py
+  - src/treg/alembic/versions/0004_archivekey_request_shape.py
   - src/treg/api.py
   - src/treg/bootstrap.py
-  - src/treg/catalog_store.py
   - src/treg/routers/admin.py
 related:
   - architecture/data-model.md
@@ -80,7 +81,7 @@ to a live call (an api-side belt catches even a fault in lookup's own plumbing; 
 it explode).
 
 `CallRecord.cached` (migration 0003) is declared LAST in the model to match ALTER TABLE's
-append position — the baseline parity test compares column order.
+append position, keeping `create_all` test schemas aligned with the migrated production shape.
 
 ## The catalog `cache` field (PR 3)
 

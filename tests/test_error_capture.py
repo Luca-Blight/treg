@@ -30,7 +30,7 @@ from treg.application.call.types import ReservationFailed, UpstreamResponse
 from treg.routers import admin as admin_routes
 from treg.routers import call as call_routes
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import CallRecord
 
 EP = "tikhub.tiktok.video.comments"           # GET, tikhub — header-injected

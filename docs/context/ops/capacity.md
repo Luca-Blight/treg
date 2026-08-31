@@ -16,21 +16,21 @@ sources:
   - src/treg/domain/capacity/overflow_spend.py
   - src/treg/domain/capacity/routes_view.py
   - src/treg/application/call/overflow.py
-  - alembic/versions/0007_overflow_spend.py
+  - src/treg/alembic/versions/0007_overflow_spend.py
   - tests/test_capacity_overflow.py
   - tests/test_capacity_overflow_spend.py
-  - alembic/versions/0008_org_platform_overflow_disabled.py
+  - src/treg/alembic/versions/0008_org_platform_overflow_disabled.py
   - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
   - src/treg/infra/upstream/aggregators/__init__.py
   - src/treg/infra/upstream/aggregators/orthogonal.py
   - src/treg/infra/upstream/aggregators/monid.py
   - src/treg/infra/upstream/aggregators/catalogs.py
-  - alembic/versions/0006_overflow_route.py
+  - src/treg/alembic/versions/0006_overflow_route.py
   - tests/test_capacity_overflow_routes.py
   - src/treg/worker.py
   - scripts/provider_balances.py
-  - alembic/versions/0005_capacity_policy_snapshot.py
+  - src/treg/alembic/versions/0005_capacity_policy_snapshot.py
   - tests/test_capacity_know.py
 related:
   - architecture/data-model.md
@@ -86,8 +86,8 @@ consulted or affected by anything here.
 DB stack (import-linter contract), and the sweep needs the platform keys in the env plus outbound
 third-party calls, which are worker-profile work — never dataplane lifespan work. In production it
 is a **Render cron job** (`treg-capacity-sweep` in `render.yaml`, hourly) that pulls its env from
-the web service via `fromService`; a run against a database missing the tables creates them
-(`init_db`). `scripts/provider_balances.py` remains the by-hand reconciliation view (balance beside
+the web service via `fromService`; startup calls read-only `verify_db()` and refuses a missing or stale
+schema. `scripts/provider_balances.py` remains the by-hand reconciliation view (balance beside
 ledger spend) over the same collectors.
 
 ## Data
@@ -96,8 +96,8 @@ ledger spend) over the same collectors.
 fields, runway thresholds, `usd_per_unit_micro` NULL = never invent a dollar figure, `rate_limit`
 + `quota` JSON, `enabled` ⇔ a key exists) and `CapacitySnapshot` (append-only observations:
 `remaining`, `total`, `unit`, `resets_at`, `source`, `confidence`, `note`, `error`). Written by the
-worker only. Both have the legacy `create_all` path **and** alembic revision `0002` until stage 5;
-`tests/test_alembic_baseline.py` proves the two agree. Numbers only — no key or payment detail.
+worker only. Alembic revision `0005` is authoritative; production schema changes are Alembic-only.
+Numbers only - no key or payment detail.
 
 ## Boundaries
 
@@ -112,7 +112,7 @@ outer layers"). Money is never touched: capacity marks are ratestore rows, never
 (`platform-overflow`), not a vendor: not in the catalog, not searchable, no BYO key. The caller
 pays the aggregator's real price, 0% markup, disclosed in-band when it ships (step E).
 
-- **`OverflowRoute`** (`overflowroute`, alembic `0003`): one row per `(endpoint_id, aggregator)` —
+- **`OverflowRoute`** (`overflowroute`, Alembic `0006`): one row per `(endpoint_id, aggregator)` -
   the aggregator's slug/path spelling, its list price (micro-USD), `agg_unit` (call | result),
   `ratio` = aggregator price ÷ our per-event price, `single_result`, `last_verified_at`, and a
   DERIVED `enabled` with `disabled_reason`. Worker-owned; the call path will only read it.
@@ -192,8 +192,8 @@ propagate to the call service for their dedicated cleanup and response handling.
 
 ## Enabling overflow (step F) — the opt-out and the rollout
 
-`Org.platform_overflow_disabled` (alembic `0005` + legacy `_ensure_bool_col`; last column in the
-class on purpose — alembic appends and the parity test compares order) is the team opt-out:
+`Org.platform_overflow_disabled` (Alembic `0008`; last column in the class on purpose — alembic
+appends, keeping create_all test schemas aligned with the migrated shape) is the team opt-out:
 `GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default true), `treg org overflow
 [on|off]` sets it. Honoured before any aggregator is contacted, on both entry points (the
 post-failure child cycle and the resolver's skip-direct rung); an opted-out team gets the typed 503.

@@ -63,7 +63,7 @@ async def test_a_team_with_oauth_family_authority_can_be_deleted(clients):
     from datetime import datetime
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthGrant, OAuthRefresh
 
     former = (await clients.post("/orgs", json={"name": "former-oauth-family-team"})).json()
@@ -96,7 +96,7 @@ async def test_deleting_a_former_grant_team_removes_the_whole_family(clients):
     from datetime import datetime, timedelta, timezone
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthGrant, OAuthRefresh, User
 
     former = (await clients.post("/orgs", json={"name": "former-grant-team"})).json()

@@ -2,7 +2,6 @@
 title: Auth & secrets — injectors, encryption, OAuth freshness, health
 status: shipped
 sources:
-  - src/treg/injectors.py
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/ssrf.py
   - src/treg/crypto.py
@@ -208,8 +207,10 @@ module symbols:
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
   path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
   stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
-  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` in the ordered release
-  upgrade phase to heal older connections automatically. The default `python -m treg` serve command runs
+  connect/reconnect, and `_backfill_provider_extra_tools` runs after the schema phase in the ordered
+  release upgrade to heal older connections automatically. The schema phase uses Alembic directly for
+  empty or stamped databases and refuses a non-empty unstamped database with the 0.14.x adoption remedy.
+  The default `python -m treg` serve command runs
   that phase before Uvicorn; raw ASGI deployments run `python -m treg upgrade` once per release. The
   backfill is registry-generic: it scans provider-attributed
   Secrets, requires the corresponding main Tool to be bound to that Secret, then calls the same extra
