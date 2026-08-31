@@ -514,6 +514,40 @@ are served first by the same flat handler; `test_legacy_flat_use_case_pages_stil
 rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
 was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
 
+### The five campaign hub pages (2026-08-31 rewrite)
+
+The five Google Ads landing pages (`/use-cases/seo-data-for-ai-agents`, `/use-cases/lead-enrichment-for-ai-agents`,
+`/use-cases/social-trend-research-for-ai-agents`, `/use-cases/competitor-ad-research-for-ai-agents`,
+`/use-cases/company-research-for-ai-agents`) are built from markdown sources in `marketing/landing/` via
+`build.py` and `build_html.py`, served as static HTML with `{BASE}` templating applied at request time.
+
+**Title matches H1, and both are buyer-job focused.** The H1s name the buyer's task, not a vendor
+alternative or MCP keyword: "SEO Data: Google Results, Keywords and Backlinks", "GTM Data: Find and
+Verify Work Emails", "Social Trends: TikTok, Reddit, YouTube and X Data", "Competitor Ads: Meta,
+Google, TikTok and LinkedIn", "Company Research: Funding, Headcount and Leadership". Vendor MCP
+keywords belong on `/tools/<provider>` (PR #276), not these hubs.
+
+**CTAs are "Start Free" and "Paste llms.txt".** The primary CTA links `/app?ref=<page_id>`, the
+secondary links `/llms.txt` directly. The copy-paste prompt in each page's workflow section is the
+action the page exists to produce.
+
+**JSON-LD: BreadcrumbList and FAQPage.** Every page carries both schemas. The breadcrumb names
+"treg.to" (never bare "treg") as the root. FAQ pairs are extracted from the "Before you sign up"
+section during build.
+
+**Links to job pages, not competing with them.** The "Next steps" section links real job pages and
+workflows: lead-enrichment links `/workflows/find-and-verify-a-lead-list` ($3.62 from a real run) and
+`/use-cases/find-professional-emails`; SEO links keyword and SERP job pages; social links creator and
+trending job pages. The hubs sell the job pages, not cannibalize them.
+
+**No hardcoded numbers.** Every figure on the page comes from `catalog_store` or a real run receipt.
+The workflow receipts (e.g. $3.62 for lead generation) are hand-recorded from actual runs, not
+rate-card estimates.
+
+**`{BASE}` templating.** The canonical URL and `og:url` use `{BASE}` in the HTML, substituted at
+request time by `routers/web.py` reading and replacing before returning `HTMLResponse`. This is the
+same pattern as `landing.html` and the legal pages.
+
 ## The workflow pages — `/workflows/<slug>`, and the hub at `/workflows`
 
 A use-case page answers one job; a workflow page is **the sequence a real person runs**, as ONE
