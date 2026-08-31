@@ -73,6 +73,9 @@ dev = [
     "pytest-asyncio>=0.24",
     "tools-registry[server]",   # the test suite imports the server (api, models, …), so dev pulls it in
 ]
+test = [
+    "playwright>=1.62.0",
+]
 
 [tool.importlinter]
 root_package = "treg"
