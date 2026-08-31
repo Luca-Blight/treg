@@ -1875,6 +1875,8 @@ details.tl[open] summary{border-bottom:1px solid var(--panel2)}
 details.tl ul{margin:12px 0;padding-left:20px}
 details.tl li{margin:9px 0;font-size:13.5px}
 details.tl li small{color:var(--muted)}
+details.tl li.more{font-style:italic;margin-top:14px}
+details.tl li.more a{color:var(--link);text-decoration:none}
 </style>"""
 
 
@@ -1971,12 +1973,15 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
             if is_oauth else
             f"{_esc_html(blurb)} {len(eps)} tools for your agent through one treg.to key, priced "
             f"at the provider's own rate{' from ' + _esc_html(cheapest) if cheapest else ''}, with no {esc_d} signup.")
+    h1_text = (f"{esc_d}: connect your own account" if is_oauth
+               else (f"{esc_d}: {len(eps)} tools from {_esc_html(cheapest)}" if cheapest
+                     else f"{esc_d}: {len(eps)} tools"))
     hero = (
         '<div class="hero"><div class="wrap">'
         '<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
         '<a href="/catalog">Catalog</a> / ' + esc_d + "</div>"
         f'<div class="kicker">{kicker}</div>'
-        f"<h1>{esc_d} MCP for AI agents</h1>"
+        f"<h1>{h1_text}</h1>"
         f'<div class="lede">{lede}</div>'
         f'<div class="ctas"><a class="candy" href="/app?ref=tool-{_esc_html(svc)}">Start free</a>'
         f'<a class="ghostbtn" href="#tools">See all {len(eps)} tools</a>'
@@ -2025,8 +2030,8 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         f"<h2>Set up {esc_d} in Claude Code, Codex or any agent</h2>"
         '<div class="steplabel"><span class="n">1</span><b>Give this to your agent</b></div>'
         '<div class="promptbox"><div class="ph"><span>in your agent&#x27;s chat</span>'
-        f'<button class="copybtn" data-copy="set up treg — {_esc_html(base)}/llms.txt">copy</button></div>'
-        f"<pre>set up treg — {_esc_html(base)}/llms.txt</pre></div>"
+        f'<button class="copybtn" data-copy="set up treg: {_esc_html(base)}/llms.txt">copy</button></div>'
+        f"<pre>set up treg: {_esc_html(base)}/llms.txt</pre></div>"
         '<div class="steplabel"><span class="n">2</span><b>Or add the MCP server yourself</b></div>'
         '<div class="promptbox"><div class="ph"><span>claude code</span>'
         f'<button class="copybtn" data-copy="claude mcp add --transport http treg {_esc_html(base)}/mcp">copy</button></div>'
@@ -2082,19 +2087,24 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         '<div class="card"><h4>One key, the whole catalog</h4><p>The same token calls '
         + (_esc_html(", ".join(_provider_display(a) for a in alt_names[:3])) if alt_names
            else "every provider in the catalog")
-        + " and ~2,600 other tools.</p></div>"
+        + f" and {len(cat.endpoints) - len(eps):,} other tools.</p></div>"
         "</div></div></section>")
 
     tool_blocks = []
+    max_shown = 8
     for i, (slug, items) in enumerate(sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0]))):
         lis = []
-        for e in items:
+        shown = sorted(items, key=lambda e: (not e.get("verified"), e["id"]))[:max_shown]
+        for e in shown:
             price = _price_label(cat.cost_view(e.get("cost"), e.get("provider")))
             bits = [b for b in ("live-verified" if e.get("verified") else "", _esc_html(price)) if b]
             lis.append(f"<li><b>{_esc_html(e['name'])}</b>"
                        + (f" · <small>{' · '.join(bits)}</small>" if bits else "")
                        + f"<br/><small>{_esc_html(e.get('summary') or '')} "
                          f"<code>{_esc_html(e['id'])}</code></small></li>")
+        if len(items) > max_shown:
+            lis.append(f'<li class="more"><a href="/catalog/{_esc_html(slug)}">See all {len(items)} '
+                       f'{_esc_html(plat_label.get(slug, slug))} tools on the catalog →</a></li>')
         tool_blocks.append(
             f'<details class="tl"{" open" if i == 0 else ""}>'
             f'<summary><a href="/catalog/{_esc_html(slug)}">{_esc_html(plat_label.get(slug, slug))}</a>'
@@ -2141,7 +2151,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         ]
     faq_items += [
         (f"How do I add {display} to Claude Code?",
-         f"Run: claude mcp add --transport http treg {base}/mcp — one MCP server carries "
+         f"Run: claude mcp add --transport http treg {base}/mcp. One MCP server carries "
          f"{display} and the rest of the catalog."),
         ("Which frameworks does it work with?",
          "Anything that speaks MCP (Claude Code, Claude Desktop, ChatGPT, Codex, Cursor, Grok) "
@@ -2176,7 +2186,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
     body = _TOOLS_CSS + hero + flow + setup + tryit + why + tools_sec + used_sec + alt_sec + faq + copy_js
 
     if is_oauth:
-        title = f"{display} MCP for AI Agents — connect your own account | treg.to"
+        title = f"{display}: connect your own account | treg.to"
         desc = (f"Use {display} from Claude Code, ChatGPT or any MCP agent: {len(eps)} tools "
                 "through one treg.to token. Calls on your own connection are never metered.")
     else:
@@ -2198,7 +2208,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
 
     ld = [
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
+            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
             {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"},
             {"@type": "ListItem", "position": 3, "name": display,
              "item": f"{base}/tools/{svc}"}]},
