@@ -311,7 +311,42 @@ async def _pdl(c, key):
                     "read from the free 400's headers"}
 
 
+async def _brightdata(c, key):
+    # GET /customer/balance returns account balance and pending charges (USD).
+    # Requires billing permission on the API token — if the token lacks it, the request
+    # returns 403 and the exception path surfaces the permission issue as a note.
+    d = await _get(c, "https://api.brightdata.com/customer/balance",
+                   headers={"Authorization": f"Bearer {key}"})
+    return {"value": d.get("balance"), "unit": "USD",
+            "note": f"pending ${d.get('pending_balance', 0):.2f} (next billing cycle)"}
+
+
+async def _crustdata(c, key):
+    # GET /account/credits is free (does not consume credits). Requires x-api-version header.
+    d = await _get(c, "https://api.crustdata.com/account/credits",
+                   headers={"Authorization": f"Bearer {key}", "x-api-version": "2025-11-01"})
+    acct = d.get("account", {})
+    rec = acct.get("recurring_credits")
+    freq = acct.get("recurring_credits_frequency")
+    refresh = (acct.get("recurring_credits_refresh_date") or "")[:10]
+    note = f"recurring {rec} {freq}, refreshes {refresh}" if rec else "no recurring grant"
+    return {"value": acct.get("credits"), "unit": "credits", "note": note}
+
+
+async def _akta(c, key):
+    # GET /mcp/account is free — returns plan tier and remaining credit balance.
+    d = await _get(c, "https://api.akta.pro/api/v1/mcp/account",
+                   headers={"x-api-key": key})
+    tier = d.get("package_type", "unknown")
+    enterprise = " (enterprise)" if d.get("is_enterprise") else ""
+    return {"value": d.get("credits"), "unit": "credits",
+            "note": f"tier {tier}{enterprise}"}
+
+
 BALANCE_ROUTES = {
+    "akta": _akta,
+    "brightdata": _brightdata,
+    "crustdata": _crustdata,
     "fiber_ai": _fiber_ai,
     "spyfu": _spyfu,
     "icypeas": _icypeas,
@@ -342,23 +377,26 @@ BALANCE_ROUTES = {
     "thecompaniesapi": _thecompaniesapi,
 }
 
-# Verified to publish NO balance/credits API (re-checked 2026-08-22) — the dashboard is the only meter. Kept
+# Verified to publish NO balance/credits API (re-checked 2026-08-31) — the dashboard is the only meter. Kept
 # explicit so the report names them instead of silently skipping, and so a future probe has a list
-# of what to re-check. brightdata is one permission grant away from graduating into BALANCE_ROUTES.
+# of what to re-check.
 NO_BALANCE_API = {
-    "finnhub": "no account/usage endpoint and no rate-limit headers (checked 2026-08-22) — "
+    "aviato": "no public balance endpoint documented (checked docs.data.aviato.co 2026-08-31) — "
+              "internal playbooks reference aviato_get_balance but it is not in the public API; "
+              "dashboard only",
+    "coresignal": "no dedicated balance endpoint (checked docs.coresignal.com 2026-08-31) — "
+                  "x-credits-remaining header rides only on BILLED 200s (a free 422 has none); "
+                  "dashboard only",
+    "exa": "no balance endpoint (checked exa.ai/docs 2026-08-31) — GET /team-management/api-keys/{id}/usage "
+           "returns historical costs, not remaining balance; dashboard only",
+    "finnhub": "no account/usage endpoint and no rate-limit headers (checked 2026-08-31) — "
                "per-minute limits only, nothing to read back",
-    "marketstack": "no usage endpoint (checked 2026-08-22) — monthly quota in the dashboard, "
+    "justoneapi": "balance available only via MCP server (get_account_balance tool), no public REST "
+                  "endpoint documented (checked docs.justoneapi.com 2026-08-31) — dashboard only",
+    "marketstack": "no usage endpoint (checked 2026-08-31) — monthly quota in the dashboard, "
                    "email alerts at 75/90/100%",
-    "tiingo": "no usage API (api/account/usage 404s, 2026-08-22) — tiingo.com/account/usage is "
+    "tiingo": "no usage API (api/account/usage 404s, checked 2026-08-31) — tiingo.com/account/usage is "
               "a logged-in HTML page only",
-    "brightdata": "GET api.brightdata.com/customer/balance exists but our token lacks the billing "
-                  "permission — grant it at brightdata.com/cp/setting/users",
-    "justoneapi": "no balance endpoint published — dashboard only",
-    "akta": "no balance endpoint published — dashboard only",
-    "coresignal": "GET /v2/subscriptions answers but is empty for a credits-pack account; the "
-                  "x-credits-remaining header rides only on BILLED 200s (a free 422 has none, "
-                  "2026-08-22) — dashboard only",
 }
 
 # platform_key_* slots that are the SECOND half of a provider's credential pair, not a provider of
