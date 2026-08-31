@@ -146,8 +146,10 @@ from that run's receipt, published with its CSV at
 | Wall clock, one call at a time | about 21 minutes |
 | Total metered | **$3.62** for 50 companies, or **$0.13 per deliverable lead** |
 
-**Misses cost nothing on the finder steps.** Findymail, Tomba and Hunter bill per found address, so
-the 9 rows that never produced an email added $0.00 to the receipt.
+**Where misses were free, and where they were not.** Hunter and LeadMagic charge only on success,
+so their misses settled at $0.00. Findymail and Tomba list a free miss too, but neither reports the
+charge in its response, so treg.to settled their calls at the list rate, misses included: $0.56 of
+the $3.62. The receipt is the real total, not the rate card.
 
 > **The honest read of this run:** 27 deliverable leads from 50 companies is one market on one day,
 > not a benchmark. The hit rate on *your* market is what the $1.00 free credit is for: run ten rows

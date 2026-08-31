@@ -737,8 +737,8 @@ async def agent_page(request: Request, agent: str):
         return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
                                  headers={"Cache-Control": "public, max-age=600"})
 
-    # Only the FIRST role is in the H1 markup: a crawler reads "…Connector for SEO experts", not nine
-    # roles run together. The rest ride in a JSON block and the script appends them.
+    # Only the FIRST role is server-rendered, on the roleline under the H1 — the H1 itself carries
+    # the term and the promise, never a persona. The rest ride in a JSON block for the script.
     roles = f'<span class="ri on">{_esc_html(agent_pages.ROLES[0])}</span>'
     more_roles = json.dumps(list(agent_pages.ROLES[1:])).replace("<", "\\u003c")
     steps = "".join(
@@ -2158,7 +2158,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         "</div></section>")
 
     alt_names = sorted({e["provider"] for e in cat.endpoints
-                        if e["capability"] in cap_counts and e["provider"] != svc})
+                        if _pub(e) and e["capability"] in cap_counts and e["provider"] != svc})
     why = (
         '<section id="why"><div class="wrap"><div class="seclab">Why treg.to</div>'
         f"<h2>Why call {esc_d} through treg.to</h2>"

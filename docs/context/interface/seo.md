@@ -514,7 +514,7 @@ nor Alpha Vantage in the catalog, said in the lede.
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a
 rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
-was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
+was one row on one agent page. All hosted-only and sitemapped; the RENDERED job pages are `.md`-mirrored like the agent pages, but the five flat ad pages are not — their route serves no `.md`, which is why the build stopped advertising alternates for them.
 
 ### The five campaign hub pages (2026-08-31 rewrite)
 

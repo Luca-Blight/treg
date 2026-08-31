@@ -54,8 +54,9 @@ async def test_chatgpt_page_counts_come_from_the_catalog(clients: AsyncClient):
 
 
 async def test_chatgpt_page_hero_rotates_through_the_roles(clients: AsyncClient):
-    """"ChatGPT for SEO experts / social media managers / SDRs …" — the first role is in the
-    server-rendered H1 so a crawler reads a complete sentence; the rest ride along for the JS."""
+    """"for SEO experts / social media managers / SDRs …" — the first role is server-rendered on
+    the roleline under the keyword H1, so a crawler reads a complete phrase; the rest ride in
+    the JSON block for the JS."""
     html = (await clients.get("/agents/chatgpt")).text
     h1 = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S).group(1)
     # The H1 carries the term and the promise, never a persona: "…for SEO experts" read as the
