@@ -113,6 +113,15 @@
       "GET",
       "HEAD"
     ],
+    "name": "agents_hub",
+    "path": "/agents"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "agent_page",
     "path": "/agents/{agent}"
   },

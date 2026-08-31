@@ -234,13 +234,21 @@ favicon only resolves at 16px and falls back to a generic globe at 64.
 Per-platform cards (`/media/og/<slug>.png`) are a deliberate follow-up. Until then every catalog page
 points at the shared one.
 
-## The agent pages — `/agents/<agent>`
+## The agent pages — `/agents/<agent>`, and the hub at `/agents`
 
 "I use ChatGPT — what can it do now?" answered on one server-rendered URL per client. The first is
 `/agents/chatgpt`; the set is the keys of `agent_pages.AGENTS`, and nothing else (an unknown agent
 404s). They came out of the programmatic-SEO plan in `marketing/pseo-build-spec.md`: the measured
 demand is for the *agent* ("chatgpt connectors") and the *platform* ("linkedin api pricing"), never
 for "how to <job> in chatgpt", so the job list lives on the agent page as rows, not as URLs.
+
+**The hub at `/agents`** (2026-08-31) is one card per client off `AGENTS` — name, the `definition`
+sentence with the counts formatted in, a link. It exists because the discovery pass gave every
+surface an "Agents" nav link with nowhere to point it: the link went to `/agents/claude-code` (one
+client's page standing in for all of them) while the bare `/agents` URL 404ed. The nav now points
+at the hub, the agent pages' breadcrumb carries it as the parent (treg.to / Agents / <name>), and
+the sitemap lists it at 0.8 beside the other two hubs. Hosted-only and adtrack'd like everything
+else off `_page()`; no `.md` mirror, matching `/use-cases` and `/workflows`.
 
 **One skin for both page types.** The agent and use-case pages render with `usecase.css`, the
 landing-page skin the five outcome pages already use, passed to `_page(css=...)`: centered hero with

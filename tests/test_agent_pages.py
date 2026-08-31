@@ -131,9 +131,24 @@ async def test_agent_pages_are_hosted_only(monkeypatch):
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
             assert (await c.get("/agents/chatgpt")).status_code == 404
-            assert "/agents/chatgpt" not in (await c.get("/sitemap.xml")).text
+            assert (await c.get("/agents")).status_code == 404
+            assert "/agents" not in (await c.get("/sitemap.xml")).text
     finally:
         get_settings.cache_clear()
+
+
+async def test_agents_hub_lists_every_agent(clients: AsyncClient):
+    """The nav's "Agents" link pointed at /agents/claude-code because no hub existed, and the bare
+    /agents URL 404ed while pages linked toward it. One card per client, the nav points here, and
+    the sitemap carries it."""
+    r = await clients.get("/agents")
+    assert r.status_code == 200, r.text[:200]
+    html = r.text
+    for slug, spec in agent_pages.AGENTS.items():
+        assert f'href="/agents/{slug}"' in html, slug
+        assert spec["name"] in html, slug
+    assert 'href="/agents"' in (await clients.get("/agents/chatgpt")).text  # nav + breadcrumb parent
+    assert f"<loc>{_base()}/agents</loc>" in (await clients.get("/sitemap.xml")).text
 
 
 # ------------------------------------------------------------------ use-case pages (the spokes)
@@ -357,7 +372,7 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
 
 # Every page that ships, not a hand-kept list: this set grows by 59 as the use-case pages land, and
 # a title that overflows is invisible in exactly the way nobody notices during review.
-ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases", "/workflows"]
+ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/agents", "/use-cases", "/workflows"]
              + [f"/use-cases/{j}" for j in agent_pages.USE_CASE_PAGES]
              + [f"/workflows/{w}" for w in agent_pages.WORKFLOWS])
 
@@ -644,6 +659,7 @@ def test_workflow_copy_has_no_em_dashes():
 
 @pytest.mark.parametrize("path", [
     "/agents/chatgpt",
+    "/agents",
     "/use-cases/verify-an-email",
     "/use-cases",
     "/workflows",
