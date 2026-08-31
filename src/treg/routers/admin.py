@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,7 +17,8 @@ from sqlmodel import select
 from .. import reconcile
 from ..config import get_settings
 from ..infra.db import get_session, session_maker
-from ..models import ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, Membership, Org, Referral, Secret, Tool, User
+from ..domain import money
+from ..models import ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, LedgerEntry, Membership, Org, Referral, Secret, Tool, User
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
 from ..domain.identity.access import require_superadmin
@@ -650,3 +652,96 @@ async def admin_delete_org(
     await _cascade_delete_org(org, db)
     await db.commit()
     return {"deleted_org": org_id}
+
+
+def _usd_to_micro(amount_usd: str | int | float) -> int:
+    """USD string/number -> integer micro-USD. Uses Decimal to avoid float drift.
+
+    Rejects amounts that cannot be exactly represented in micro-USD (finer than 6 decimal places),
+    non-positive amounts, and non-numeric input.
+    """
+    try:
+        value = Decimal(str(amount_usd))
+    except InvalidOperation:
+        raise HTTPException(status_code=400, detail=f"amount_usd {amount_usd!r} is not a valid number")
+    if value <= 0:
+        raise HTTPException(status_code=400, detail="amount_usd must be positive")
+    micro = value * 1_000_000
+    if micro != micro.to_integral_value():
+        raise HTTPException(
+            status_code=400,
+            detail=f"amount_usd {amount_usd} is finer than micro-USD (6 decimal places); it cannot be represented exactly"
+        )
+    return int(micro)
+
+
+class CreditIn(BaseModel):
+    amount_usd: str | int | float
+    ref: str
+    reason: str
+
+
+@app.post("/admin/orgs/{org_id}/credit")
+async def admin_credit_org(
+    org_id: int, body: CreditIn, principal: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Credit an org with promotional balance — the HTTP equivalent of scripts/manual_grant.py.
+
+    The ONLY sanctioned way to credit balance through the API. Uses `money.grant()` under the hood,
+    which writes block + balance + ledger in one transaction, preserving the invariant that
+    `org.balance_micro == sum(block.remaining_micro) - sum(open hold.amount_micro)`.
+
+    Why `promotional` and not a custom kind: spend burns blocks in `money._KIND_ORDER` order, and an
+    unrecognized kind falls through to sort AFTER purchased credit. A comp should burn BEFORE the
+    customer's own money (it's a marketing expense), which is what `promotional` already does.
+
+    `ref` provides idempotency: a grant with the same ref for the same org is refused (409) rather than
+    double-credited. This is a best-effort scan of `meta.ref` in existing ledger entries — the same
+    sequential-reuse guard as scripts/manual_grant.py. It is NOT concurrency-safe: two simultaneous
+    requests with the same ref can both pass the scan. For an HTTP endpoint called by one ops person
+    at a time, that is acceptable; if it ever stops being true, the fix is a unique column.
+
+    Returns the org_id, credited amount, new balance, block id, and ref — enough for ops to confirm.
+    """
+    micro = _usd_to_micro(body.amount_usd)
+    ref = body.ref.strip()
+    reason = body.reason.strip()
+    if not ref:
+        raise HTTPException(status_code=400, detail="ref is required (ops ticket / idempotency key)")
+    if not reason:
+        raise HTTPException(status_code=400, detail="reason is required (human explanation)")
+
+    org = await db.get(Org, org_id)
+    if org is None:
+        raise HTTPException(status_code=404, detail="org not found")
+
+    prior = (await db.execute(
+        select(LedgerEntry).where(LedgerEntry.org_id == org_id, LedgerEntry.kind == "grant")
+    )).scalars().all()
+    clash = next((e for e in prior if (e.meta or {}).get("ref") == ref), None)
+    if clash is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"ref {ref!r} was already used for a grant to org {org_id} "
+                   f"(${clash.amount_micro / 1_000_000:.2f}, entry {clash.id}, {clash.created_at})"
+        )
+
+    block = await money.grant(
+        db, org_id, amount_micro=micro, kind="promotional", once=False,
+        meta={"ref": ref, "reason": reason, "source": "admin_credit_org", "principal": principal},
+    )
+    await db.commit()
+
+    if block is None:
+        raise HTTPException(status_code=500, detail="grant returned None unexpectedly")
+
+    await db.refresh(org)
+    return {
+        "org_id": org_id,
+        "amount_micro": micro,
+        "amount_usd": float(Decimal(str(micro)) / 1_000_000),
+        "balance_micro": org.balance_micro,
+        "balance_usd": float(Decimal(str(org.balance_micro)) / 1_000_000),
+        "block_id": block.id,
+        "ref": ref,
+    }

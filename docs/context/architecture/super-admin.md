@@ -67,6 +67,12 @@ endpoints are unaffected (they use `require_superadmin`).
   email); the three destructive user ops refuse (`409`) when demoting/suspending/deleting would drop the
   count of active (`is_superadmin and not suspended`) users to zero — so a superadmin can't self-lock the
   platform out of `/admin/*`. The env token bypasses the floor (it can always recover).
+- **Org credit:** `admin_credit_org` (`POST /admin/orgs/{org_id}/credit`) — the HTTP equivalent of
+  `scripts/manual_grant.py`. Credits an org with promotional balance through `money.grant()`, preserving
+  the invariant that balance = sum(blocks) - sum(holds). Requires `amount_usd`, `ref` (idempotency key —
+  a duplicate ref for the same org returns 409), and `reason`. Always uses `kind="promotional"` so the
+  credit burns before purchased (non-refundable marketing expense). The script remains valid for
+  airgapped / direct-DB ops, and the route removes the need to open Render Postgres IP allowlists.
 
 ## Model + migration
 `User` gains `is_superadmin` + `suspended`; `Org` gains `suspended` (booleans). The columns are part
@@ -75,5 +81,6 @@ of the Alembic baseline schema; a live DB picks up schema changes through the ex
 
 ## CLI (`interface/cli.md`)
 `treg admin login --token` (saves the env key), `admin stats|orgs|org <id>|users|tools|calls|health`,
-and `admin grant|revoke|suspend-user|rm-user|suspend-org|rm-org`. `_admin_client` sends the saved
+`admin grant|revoke|suspend-user|rm-user|suspend-org|rm-org`, and
+`admin credit <org_id> --amount-usd <n> --ref <ticket> --reason <text>`. `_admin_client` sends the saved
 `admin_token` if present, else the active org token (works for an `is_superadmin` user).

@@ -303,6 +303,39 @@
         "title": "CliApproveIn",
         "type": "object"
       },
+      "CreditIn": {
+        "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "ref",
+          "reason"
+        ],
+        "title": "CreditIn",
+        "type": "object"
+      },
       "DenyRuleIn": {
         "properties": {
           "host": {
@@ -2035,6 +2068,78 @@
           }
         },
         "summary": "Admin Org Detail"
+      }
+    },
+    "/admin/orgs/{org_id}/credit": {
+      "post": {
+        "description": "Credit an org with promotional balance — the HTTP equivalent of scripts/manual_grant.py.\n\nThe ONLY sanctioned way to credit balance through the API. Uses `money.grant()` under the hood,\nwhich writes block + balance + ledger in one transaction, preserving the invariant that\n`org.balance_micro == sum(block.remaining_micro) - sum(open hold.amount_micro)`.\n\nWhy `promotional` and not a custom kind: spend burns blocks in `money._KIND_ORDER` order, and an\nunrecognized kind falls through to sort AFTER purchased credit. A comp should burn BEFORE the\ncustomer's own money (it's a marketing expense), which is what `promotional` already does.\n\n`ref` provides idempotency: a grant with the same ref for the same org is refused (409) rather than\ndouble-credited. This is a best-effort scan of `meta.ref` in existing ledger entries — the same\nsequential-reuse guard as scripts/manual_grant.py. It is NOT concurrency-safe: two simultaneous\nrequests with the same ref can both pass the scan. For an HTTP endpoint called by one ops person\nat a time, that is acceptable; if it ever stops being true, the fix is a unique column.\n\nReturns the org_id, credited amount, new balance, block id, and ref — enough for ops to confirm.",
+        "operationId": "admin_credit_org_admin_orgs__org_id__credit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "treg_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Treg Session",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Credit Org Admin Orgs  Org Id  Credit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Credit Org"
       }
     },
     "/admin/orgs/{org_id}/suspend": {
