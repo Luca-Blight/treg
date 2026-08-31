@@ -4377,6 +4377,15 @@ def cmd_admin_rm_org(args, cfg) -> None:
         _show(c.delete(f"/admin/orgs/{args.org_id}"))
 
 
+def cmd_admin_credit(args, cfg) -> None:
+    with _admin_client(cfg) as c:
+        _show(c.post(f"/admin/orgs/{args.org_id}/credit", json={
+            "amount_usd": args.amount_usd,
+            "ref": args.ref,
+            "reason": args.reason,
+        }))
+
+
 def cmd_oauth_providers(args, cfg) -> None:
     with _client(cfg) as c:
         _show(c.get("/oauth/providers"))
@@ -5709,6 +5718,13 @@ def build_parser() -> argparse.ArgumentParser:
     aso.add_argument("org_id", type=int, help="the org id"); aso.add_argument("--undo", action="store_true", help="un-suspend instead"); aso.set_defaults(fn=cmd_admin_suspend_org)
     aro = mk(ad, "rm-org", "Delete an org platform-wide.", "treg admin rm-org 2")
     aro.add_argument("org_id", type=int, help="the org id"); aro.set_defaults(fn=cmd_admin_rm_org)
+    acr = mk(ad, "credit", "Credit an org promotional balance (HTTP equivalent of scripts/manual_grant.py).",
+             "treg admin credit 2867 --amount-usd 100 --ref hs-1234 --reason 'goodwill comp'")
+    acr.add_argument("org_id", type=int, help="the org id to credit")
+    acr.add_argument("--amount-usd", dest="amount_usd", required=True, help="amount in USD (e.g. '100', '50.50')")
+    acr.add_argument("--ref", required=True, help="dedupe key (ticket id) — a repeat with the same ref refuses")
+    acr.add_argument("--reason", required=True, help="human explanation recorded on the ledger")
+    acr.set_defaults(fn=cmd_admin_credit)
     return p
 
 
