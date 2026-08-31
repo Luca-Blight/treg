@@ -76,3 +76,6 @@ e2e.db*
 docs/evidence/
 .import_linter_cache/
 body.json
+
+# Test screenshots — regenerated on demand, not versioned.
+tests/screenshots/

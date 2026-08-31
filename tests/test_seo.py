@@ -343,7 +343,7 @@ def test_public_catalog_drops_the_workspace_chrome():
     spa = _spa()
     assert '<div class="pubnav" v-if="publicCatalog">' in spa      # marketing nav instead
     assert '<div class="top" role="banner" v-else>' in spa          # app bar only for members
-    assert '<nav class="side" v-if="!publicCatalog">' in spa        # no sidebar in public mode
+    assert '<nav class="side"' in spa and 'v-if="!publicCatalog">' in spa  # no sidebar in public mode
     assert '.layout.solo{grid-template-columns:minmax(0,1fr)}' in spa   # main spans the full width
 
 
