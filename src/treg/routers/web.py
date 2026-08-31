@@ -473,10 +473,18 @@ def _hosted() -> bool:
     return host in PUBLIC_HOST_ALIASES
 
 
+def _pub(e: dict) -> bool:
+    """An endpoint the PUBLIC pages may count or list: hidden utility kinds out, and the
+    `kind: routed` meta-rows (PR #242) out with them — a routed row delegates to children that
+    are already on the page, so anywhere public it double-counts and surfaces a provider named
+    "treg", which the brand rules say must never appear as a vendor."""
+    return e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed"
+
+
 def _catalog_census() -> tuple[int, int]:
     """(browse-surface endpoint count, platform count): the two numbers the agent pages state."""
     cat = catalog_store.load()
-    browse = [e for e in cat.endpoints if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    browse = [e for e in cat.endpoints if _pub(e)]
     return len(browse), len({e["platform"] for e in browse})
 
 
@@ -554,7 +562,7 @@ def _jobs_by_provider() -> dict[str, list[tuple[str, str]]]:
     out: dict[str, list[tuple[str, str]]] = {}
     for slug, spec in agent_pages.USE_CASE_PAGES.items():
         provs = {e["provider"] for cid in _use_case_caps(spec["label"])
-                 for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS}
+                 for e in cat.for_capability(cid) if _pub(e)}
         for p in provs:
             out.setdefault(p, []).append((slug, spec["sentence"]))
     return out
@@ -583,13 +591,13 @@ def _menu_rows(cat, category: str, jobs) -> list[dict]:
     Markdown renderings of the agent page so the two can never list different jobs."""
     rows = []
     for label, caps in jobs:
-        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        eps = [e for cid in caps for e in cat.for_capability(cid) if _pub(e)]
         if not eps:  # the test forbids this, but a page must never render an empty promise
             continue
         prices = [c["usd"] for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]]
         plats, seen = [], set()
         for cid in caps:
-            ceps = [e for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+            ceps = [e for e in cat.for_capability(cid) if _pub(e)]
             if not ceps:
                 continue
             slug = ceps[0]["platform"]
@@ -950,6 +958,9 @@ async def use_case_job_page_nested(category: str, job: str):
     answers is free, and a moved URL that does not is the whole cost of a taxonomy change."""
     md = job.endswith(".md")
     slug = job[:-3] if md else job
+    # A renamed slug must keep redirecting from its nested shape too — this handler used to
+    # reject it before consulting the map, which turned the promised 301 into a 404.
+    slug = agent_pages.USE_CASE_REDIRECTS.get(slug.lower(), slug)
     if slug not in agent_pages.USE_CASE_PAGES:
         raise HTTPException(status_code=404, detail="unknown use case")
     return RedirectResponse(f"/use-cases/{slug}{'.md' if md else ''}", status_code=301)
@@ -1002,7 +1013,7 @@ async def use_case_job_page(request: Request, job: str,
     agent_slug, agent_name = _uc_agent()
     cat_label = _job_category(spec["label"])
     caps = _use_case_caps(spec["label"])
-    eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    eps = [e for cid in caps for e in cat.for_capability(cid) if _pub(e)]
     if not eps:
         raise HTTPException(status_code=404, detail="no endpoints for this job")
     job_workflows = _workflows_for_caps(caps)
@@ -1094,9 +1105,10 @@ async def use_case_job_page(request: Request, job: str,
               f"Setup line (paste into any agent): `{setup}`", "",
               f'Then ask: "{spec["prompt"]}"', ""]
         md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
-        # Free own-key jobs (GA4, Search Console, YouTube on your own account) are never metered, so
-        # the "9 accounts" and "Hunter" cards are false; use the own-key subset instead.
-        own_key_free = form == "short" and provs[0]["free"]
+        # Any page with a free own-account row (GA4, Search Console short pages, and the YouTube
+        # comparisons where the official Data API is a $0.00 row) drops the metering cards: "9
+        # accounts" and "Hunter" are false wherever the reader's own account does the job.
+        own_key_free = any(p["free"] for p in provs)
         why_treg = agent_pages.WHY_TREG_OWN_KEY if own_key_free else agent_pages.WHY_TREG
         md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in why_treg]
         if trial_single:
@@ -1184,9 +1196,10 @@ async def use_case_job_page(request: Request, job: str,
 
     why_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
                         for t, d in spec["prompt_why"])
-    # Free own-key jobs (GA4, Search Console, YouTube on your own account) are never metered, so
-    # the "9 accounts" and "Hunter" cards are false; use the own-key subset instead.
-    own_key_free = form == "short" and provs[0]["free"]
+    # Any page with a free own-account row (GA4, Search Console short pages, and the YouTube
+    # comparisons where the official Data API is a $0.00 row) drops the metering cards: "9
+    # accounts" and "Hunter" are false wherever the reader's own account does the job.
+    own_key_free = any(p["free"] for p in provs)
     why_treg = agent_pages.WHY_TREG_OWN_KEY if own_key_free else agent_pages.WHY_TREG
     treg_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
                          for t, d in why_treg)
@@ -1461,7 +1474,7 @@ async def use_cases_hub():
     for j, spec in agent_pages.USE_CASE_PAGES.items():
         label = _job_category(spec["label"])
         caps = _use_case_caps(spec["label"])
-        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        eps = [e for cid in caps for e in cat.for_capability(cid) if _pub(e)]
         nprov = len({e["provider"] for e in eps})
         prices = [cv["usd"] for e in eps if (cv := cat.cost_view(e.get("cost"), e.get("provider"))) and cv["usd"]]
         meta = (f"{nprov} provider{'s' if nprov != 1 else ''} &middot; from {_esc_html(_usd_short(min(prices)))}"
@@ -1512,7 +1525,7 @@ async def _wf_steps(cat, observations: endpoint_stats.EndpointObservationReader,
     price per billing unit, how many providers do the step, and the observed stats when any."""
     out = []
     for name, cap, asks, ep_id, why in spec["steps"]:
-        eps = [e for e in cat.for_capability(cap) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        eps = [e for e in cat.for_capability(cap) if _pub(e)]
         used = next((e for e in eps if e["id"] == ep_id), None)
         cv = cat.cost_view(used.get("cost"), used.get("provider")) if used else None
         usd = cv["usd"] if cv and cv["usd"] else None
@@ -1826,7 +1839,7 @@ def _provider_rows() -> list[dict]:
     cat = catalog_store.load()
     rows = []
     for service in sorted({e["provider"] for e in cat.endpoints}):
-        eps = [e for e in cat.for_provider(service) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        eps = [e for e in cat.for_provider(service) if _pub(e)]
         if not eps:
             continue
         rows.append({
@@ -1911,7 +1924,12 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
     # never the request's. (Same idiom as the use-case pages; it is also what reads as a taint
     # kill to CodeQL, which cannot see _esc_html as a sanitizer.)
     svc = all_eps[0]["provider"]
-    eps = [e for e in all_eps if e["kind"] not in catalog_store.HIDDEN_KINDS] or all_eps
+    eps = [e for e in all_eps if _pub(e)] or [e for e in all_eps if e.get("kind") != "routed"]
+    if not eps:
+        # The first-party "treg" pseudo-provider is nothing but routed meta-rows. Without this a
+        # self-referential /tools/treg page rendered (and reached the sitemap) — the fallback above
+        # resurrects hidden kinds for providers whose real rows are all utility, never routed ones.
+        raise HTTPException(status_code=404, detail=f"unknown provider {service!r}")
     display = _provider_display(svc)
     esc_d = _esc_html(display)
     base = get_settings().public_url.rstrip("/")
