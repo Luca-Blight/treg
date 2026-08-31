@@ -12,14 +12,15 @@ from urllib.parse import quote, urlsplit
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ... import catalog_store, oauth_providers
+from ... import oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
 from ...domain.capacity.routes_view import view as overflow_routes_view
 from ...domain.capacity.view import view as capacity_view
-from ...db import session_maker
+from ...domain.catalog import store as catalog_store
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
+from ...infra.db import session_maker
 from ...models import CapabilityPin, Org, Secret, Tool
 from ..connect import _host_of, _provider_bindings
 from .types import ResolutionFailed, ResolvedTarget

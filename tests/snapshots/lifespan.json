@@ -33,7 +33,7 @@
   "startup": [
     {
       "action": "await",
-      "task": "treg.db.init_db"
+      "task": "treg.infra.db.verify_db"
     },
     {
       "action": "create",

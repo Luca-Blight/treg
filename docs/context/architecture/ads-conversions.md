@@ -124,7 +124,7 @@ a busy launch — so deriving the flag from `CallRecord` would undercount precis
 highest. `_record_first_call` runs on its **own session**, opened fresh via `session_maker()`, and
 never raises into the caller's response. This is deliberate: an earlier version committed on the
 request's own `db` session mid-settlement (the proxy call was still being billed) and broke 8 billing
-tests, because that reaches into the money transaction from outside `ledger.py` — the same rule
+tests, because that reaches into the money transaction from outside `domain/money` — the same rule
 `money.md` states for ledger writes applies here by extension, even though `adsconv.py` itself never
 touches balance.
 
@@ -140,7 +140,7 @@ touches balance.
   and the fire site that would have queued the conversion never runs again.
 
   This gap was found in review and the decision (2026-08-17) was to **accept it and document it
-  honestly** rather than restructure `ledger.py` to make the credit and the conversion one
+  honestly** rather than restructure `domain/money` to make the credit and the conversion one
   transaction. The cheap fix, if the gap ever matters in practice: a reconciliation sweep over orgs
   that have a credited payment (a `CreditBlock`) and a `gclid` but no `paid` `AdConversion` row, in
   the shape of `reconcile.py`'s other read-only reports. Not built.

@@ -11,7 +11,7 @@ from httpx import AsyncClient
 
 from treg import audit
 from treg.config import get_settings
-from treg.ledger import with_margin
+from treg.domain.money import with_margin
 
 from test_marketplace_call import EP, EP_DFS, EP_MICRO
 

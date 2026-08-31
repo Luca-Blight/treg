@@ -15,7 +15,8 @@ import re
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from treg import agent_pages, catalog_store
+from treg import agent_pages
+from treg.domain.catalog import store as catalog_store
 from treg.api import app
 from treg.config import get_settings
 

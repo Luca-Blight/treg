@@ -18,7 +18,7 @@ from sqlmodel import select
 from treg import oauth
 from treg import oauth_providers as P
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import PendingOAuth
 
 

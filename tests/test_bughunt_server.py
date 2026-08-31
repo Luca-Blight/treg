@@ -15,10 +15,11 @@ from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
-from treg import audit, crypto, oauth, session as sess
+from treg import audit, crypto, oauth
+from treg.domain.identity import session as sess
 from treg.api import app
 from treg.config import get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import Secret, User
 
 
@@ -198,15 +199,15 @@ async def test_security_headers_on_api(c):
     assert "max-age" in r.headers.get("strict-transport-security", "")  # HSTS pins https
 
 
-async def test_init_db_refuses_ephemeral_key_on_real_db():
-    from treg import db as dbmod
+async def test_verify_db_refuses_ephemeral_key_on_real_db():
+    from treg.infra import db as dbmod
     s = get_settings()
     prev = (s.secret_key, s.database_url)
     object.__setattr__(s, "secret_key", "")
     object.__setattr__(s, "database_url", "postgresql+asyncpg://u:p@host/db")
     try:
         with pytest.raises(RuntimeError, match="TREG_SECRET_KEY"):
-            await dbmod.init_db()
+            await dbmod.verify_db()
     finally:
         object.__setattr__(s, "secret_key", prev[0])
         object.__setattr__(s, "database_url", prev[1])

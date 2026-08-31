@@ -10,10 +10,9 @@ from importlib.resources import files
 from alembic import command, util
 from alembic.config import Config
 from sqlalchemy import inspect
-from sqlmodel import SQLModel
 
 from .application.connect import _backfill_provider_extra_tools
-from .db import _db_url, _engine, init_db
+from .infra.db import _db_url, _engine
 
 
 ReleaseTask = tuple[str, Callable[[], Awaitable[int]]]
@@ -41,33 +40,6 @@ async def _table_names() -> set[str]:
         ))
 
 
-def _find_adoption_gaps(sync_connection) -> list[str]:
-    """Every table and every column of the model metadata must exist before a stamp. A hand-kept
-    subset already let one gap through (the 0004 request-shape columns); the sweep is total so the
-    next gap refuses loudly instead of being stamped past. Deliberately name-level only: types,
-    defaults, and indexes legitimately differ between a legacy-built schema and an Alembic-built
-    one (the parity test proves the two fresh builds equal at head)."""
-    from . import models  # noqa: F401 - populate SQLModel.metadata
-
-    inspector = inspect(sync_connection)
-    existing_tables = set(inspector.get_table_names())
-    columns_by_table = {
-        table: {column["name"] for column in columns}
-        for (_, table), columns in inspector.get_multi_columns().items()
-    }
-    gaps = []
-    for table in SQLModel.metadata.sorted_tables:
-        if table.name not in existing_tables:
-            gaps.append(f"table {table.name}")
-            continue
-        actual_columns = columns_by_table.get(table.name, set())
-        gaps.extend(
-            f"column {table.name}.{name}"
-            for name in sorted({column.name for column in table.columns} - actual_columns)
-        )
-    return sorted(gaps)
-
-
 async def _upgrade_schema() -> None:
     tables = await _table_names()
     config = _alembic_config()
@@ -87,20 +59,11 @@ async def _upgrade_schema() -> None:
         print(f"treg schema: alembic upgrade head ({state} database)")
         return
 
-    await init_db()
-    async with _engine.connect() as connection:
-        gaps = await connection.run_sync(_find_adoption_gaps)
-    if gaps:
-        missing = ", ".join(gaps)
-        raise RuntimeError(
-            "Cannot adopt the existing database because its legacy schema is incomplete. "
-            f"Missing: {missing}. Alembic stamp was not applied. If this database was built by "
-            "a release older than this one, first install the adoption release - `pip install "
-            "'tools-registry[server]==0.14.*'` - complete `python -m treg upgrade` there, then "
-            "upgrade onward; otherwise restore the missing objects (or the database) first."
-        )
-    await asyncio.to_thread(command.stamp, config, "head")
-    print("treg schema: adopted legacy database and stamped head")
+    raise RuntimeError(
+        "This database predates Alembic adoption. Install the adoption release - `pip install "
+        "'tools-registry[server]==0.14.*'` - run `python -m treg upgrade` there to adopt and "
+        "stamp it, then upgrade onward. Nothing was changed."
+    )
 
 
 async def upgrade() -> None:

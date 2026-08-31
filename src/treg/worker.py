@@ -26,10 +26,10 @@ def _need_server() -> None:
 
 
 async def _capacity_sweep(args) -> int:
-    from .db import init_db, session_maker
+    from .infra.db import session_maker, verify_db
     from .domain.capacity.sweep import run_sweep
 
-    await init_db()
+    await verify_db()
     only = {p.strip() for p in (args.only or "").split(",") if p.strip()} or None
     async with session_maker() as db:
         result = await run_sweep(db, only=only)
@@ -63,11 +63,11 @@ def _our_endpoints() -> list[dict]:
 
 async def _overflow_sync(args) -> int:
     from .config import get_settings
-    from .db import init_db, session_maker
+    from .infra.db import session_maker, verify_db
     from .domain.capacity import routes as R
     from .domain.catalog import store as catalog_store
 
-    await init_db()
+    await verify_db()
     candidates = R.load_seed()
     if args.live:
         import httpx
@@ -97,14 +97,14 @@ async def _overflow_verify(args) -> int:
     from sqlalchemy import select
     from .config import get_settings, platform_setting_name
     from . import oauth_providers
-    from .db import init_db, session_maker
+    from .infra.db import session_maker, verify_db
     from .domain.capacity import verify as V
     from .domain.capacity import routes as R
     from .domain.catalog import store as catalog_store
     from .models import OverflowRoute
     from .timeutil import utcnow_naive
 
-    await init_db()
+    await verify_db()
     s = get_settings()
     cat = catalog_store.load()
     by_id = {e["id"]: e for e in cat.endpoints}

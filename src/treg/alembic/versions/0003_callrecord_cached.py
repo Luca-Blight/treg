@@ -5,6 +5,9 @@ columns stay identical to a live call on purpose — pricing a hit is a deferred
 that will attach to this tag. server_default false backfills every historical row correctly:
 nothing before this migration was ever served from the store.
 
+Rollback floor: the new NOT NULL column keeps no server default once backfilled, so code older
+than this revision can no longer insert call records.
+
 Revision ID: 0003
 Revises: 0002
 Create Date: 2026-08-27
@@ -20,6 +23,7 @@ revision: str = '0003'
 down_revision: str | Sequence[str] | None = '0002'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+contract = True
 
 
 def upgrade() -> None:

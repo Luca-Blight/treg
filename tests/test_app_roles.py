@@ -10,7 +10,7 @@ from fastapi.routing import APIRoute
 from starlette.routing import Mount
 
 from treg import api
-from treg.bootstrap import create_app
+from treg.bootstrap import ROLE_STARTUP_CHECKS, create_app
 
 
 _SNAPSHOT = Path(__file__).parent / "snapshots" / "routes.json"
@@ -50,21 +50,21 @@ _EXPECTED_BACKGROUND_TASKS = {
     "dataplane": [],
     "control": ["treg.adsconv.worker"],
 }
-_EXPECTED_STARTUP_CHECKS = {
-    "all": [
-        "treg.db.init_db",
+_READ_ONLY_STARTUP_CHECKS = {
+    "all": (
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
-    ],
-    "dataplane": [
-        "treg.db.init_db",
+    ),
+    "dataplane": (
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
-    ],
-    "control": [
-        "treg.db.init_db",
+    ),
+    "control": (
+        "treg.infra.db.verify_db",
         "app.state.http",
-    ],
+    ),
 }
 
 
@@ -85,13 +85,18 @@ def test_role_manifests_are_explicit_and_match_the_created_app(role):
     expected = {
         "routes": _EXPECTED_ROUTES[role],
         "background_tasks": _EXPECTED_BACKGROUND_TASKS[role],
-        "startup_checks": _EXPECTED_STARTUP_CHECKS[role],
+        "startup_checks": list(_READ_ONLY_STARTUP_CHECKS[role]),
     }
 
     assert app.state.role == role
     assert app.state.endpoint_observation_reader is not None
     assert app.state.role_manifest == expected
     assert _actual_routes(app) == expected["routes"]
+
+
+def test_every_role_startup_manifest_is_pinned_to_read_only_checks():
+    """Refactor plan §1.6: startup performs no writes; the PR2 carve-out is retired."""
+    assert ROLE_STARTUP_CHECKS == _READ_ONLY_STARTUP_CHECKS
 
 
 def test_api_app_remains_the_all_role_compatibility_entrypoint():

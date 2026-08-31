@@ -17,13 +17,14 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit, crypto, ledger
+from treg import audit, crypto
+from treg.domain import money as ledger
 from treg.application.call import service as call_service
 from treg.application.call import settle as call_settle
 from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Membership, Org, TagSpend, User
 
 EP = "tikhub.tiktok.video.comments"

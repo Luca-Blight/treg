@@ -11,7 +11,6 @@ sources:
   - src/treg/web/index.html
   - src/treg/web/landing.html
   - src/treg/web/llms.txt
-  - src/treg/endpoint_stats.py
   - scripts/indexnow_submit.py
   - src/treg/web/support.html
   - assets/brand/og-card.html

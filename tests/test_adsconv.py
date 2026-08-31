@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -13,7 +12,7 @@ from conftest import make_upstream
 from treg import adsconv
 from treg.api import app
 from treg.config import get_settings
-from treg.db import _migrate_to_orgs, reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import AdConversion, Org
 from treg.timeutil import utcnow_naive
 
@@ -142,20 +141,6 @@ def test_tracking_is_disabled_when_any_required_setting_is_missing(
 ):
     monkeypatch.setattr(ads_enabled, setting_name, "", raising=False)
     assert adsconv.enabled() is False
-
-
-def test_existing_ads_tables_receive_additive_state_columns():
-    engine = create_engine("sqlite://")
-    with engine.begin() as conn:
-        conn.execute(text("CREATE TABLE org (id INTEGER PRIMARY KEY)"))
-        conn.execute(text("INSERT INTO org (id) VALUES (1)"))
-        conn.execute(text("CREATE TABLE adconversion (id INTEGER PRIMARY KEY)"))
-
-        _migrate_to_orgs(conn)
-
-        assert "ad_click_id_type" in {c["name"] for c in inspect(conn).get_columns("org")}
-        conversion_columns = {c["name"] for c in inspect(conn).get_columns("adconversion")}
-        assert {"next_attempt_at", "failed_at"} <= conversion_columns
 
 
 async def test_ad_conversion_is_unique_per_org_and_action(clients):

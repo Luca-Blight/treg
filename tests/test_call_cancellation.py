@@ -15,12 +15,12 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from treg import ledger
+from treg.domain import money as ledger
 from treg.application.call import service as call_service
 from treg.application.call.types import GatewayFailed
 from treg.routers import call as call_routes
 from treg.api import app
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Hold, IdempotentCall, LedgerEntry
 
 from test_marketplace_call import EP, platform_on  # noqa: F401 - shared tier-4 fixture

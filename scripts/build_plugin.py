@@ -118,6 +118,49 @@ Either way, the rest of this page is the part that matters — **when** treg is 
 ---
 """
 
+# Cursor now ships MCP alongside the skill, so its bootstrap is closer to Codex: check for the tools
+# first, and fall back to CLI only if they are not there. The MCP config uses `${env:TREG_TOKEN}` for
+# the bearer token, so the tools will 401 until the user sets that env var — which is what the
+# bootstrap explains. Unlike Codex (where `bearer_token_env_var` works the same way), Cursor's
+# variable syntax (`${env:...}`) is documented and standard.
+CURSOR_BOOTSTRAP = """
+## First, check which treg you have
+
+This plugin ships MCP tools alongside the skill. **Look at your tools before you do anything else.**
+
+**If you can see `catalog_search`, `catalog_get`, `call`, `balance` and `my_tools`** — treg is
+connected. Use those; there is nothing to install. The rest of this page is written around the `treg`
+command line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+
+**If the tools error or you cannot see them**, the plugin needs a token. The human sets `TREG_TOKEN`:
+
+1. Sign in at {BASE} (GitHub / Google / email code)
+2. Copy the token from Settings → API Token
+3. Set `TREG_TOKEN` in the environment Cursor reads (or add it in Cursor's plugin configuration)
+4. Restart the agent — the tools will appear
+
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
+is the thing treg exists to avoid.
+
+---
+
+## When the tools ARE there
+
+| tool | use it for |
+|---|---|
+| `catalog_search` | find an endpoint by WHAT YOU WANT TO DO — "work email", "backlinks", "tiktok comments" |
+| `catalog_get` | one endpoint's parameters and its exact price, **before** you spend |
+| `call` | make the call; treg injects the credential and relays the answer |
+| `balance` | the team's prepaid balance |
+| `my_tools` | what this team registered and you can call without holding the key |
+
+Either way, the rest of this page is the part that matters — **when** treg is the right move, and
+**how to choose** between providers.
+
+---
+"""
+
 # The Claude Code plugin's MANIFEST declares no connector — anything it declared would be registered
 # at install time, before a human has signed in, i.e. five always-on tools that 401 on every call.
 # Keeping it out is what makes `/plugin install` zero-config. The SKILL then finishes the job at
@@ -219,9 +262,9 @@ the plugin already gives you — worth mentioning to the human, who can remove i
 
 # variant -> (target, bootstrap, stamp_version). One source, five shop windows.
 #
-# Claude Code and Cursor share CLI_BOOTSTRAP: both give the agent a terminal, neither ships a
-# connector, and `treg mcp install` writes a verified config for both (mcp_install.py). Keeping one
-# string rather than two near-identical ones is what stops them drifting.
+# Claude Code uses CLI_BOOTSTRAP: it gives the agent a terminal, does not ship a connector, and
+# `treg mcp install` writes a verified config for it. Cursor now ships MCP alongside the skill, so it
+# gets CURSOR_BOOTSTRAP which checks for the tools first and falls back to CLI if not.
 #
 # dsh gets its OWN bootstrap rather than sharing either: it is the only surface that ships the
 # connector and the CLI path in one install (the row is disabled until there is a token), and it is
@@ -230,7 +273,7 @@ the plugin already gives you — worth mentioning to the human, who can remove i
 VARIANTS = {
     "codex": (CODEX_TARGET, CODEX_BOOTSTRAP, False),
     "claude": (CLAUDE_TARGET, CLI_BOOTSTRAP, True),
-    "cursor": (CURSOR_TARGET, CLI_BOOTSTRAP, True),
+    "cursor": (CURSOR_TARGET, CURSOR_BOOTSTRAP, True),
     "dsh": (DSH_TARGET, DSH_BOOTSTRAP, False),
     "minimax": (MINIMAX_TARGET, MINIMAX_BOOTSTRAP, True),
 }

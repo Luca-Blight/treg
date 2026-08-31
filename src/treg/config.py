@@ -94,7 +94,7 @@ class Settings(BaseSettings):
     run_cpu_seconds: int = 300          # CPU time a single server run may burn (backstop to the wall timeout)
     run_fsize_mb: int = 100             # largest single file a server run may write (disk-fill guard)
 
-    # ---- prepaid balance (ledger.py) -----------------------------------------------------------
+    # ---- prepaid balance (domain/money) -----------------------------------------------------------
     # Platform markup on a call served by a PLATFORM key, applied to the estimate at reserve time and
     # to the observed cost at settle time. 0.0 = we charge exactly what the provider charges us.
     # It lives in config (rather than being hardcoded) so turning margin on is a deploy setting, not

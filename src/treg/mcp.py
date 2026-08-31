@@ -51,7 +51,8 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.exceptions import MCPError
 from mcp.types import METHOD_NOT_FOUND, ToolAnnotations
 
-from . import audit, catalog_store
+from . import audit
+from .domain.catalog import store as catalog_store
 from .config import PUBLIC_HOST_ALIASES, get_settings
 from .domain.catalog.stats import EndpointObservationReader
 
@@ -408,7 +409,7 @@ async def _internal_auth(token: str) -> dict[str, str]:
     from sqlmodel import select
 
     from .domain.identity import session
-    from .db import session_maker
+    from .infra.db import session_maker
     from .models import Org, User
 
     async with session_maker() as db:
@@ -1368,7 +1369,7 @@ class RequireAuthForProtectedTools:
         return None             # a live access token, or a per-org token the tool validates itself
 
     async def _challenge(self, send, *, invalid: bool = False) -> None:
-        from . import mcp_oauth
+        from .domain.identity import mcp_oauth
 
         base = get_settings().public_url.rstrip("/")
         suffix = "/mcp/v2" if self.resource_version == "v2" else ""

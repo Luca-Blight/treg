@@ -2,7 +2,7 @@
 
 from fastapi import Request
 
-from .. import referrals
+from ..domain import referrals
 from .auth_helpers import _is_https
 
 

@@ -14,7 +14,7 @@ import re
 
 from httpx import AsyncClient
 
-from treg import catalog_store as cs
+from treg.domain.catalog import store as cs
 from treg import oauth_providers as P
 
 
@@ -726,7 +726,7 @@ def test_a_free_route_needs_no_price_provenance():
     number, so demanding provenance refused 61 endpoints across 8 providers — 28 of Hunter's 35 —
     treating "costs nothing" as if it meant "we don't know", which is the one distinction the cost
     model is otherwise careful to keep apart."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     free = {"type": "free", "value": 0, "currency": "USD", "unit": "call"}
     ep = {"cost": free, "provider": "hunter", "scope": "any_account", "kind": "data"}
@@ -736,7 +736,7 @@ def test_a_free_route_needs_no_price_provenance():
 def test_a_PAID_route_still_needs_provenance():
     """The relaxation must not leak: a route with a real price and no provenance stays refused, or
     we would bill a team using a number nobody checked."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     unchecked = {"type": "per_call", "value": 0.05, "currency": "USD", "unit": "call"}
     ep = {"cost": unchecked, "provider": "hunter", "scope": "any_account", "kind": "data"}
@@ -748,7 +748,7 @@ def test_a_PAID_route_still_needs_provenance():
 
 def test_an_unpriced_route_is_still_refused():
     """The original rule, unchanged: no usd → refuse, so treg never pays a provider and charges $0."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     ep = {"cost": {"type": "per_call", "currency": "credit", "unit": "credit"},
           "provider": "pdl", "scope": "any_account", "kind": "data"}
@@ -814,7 +814,7 @@ def test_a_shared_plan_rate_converts_like_any_credit():
     """The whole design: a flat-fee provider is modelled as a credit provider whose credit is one
     call on treg's shared plan. cost_view needs ZERO changes — this asserts the pilot entry flows
     through the existing conversion."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
 
     c = cs.load()
     out = c.cost_view({"type": "per_call", "value": 1, "currency": "credit"}, "alphavantage")
@@ -852,7 +852,7 @@ def test_trial_pools_flow_from_fx_to_eligibility_and_display():
     """The real file's three pools, end to end through the loader: a $0 price that is platform
     eligible AND carries its allowance wherever the cost is shown — a bare $0.00 would read as
     unlimited."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
 
     c = cs.load()
     assert c.trial_pools == {"finnhub": 50, "twelvedata": 20, "tiingo": 20}
