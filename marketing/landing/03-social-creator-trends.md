@@ -261,8 +261,7 @@ paste the setup line from `/llms.txt` into Grok and it can use the treg.to catal
 ### Individual jobs you can run now
 
 - [Find Creators by Keyword](/use-cases/find-creators-by-keyword)
-- [A Creator's Profile and Stats](/use-cases/a-creators-profile-and-stats)
-- [What's Trending Right Now](/use-cases/whats-trending-right-now)
+- [YouTube Channel Stats](/use-cases/youtube-channel-stats)
 - [Search Posts by Keyword](/use-cases/search-posts-by-keyword)
 - [Mine the Comments](/use-cases/mine-the-comments)
 

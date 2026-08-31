@@ -6,7 +6,6 @@
 <title>Ad Library API: Meta, Google, TikTok, LinkedIn Ads | treg.to</title>
 <meta name="description" content="Ad library API for AI agents: pull competitors&#x27; live ads from Meta, Google, TikTok and LinkedIn through one key. Calls from $0.00188. $1.00 free."/>
 <link rel="canonical" href="{BASE}/use-cases/competitor-ad-research-for-ai-agents"/>
-<link rel="alternate" type="text/markdown" href="{BASE}/use-cases/competitor-ad-research-for-ai-agents.md"/>
 <meta property="og:title" content="Ad Library API: Meta, Google, TikTok, LinkedIn Ads | treg.to"/>
 <meta property="og:description" content="Ad library API for AI agents: pull competitors&#x27; live ads from Meta, Google, TikTok and LinkedIn through one key. Calls from $0.00188. $1.00 free."/>
 <meta property="og:url" content="{BASE}/use-cases/competitor-ad-research-for-ai-agents"/>
@@ -18,12 +17,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/usecase.css"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"treg.to","item":"{BASE}/"},{"@type":"ListItem","position":2,"name":"Competitor Ads","item":"{BASE}/use-cases"},{"@type":"ListItem","position":3,"name":"Ad Library API: Meta, Google, TikTok, LinkedIn Ads","item":"{BASE}/use-cases/competitor-ad-research-for-ai-agents"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why not just call the providers directly?","acceptedAnswer":{"@type":"Answer","text":"Meta's Ad Library API requires identity verification and returns only what you ask for in a fields\nparameter; the other three platforms have no comparable official developer access. So \"directly\" in\npractice means one verified Meta app plus three manual browser workflows: for research that happens in\nbursts. treg.to is closer to OpenRouter for agent tools than to a data vendor: one base URL, one token,\nmany providers behind it.\nHow are credentials handled?: The credential is injected on the server. Your agent makes the real upstream request through treg.to's\n/call/ endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key\nis ever written to your machine, your repo or your agent's context. Every call is recorded and attributed\nto the token that made it.\nCan I choose a specific provider?: Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once\nfor the whole team, treg org pin &lt;capability&gt; --provider &lt;provider&gt; refuses calls to any other provider\nof that capability.\n(Matters here. Providers into the same library return different fields: one gives you EU\nreach and per-ad detail, another gives you a cheap count. Read the endpoint before you pin one.)\nCan I use my existing provider key?: Yes, and it takes precedence. Register the key once and every call to that provider routes through it;\nthose calls are never metered against your treg.to balance. Your key always wins over treg.to's.\n(If you have a verified Meta app, connect it: Meta's own Ad Library API costs nothing per call, and those\ncalls will not touch your balance.)\nWhat happens if a provider fails?: treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,\nso treg.to relays your request rather than rewriting it. Failed calls are not billed. If a call\nsucceeded upstream but the answer was lost coming back, an Idempotency-Key returns the stored result\nwithout paying twice."}},{"@type":"Question","name":"How much does a call cost?","acceptedAnswer":{"@type":"Answer","text":"A Meta ad library search is $0.00188 with ScrapeCreators, or $0.005 per ad returned with Apify. Google Ads\nTransparency ranges from $0.0006 to $0.015 depending on provider. The exact price is shown before the\ncall, and treg.to adds no markup. New teams start with $1.00 of free credit: enough for several hundred\nlibrary searches.\nWhich agents does it work with?: The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP\nclient that supports the authorization spec can connect with OAuth. Anything that can run a shell command,\nCodex included, can use the treg CLI or plain HTTP."}},{"@type":"Question","name":"Is there a Meta Ad Library API?","acceptedAnswer":{"@type":"Answer","text":"The Meta Ad Library is a public website, not an API. The catalog has providers (ScrapeCreators,\nDataForSEO, Bright Data) that return structured data from it. Your agent calls a treg.to endpoint\nand gets the ads back as JSON."}},{"@type":"Question","name":"Is there a Facebook Ads Library MCP?","acceptedAnswer":{"@type":"Answer","text":"Yes. The treg.to MCP server exposes Meta/Facebook ad library search through multiple providers.\nOne MCP connection gives your agent access to competitor ad research across Meta, Google, TikTok\nand LinkedIn."}},{"@type":"Question","name":"What about Google Ads Transparency?","acceptedAnswer":{"@type":"Answer","text":"Google's Ads Transparency Center is in the catalog via DataForSEO and SerpApi. Your agent can\nsearch by advertiser domain and get back creatives, spend estimates and targeting."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why not just call the providers directly?","acceptedAnswer":{"@type":"Answer","text":"Meta's Ad Library API requires identity verification and returns only what you ask for in a fields\nparameter; the other three platforms have no comparable official developer access. So \"directly\" in\npractice means one verified Meta app plus three manual browser workflows: for research that happens in\nbursts. treg.to is closer to OpenRouter for agent tools than to a data vendor: one base URL, one token,\nmany providers behind it."}},{"@type":"Question","name":"How are credentials handled?","acceptedAnswer":{"@type":"Answer","text":"The credential is injected on the server. Your agent makes the real upstream request through treg.to's\n/call/ endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key\nis ever written to your machine, your repo or your agent's context. Every call is recorded and attributed\nto the token that made it."}},{"@type":"Question","name":"Can I choose a specific provider?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once\nfor the whole team, treg org pin &lt;capability&gt; --provider &lt;provider&gt; refuses calls to any other provider\nof that capability.\n(Matters here. Providers into the same library return different fields: one gives you EU\nreach and per-ad detail, another gives you a cheap count. Read the endpoint before you pin one.)"}},{"@type":"Question","name":"Can I use my existing provider key?","acceptedAnswer":{"@type":"Answer","text":"Yes, and it takes precedence. Register the key once and every call to that provider routes through it;\nthose calls are never metered against your treg.to balance. Your key always wins over treg.to's.\n(If you have a verified Meta app, connect it: Meta's own Ad Library API costs nothing per call, and those\ncalls will not touch your balance.)"}},{"@type":"Question","name":"What happens if a provider fails?","acceptedAnswer":{"@type":"Answer","text":"treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,\nso treg.to relays your request rather than rewriting it. Failed calls are not billed. If a call\nsucceeded upstream but the answer was lost coming back, an Idempotency-Key returns the stored result\nwithout paying twice."}},{"@type":"Question","name":"How much does a call cost?","acceptedAnswer":{"@type":"Answer","text":"A Meta ad library search is $0.00188 with ScrapeCreators, or $0.005 per ad returned with Apify. Google Ads\nTransparency ranges from $0.0006 to $0.015 depending on provider. The exact price is shown before the\ncall, and treg.to adds no markup. New teams start with $1.00 of free credit: enough for several hundred\nlibrary searches."}},{"@type":"Question","name":"Is there a Meta Ad Library MCP?","acceptedAnswer":{"@type":"Answer","text":"This is one. treg.to is a single MCP server carrying the Meta ad library, Google Ads Transparency and\nthe TikTok and LinkedIn ad endpoints together: one line to add, one token."}},{"@type":"Question","name":"Is this an ad-spy tool alternative?","acceptedAnswer":{"@type":"Answer","text":"For the data, yes: the ad libraries per call instead of a $99 to $249 monthly subscription. The\nswipe-file interface those tools sell is your agent's report now."}},{"@type":"Question","name":"Which agents does it work with?","acceptedAnswer":{"@type":"Answer","text":"The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP\nclient that supports the authorization spec can connect with OAuth. Anything that can run a shell command,\nCodex included, can use the treg CLI or plain HTTP."}},{"@type":"Question","name":"Is there a Meta Ad Library API?","acceptedAnswer":{"@type":"Answer","text":"The Meta Ad Library is a public website, not an API. The catalog has providers (ScrapeCreators,\nDataForSEO, Bright Data) that return structured data from it. Your agent calls a treg.to endpoint\nand gets the ads back as JSON."}},{"@type":"Question","name":"Is there a Facebook Ads Library MCP?","acceptedAnswer":{"@type":"Answer","text":"Yes. The treg.to MCP server exposes Meta/Facebook ad library search through multiple providers.\nOne MCP connection gives your agent access to competitor ad research across Meta, Google, TikTok\nand LinkedIn."}},{"@type":"Question","name":"What about Google Ads Transparency?","acceptedAnswer":{"@type":"Answer","text":"Google's Ads Transparency Center is in the catalog via DataForSEO and SerpApi. Your agent can\nsearch by advertiser domain and get back creatives, spend estimates and targeting."}}]}</script>
 </head>
 <body data-page="p4">
 
 <div class="navwrap"><nav class="nav">
-  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
   <div class="links">
     <a class="hidem" href="/tutorial">docs</a>
     <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">repo</a>
@@ -32,14 +31,13 @@
 </nav></div>
 
 <header class="hero"><div class="wrap">
-  <div class="kicker">2,600+ tools · 40+ providers · one key</div>
+  <div class="kicker">2,600+ tools · 60+ providers · one key</div>
   <h1>Ad Library API: Meta, Google, TikTok, LinkedIn Ads</h1>
-  <div class="lede"><p><code>text
-Using treg, show me every ad Notion is running on Meta right now. Group them by
-offer, hook and format. Then check what they are bidding on in Google Ads.</code></p></div>
+  <div class="lede"><div class="promptbox"><div class="ph"><span>the prompt</span><button class="copybtn" data-copy="#heroprompt" data-ev="lp_copy_hero" data-page="p4">copy</button></div><pre id="heroprompt">Using treg, show me every ad Notion is running on Meta right now. Group them by
+offer, hook and format. Then check what they are bidding on in Google Ads.</pre></div></div>
   <div class="ctas"><a class="candy" href="/app?ref=p4" data-ev="lp_cta_primary" data-page="p4">Start Free</a><a class="ghostbtn" href="/llms.txt" data-ev="lp_cta_secondary" data-page="p4">Paste llms.txt</a></div>
   <div class="trust">$1.00 of free credit on every new team. No provider signup, no credit card.</div>
-  <div class="subline"></div>
+  <div class="subline"><p><strong>Meta ad library from $0.00188/call</strong>, <strong>Google Ads Transparency from $0.002/call</strong>. No subscription.</p></div>
   <div class="provstrip"><span class="pl">compared on this page</span><span class="ptiles"><span class="ptile"><img src="/logos/apify.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/dataforseo.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/google-ads.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/meta-ad-library.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/scrapecreators.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/serpapi.svg" alt="" loading="lazy" width="22" height="22"></span><span class="ptile"><img src="/logos/tikhub.svg" alt="" loading="lazy" width="22" height="22"></span></span></div>
 </div></header>
 <section><div class="wrap"><div class="seclab">The economics</div><h2>The old way vs. the treg.to way</h2><div class="tablewrap"><table class="compare">
@@ -51,7 +49,7 @@ offer, hook and format. Then check what they are bidding on in Google Ads.</code
 </tr>
 </thead>
 <tbody>
-<tr><td><strong>What you pay for</strong></td><td data-label="The old way">An ad-spy subscription, or a media-buying suite at $99–$249/mo, for research you do before each launch</td><td data-label="With treg">One prepaid balance. A Meta ad library search is $0.00188</td></tr>
+<tr><td><strong>What you pay for</strong></td><td data-label="The old way">An ad-spy subscription, or a media-buying suite at $99 to $249/mo, for research you do before each launch</td><td data-label="With treg">One prepaid balance. A Meta ad library search is $0.00188</td></tr>
 <tr><td><strong>Keys</strong></td><td data-label="The old way">Meta's Ad Library API needs identity verification; the rest have no official access at all</td><td data-label="With treg">One treg token. Every tool in the catalog answers to it</td></tr>
 <tr><td><strong>Picking a provider</strong></td><td data-label="The old way">Whichever spy tool you subscribed to, whatever it happens to cover</td><td data-label="With treg"><code>catalog get</code> lists every provider for that library with price, measured success rate and median speed</td></tr>
 <tr><td><strong>Commitment</strong></td><td data-label="The old way">A monthly tool for research that happens in bursts around launches</td><td data-label="With treg">No subscription. Research a launch, stop paying until the next one</td></tr>
@@ -67,7 +65,7 @@ offer, hook and format. Then check what they are bidding on in Google Ads.</code
 <section id="workflow"><div class="wrap"><div class="seclab">Try it</div><h2>A real workflow</h2><h3>Copy this into Claude Code, Cursor, Codex or opencode</h3><div class="steplabel"><span class="n">1</span><b>Set treg up in your agent</b>
   <span class="once">first time only</span></div>
 <p class="stephint">Paste this into the same agent. It installs the CLI, signs you in and registers the
-tools. One line, once &mdash; already set up? Skip to step 2.</p>
+tools. One line, once. Already set up? Skip to step 2.</p>
 <div class="promptbox">
   <div class="ph"><span>setup</span>
     <button class="copybtn" data-copy="#setup" data-ev="lp_copy_setup" data-page="p4">copy</button>
@@ -177,28 +175,25 @@ signal that someone changed strategy. A quiet week costs nothing.</p></div></div
 parameter; the other three platforms have no comparable official developer access. So "directly" in
 practice means one verified Meta app plus three manual browser workflows: for research that happens in
 bursts. treg.to is closer to OpenRouter for agent tools than to a data vendor: one base URL, one token,
-many providers behind it.</p>
-<p><strong>How are credentials handled?</strong>: The credential is injected on the server. Your agent makes the real upstream request through treg.to's
+many providers behind it.</p></div></details><details data-ev="lp_objection_open" data-q="How are credentials handled?"><summary>How are credentials handled?</summary><div class="body"><p>The credential is injected on the server. Your agent makes the real upstream request through treg.to's
 <code>/call/</code> endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key
 is ever written to your machine, your repo or your agent's context. Every call is recorded and attributed
-to the token that made it.</p>
-<p><strong>Can I choose a specific provider?</strong>: Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once
+to the token that made it.</p></div></details><details data-ev="lp_objection_open" data-q="Can I choose a specific provider?"><summary>Can I choose a specific provider?</summary><div class="body"><p>Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once
 for the whole team, <code>treg org pin &lt;capability&gt; --provider &lt;provider&gt;</code> refuses calls to any other provider
 of that capability.
 <em>(Matters here. Providers into the same library return different fields: one gives you EU
-reach and per-ad detail, another gives you a cheap count. Read the endpoint before you pin one.)</em></p>
-<p><strong>Can I use my existing provider key?</strong>: Yes, and it takes precedence. Register the key once and every call to that provider routes through it;
+reach and per-ad detail, another gives you a cheap count. Read the endpoint before you pin one.)</em></p></div></details><details data-ev="lp_objection_open" data-q="Can I use my existing provider key?"><summary>Can I use my existing provider key?</summary><div class="body"><p>Yes, and it takes precedence. Register the key once and every call to that provider routes through it;
 those calls are never metered against your treg.to balance. Your key always wins over treg.to's.
 <em>(If you have a verified Meta app, connect it: Meta's own Ad Library API costs nothing per call, and those
-calls will not touch your balance.)</em></p>
-<p><strong>What happens if a provider fails?</strong>: treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,
+calls will not touch your balance.)</em></p></div></details><details data-ev="lp_objection_open" data-q="What happens if a provider fails?"><summary>What happens if a provider fails?</summary><div class="body"><p>treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,
 so treg.to relays your request rather than rewriting it. Failed calls are not billed. If a call
 succeeded upstream but the answer was lost coming back, an <code>Idempotency-Key</code> returns the stored result
 without paying twice.</p></div></details><details data-ev="lp_objection_open" data-q="How much does a call cost?"><summary>How much does a call cost?</summary><div class="body"><p>A Meta ad library search is $0.00188 with ScrapeCreators, or $0.005 per ad returned with Apify. Google Ads
 Transparency ranges from $0.0006 to $0.015 depending on provider. The exact price is shown before the
 call, and treg.to adds no markup. New teams start with $1.00 of free credit: enough for several hundred
-library searches.</p>
-<p><strong>Which agents does it work with?</strong>: The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP
+library searches.</p></div></details><details data-ev="lp_objection_open" data-q="Is there a Meta Ad Library MCP?"><summary>Is there a Meta Ad Library MCP?</summary><div class="body"><p>This is one. treg.to is a single MCP server carrying the Meta ad library, Google Ads Transparency and
+the TikTok and LinkedIn ad endpoints together: one line to add, one token.</p></div></details><details data-ev="lp_objection_open" data-q="Is this an ad-spy tool alternative?"><summary>Is this an ad-spy tool alternative?</summary><div class="body"><p>For the data, yes: the ad libraries per call instead of a $99 to $249 monthly subscription. The
+swipe-file interface those tools sell is your agent's report now.</p></div></details><details data-ev="lp_objection_open" data-q="Which agents does it work with?"><summary>Which agents does it work with?</summary><div class="body"><p>The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP
 client that supports the authorization spec can connect with OAuth. Anything that can run a shell command,
 Codex included, can use the <code>treg</code> CLI or plain HTTP.</p></div></details><details data-ev="lp_objection_open" data-q="Is there a Meta Ad Library API?"><summary>Is there a Meta Ad Library API?</summary><div class="body"><p>The Meta Ad Library is a public website, not an API. The catalog has providers (ScrapeCreators,
 DataForSEO, Bright Data) that return structured data from it. Your agent calls a treg.to endpoint
@@ -207,7 +202,7 @@ One MCP connection gives your agent access to competitor ad research across Meta
 and LinkedIn.</p></div></details><details data-ev="lp_objection_open" data-q="What about Google Ads Transparency?"><summary>What about Google Ads Transparency?</summary><div class="body"><p>Google's Ads Transparency Center is in the catalog via DataForSEO and SerpApi. Your agent can
 search by advertiser domain and get back creatives, spend estimates and targeting.</p>
 <hr /></div></details></div></section>
-<section class="related"><div class="wrap"><div class="seclab">Next steps</div><h2>Next steps</h2><ul class="related-list"><li><a href="/use-cases/ads-a-competitor-is-running-now">Ads a Competitor Is Running Now</a></li><li><a href="/use-cases/keywords-a-domain-bids-on">Keywords a Domain Bids On</a></li></ul></div></section>
+<section class="related"><div class="wrap"><div class="seclab">Next steps</div><h2>Next steps</h2><ul class="related-list"><li><a href="/use-cases/ads-a-competitor-is-running-now">Ads a Competitor Is Running Now</a></li><li><a href="/use-cases/keywords-a-domain-bids-on">Keywords a Domain Bids On</a></li><li><a href="/use-cases/your-own-campaign-performance">Your Own Campaign Performance</a></li><li><a href="/use-cases/google-results-for-a-keyword">Google Results for a Keyword</a></li></ul></div></section>
 <section class="final"><div class="wrap">
   <h2>Find out what the category is running, before your next launch</h2>
   <div class="ctas"><a class="candy" href="/app?ref=p4" data-ev="lp_cta_primary" data-page="p4">Start Free</a></div>
@@ -217,7 +212,7 @@ search by advertiser domain and get back creatives, spend estimates and targetin
 
 <footer>
   <div class="foot-in">
-    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
     <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
@@ -284,6 +279,7 @@ search by advertiser domain and get back creatives, spend estimates and targetin
   }
 })();
 </script>
+<script src="/sitetrack.js"></script>
 <script src="/adtrack.js"></script>
 </body>
 </html>

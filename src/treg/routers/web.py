@@ -676,8 +676,8 @@ async def agents_hub():
 @app.get("/agents/{agent}.md", include_in_schema=False)
 @app.get("/agents/{agent}", include_in_schema=False)
 async def agent_page(request: Request, agent: str):
-    """One client: "I use ChatGPT, what can it do now?" A rotating "The ChatGPT Connector for <role>"
-    hero, the install steps for that client, then the use-case menu: plain-words jobs under buyer
+    """One client: "I use ChatGPT, what can it do now?" A keyword H1 with a rotating "for <role>"
+    line under it, the install steps for that client, then the use-case menu: plain-words jobs under buyer
     categories, each priced from the catalog. The menu is `agent_pages.USE_CASES`, the same
     taxonomy the use-case pages hang from, so the agent page is the map of the whole site.
     `/agents/<agent>.md` is the same page as Markdown, for agents and answer engines."""
@@ -822,8 +822,13 @@ async def agent_page(request: Request, agent: str):
         f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
         f'<a href="/agents/{_esc_html(agent)}">{_esc_html(name)}</a></div>'
         f'<div class="kicker">{n} endpoints &middot; {p} platforms &middot; $0.000 markup</div>'
-        f'<h1>The {_esc_html(name)} {_esc_html(spec.get("h1_noun", "plugin"))} for <span class="roleslot" id="roleslot">'
-        f'<span class="rw" id="rolewheel">{roles}</span></span></h1>'
+        # The H1 carries the measured term and the promise, never a persona — a crawler was reading
+        # "The ChatGPT Connector for SEO experts" as if that were the audience. The rotating role
+        # wheel stays, one line down.
+        f'<h1>The {_esc_html(name)} {_esc_html(spec.get("h1_noun", "plugin"))}: '
+        f'call {n} APIs without keys</h1>'
+        f'<div class="roleline">for <span class="roleslot" id="roleslot">'
+        f'<span class="rw" id="rolewheel">{roles}</span></span></div>'
         f'<script type="application/json" id="roles-more">{more_roles}</script>'
         f'<div class="lede">{_esc_html(definition)}</div>'
         '<div class="ctas">'
@@ -877,6 +882,7 @@ async def agent_page(request: Request, agent: str):
         + """
 <style>
 .hero h1{line-height:1.16}
+.roleline{font-size:21px;font-weight:600;letter-spacing:-.01em;margin:8px 0 2px}
 .roleslot{display:inline-block;height:1.16em;overflow:hidden;vertical-align:bottom;position:relative}
 .roleslot .rw{display:flex;flex-direction:column;align-items:flex-start;transition:transform .62s cubic-bezier(.2,.7,.2,1)}
 .roleslot .ri{height:1.16em;line-height:1.16;flex:none;white-space:nowrap;transition:opacity .4s}
@@ -2116,8 +2122,8 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         f"<h2>Set up {esc_d} in Claude Code, Codex or any agent</h2>"
         '<div class="steplabel"><span class="n">1</span><b>Give this to your agent</b></div>'
         '<div class="promptbox"><div class="ph"><span>in your agent&#x27;s chat</span>'
-        f'<button class="copybtn" data-copy="set up treg: {_esc_html(base)}/llms.txt">copy</button></div>'
-        f"<pre>set up treg: {_esc_html(base)}/llms.txt</pre></div>"
+        f'<button class="copybtn" data-copy="set up treg — {_esc_html(base)}/llms.txt">copy</button></div>'
+        f"<pre>set up treg — {_esc_html(base)}/llms.txt</pre></div>"
         '<div class="steplabel"><span class="n">2</span><b>Or add the MCP server yourself</b></div>'
         '<div class="promptbox"><div class="ph"><span>claude code</span>'
         f'<button class="copybtn" data-copy="claude mcp add --transport http treg {_esc_html(base)}/mcp">copy</button></div>'
@@ -2173,7 +2179,7 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
         '<div class="card"><h4>One key, the whole catalog</h4><p>The same token calls '
         + (_esc_html(", ".join(_provider_display(a) for a in alt_names[:3])) if alt_names
            else "every provider in the catalog")
-        + f" and {len(cat.endpoints) - len(eps):,} other tools.</p></div>"
+        + f" and {_catalog_census()[0] - len(eps):,} other tools.</p></div>"
         "</div></div></section>")
 
     tool_blocks = []
@@ -2310,15 +2316,17 @@ async def tools_provider(service: str, db: AsyncSession = Depends(get_session)):
             for q, a in faq_items]},
         {"@context": "https://schema.org", "@type": "HowTo",
          "name": f"Set up {display} for an AI agent via treg.to",
+         # The steps mirror the VISIBLE setup section in order — schema that describes a
+         # different flow than the page shows is the mismatch Google treats as a violation.
          "step": [
-             {"@type": "HowToStep", "position": 1, "name": "Add the treg.to MCP server",
+             {"@type": "HowToStep", "position": 1, "name": "Give your agent the setup line",
+              "text": f"set up treg — {base}/llms.txt"},
+             {"@type": "HowToStep", "position": 2, "name": "Or add the MCP server yourself",
               "text": f"claude mcp add --transport http treg {base}/mcp"},
-             {"@type": "HowToStep", "position": 2, "name": "Get a token",
-              "text": "Create a free team at treg.to; the first $1.00 of calls is free."},
              {"@type": "HowToStep", "position": 3, "name": f"Call {display}",
               "text": f"Ask your agent, or call {base}/call/{sample_id} over HTTP."}]},
     ]
-    return _page(title, desc[:300], f"/tools/{svc}", body, ld,
+    return _page(title, _serp_desc(desc), f"/tools/{svc}", body, ld,
                  nav_current="/catalog", css="usecase.css")
 
 

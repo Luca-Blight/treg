@@ -252,6 +252,15 @@ organic results at $0.002 per call, Moz URL metrics at $0.006667, at the time of
 is shown before the call, and treg.to adds no markup to what the provider charges. New teams start with
 $1.00 of free credit.
 
+**Is there a DataForSEO MCP or a Serpstat MCP?**
+This is one. treg.to is a single MCP server that carries DataForSEO, Serpstat, SE Ranking, SerpApi and
+Majestic behind one token: add it once and the agent calls whichever fits the job.
+
+**Is this a Semrush or Ahrefs alternative?**
+Not for the dashboards; it is the API half. Semrush's own data endpoints are in the catalog, priced in
+Semrush API units. Ahrefs is not in the catalog. What you replace is a stack of separate SEO API
+subscriptions, not the suite you read reports in.
+
 **Which agents does it work with?**: `S-OBJ-AGENTS`
 
 ---
@@ -270,7 +279,6 @@ $1.00 of free credit.
 - [Keyword Volume, CPC and Competition](/use-cases/keyword-volume-cpc-and-competition)
 - [Google Results for a Keyword](/use-cases/google-results-for-a-keyword)
 - [Keywords a Domain Ranks For](/use-cases/keywords-a-domain-ranks-for)
-- [Is This Page Indexed, and Why Not](/use-cases/is-this-page-indexed-and-why-not)
 - [Backlink Profile of a Domain](/use-cases/backlink-profile-of-a-domain)
 
 ---

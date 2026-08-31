@@ -375,10 +375,8 @@ AGENTS: dict[str, dict] = {
             "Ask for what you want done. ChatGPT searches the catalog, tells you the price, and "
             "calls the endpoint. You never hold a provider key.",
         ],
-        "install_image": "/media/install/chatgpt-setup.png",
-        "install_image_alt": "ChatGPT with the treg setup line pasted into the chat",
-        "install_image_bar": "chatgpt.com",
-        "install_image_caption": "Paste the setup line and ChatGPT handles the rest.",
+        # No install screenshot: the setup-line flow has none yet, and a page ships without the
+        # slot rather than with a broken image (the old Plugins-directory PNG shows a dead UI).
         "faq": [
             ("Is treg.to free to use in ChatGPT?",
              "Installing is free and every new team starts with $1.00 of calls. After that, each call "
@@ -2704,10 +2702,7 @@ AGENTS["grok-bot"] = {
         "Ask for what you want done. Grok searches the catalog, tells you the price, and "
         "calls the endpoint. You never hold a provider key.",
     ],
-    "install_image": "/media/install/grok-bot-setup.png",
-    "install_image_alt": "Grok Bot with the treg setup line pasted into the chat",
-    "install_image_bar": "Grok Bot",
-    "install_image_caption": "Paste the setup line and Grok handles the rest.",
+    # No install screenshot: same rule as the ChatGPT page.
     "faq": [
         ("Can Grok Bot do lead generation with this?",
          "Yes, and it is the sequence most people ask for first. A research bot or a sales bot in "

@@ -1,7 +1,7 @@
 # treg — the tool catalog for your agent
 
 > **OpenRouter, but for agent tools instead of models.** Point an agent at ONE base URL with ONE
-> token and it can do the *job*: 2,896 catalogued endpoints across 60 providers (SEO and SERP
+> token and it can do the *job*: 2,600+ catalogued endpoints across 60+ providers (SEO and SERP
 > data, backlinks, social and trends, people and company enrichment, ads, scraping) — plus your
 > own team's keys, skills and CLIs. Every credential is injected **server-side**; nothing
 > sensitive lands on the agent's machine, and every call is audited.
@@ -131,7 +131,7 @@ ledger.
 
 ## The catalog — tools you do not have a key for
 
-Curated endpoints across 60 providers, grouped by what they DO: keyword and rank tracking,
+Curated endpoints across 60+ providers, grouped by what they DO: keyword and rank tracking,
 backlinks and authority, AI visibility, trending and discovery, publishing to socials, people and
 company enrichment, ads management and creative, measurement. Ask for the task; the catalog tells
 you which endpoints serve it, what each costs, and how you would be served. Exact live counts:
@@ -321,9 +321,9 @@ key - share access.
 
 ## MCP — connect an assistant
 
-Using ChatGPT? The connector is in ChatGPT's Connectors directory (search "treg" → Add); the page
-{BASE}/agents/chatgpt lists what it can do by job, with prices, and {BASE}/agents/chatgpt.md is the
-same page as Markdown.
+Using ChatGPT? The install is the same one line every agent uses — paste
+`set up treg — {BASE}/llms.txt` into the chat; the page {BASE}/agents/chatgpt lists what it can do
+by job, with prices, and {BASE}/agents/chatgpt.md is the same page as Markdown.
 
 
 treg is also an **MCP server** at `{BASE}/mcp/`, two ways to authenticate it:

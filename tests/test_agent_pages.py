@@ -58,9 +58,14 @@ async def test_chatgpt_page_hero_rotates_through_the_roles(clients: AsyncClient)
     server-rendered H1 so a crawler reads a complete sentence; the rest ride along for the JS."""
     html = (await clients.get("/agents/chatgpt")).text
     h1 = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S).group(1)
-    assert "ChatGPT Connector for" in h1 and html_mod.escape(agent_pages.ROLES[0]) in h1
-    # only ONE role in the H1 itself — the rest are appended by JS from data-more
-    assert html_mod.escape(agent_pages.ROLES[1]) not in h1
+    # The H1 carries the term and the promise, never a persona: "…for SEO experts" read as the
+    # page's audience to a crawler. The wheel lives on its own line below.
+    assert "ChatGPT Connector" in h1 and "call" in h1
+    assert html_mod.escape(agent_pages.ROLES[0]) not in h1
+    roleline = re.search(r'<div class="roleline">(.*?)</div>', html, re.S).group(1)
+    assert html_mod.escape(agent_pages.ROLES[0]) in roleline
+    # only ONE role server-rendered — the rest are appended by JS from the json block
+    assert html_mod.escape(agent_pages.ROLES[1]) not in roleline
     more = json.loads(re.search(r'<script type="application/json" id="roles-more">(.*?)</script>', html, re.S).group(1))
     assert tuple(more) == agent_pages.ROLES[1:]
 
@@ -124,7 +129,7 @@ async def test_agent_page_is_in_the_sitemap_and_reachable_by_robots(clients: Asy
 
 
 async def test_agent_pages_are_hosted_only(monkeypatch):
-    """The install copy says "search treg in ChatGPT's Plugins directory" — true of treg.to, false of
+    """The install copy describes treg.to's own hosted listing and grant — true of treg.to, false of
     every self-hosted registry. So off the reference hosts the page 404s and leaves the sitemap."""
     monkeypatch.setenv("TREG_PUBLIC_URL", "https://registry.example.internal")
     get_settings.cache_clear()

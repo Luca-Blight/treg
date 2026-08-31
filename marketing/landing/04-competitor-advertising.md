@@ -55,7 +55,7 @@ offer, hook and format. Then check what they are bidding on in Google Ads.
 
 | | The old way | With treg |
 |---|---|---|
-| **What you pay for** | An ad-spy subscription, or a media-buying suite at $99–$249/mo, for research you do before each launch | One prepaid balance. A Meta ad library search is $0.00188 |
+| **What you pay for** | An ad-spy subscription, or a media-buying suite at $99 to $249/mo, for research you do before each launch | One prepaid balance. A Meta ad library search is $0.00188 |
 | **Keys** | Meta's Ad Library API needs identity verification; the rest have no official access at all | One treg token. Every tool in the catalog answers to it |
 | **Picking a provider** | Whichever spy tool you subscribed to, whatever it happens to cover | `catalog get` lists every provider for that library with price, measured success rate and median speed |
 | **Commitment** | A monthly tool for research that happens in bursts around launches | No subscription. Research a launch, stop paying until the next one |
@@ -235,6 +235,14 @@ Transparency ranges from $0.0006 to $0.015 depending on provider. The exact pric
 call, and treg.to adds no markup. New teams start with $1.00 of free credit: enough for several hundred
 library searches.
 
+**Is there a Meta Ad Library MCP?**
+This is one. treg.to is a single MCP server carrying the Meta ad library, Google Ads Transparency and
+the TikTok and LinkedIn ad endpoints together: one line to add, one token.
+
+**Is this an ad-spy tool alternative?**
+For the data, yes: the ad libraries per call instead of a $99 to $249 monthly subscription. The
+swipe-file interface those tools sell is your agent's report now.
+
 **Which agents does it work with?**: `S-OBJ-AGENTS`
 
 **Is there a Meta Ad Library API?**
@@ -259,6 +267,8 @@ search by advertiser domain and get back creatives, spend estimates and targetin
 
 - [Ads a Competitor Is Running Now](/use-cases/ads-a-competitor-is-running-now)
 - [Keywords a Domain Bids On](/use-cases/keywords-a-domain-bids-on)
+- [Your Own Campaign Performance](/use-cases/your-own-campaign-performance)
+- [Google Results for a Keyword](/use-cases/google-results-for-a-keyword)
 
 ---
 

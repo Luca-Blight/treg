@@ -146,7 +146,7 @@ COST             $[from your run]
 | Subscription cost avoided | **$398/mo** at list: Crunchbase $99 + Diffbot $299 |
 | Time to completion | Under 5 seconds |
 | Data freshness | Live at call time |
-| Companies returned | **9**, filtered to recently funded AI infrastructure at 20–200 employees |
+| Companies returned | **9**, filtered to recently funded AI infrastructure at 20 to 200 employees |
 | Cost per company researched | **$0.00** for discovery; $0.00188 per company enriched |
 
 **What the free call returned.** Nine companies with domains and contactable-address counts: Daloopa,
@@ -239,6 +239,14 @@ Company search is free with three of the eleven providers and $0.38 a record at 
 history is $0.10 a company; person enrichment from $0.025. The exact price is
 shown before the call, and treg.to adds no markup. New teams start with $1.00 of free credit.
 
+**Is there a Crunchbase MCP?**
+This is one. treg.to is a single MCP server that carries Crunchbase alongside ten other company-search
+providers: one token, and the agent compares them by price before it calls.
+
+**Is this a Crunchbase or PitchBook alternative?**
+For per-company lookups, yes: pay per record instead of a seat. For analyst tooling and valuation
+models, no.
+
 **Which agents does it work with?**: `S-OBJ-AGENTS`
 
 ---
@@ -248,9 +256,9 @@ shown before the call, and treg.to adds no markup. New teams start with $1.00 of
 ### Individual jobs you can run now
 
 - [Build a Company List by Industry, Size or Tech](/use-cases/build-a-company-list-by-industry-size-or-tech)
-- [Enrich a Company From Its Domain](/use-cases/enrich-a-company-from-its-domain)
-- [A Company's Funding Rounds](/use-cases/a-companys-funding-rounds)
-- [What Technology a Company Runs](/use-cases/what-technology-a-company-runs)
+- [Enrich a Company From Its Domain](/use-cases/enrich-a-company)
+- [Employee Reviews of a Company](/use-cases/employee-reviews-of-a-company)
+- [Job Postings Across Companies](/use-cases/job-postings-across-companies)
 
 ---
 

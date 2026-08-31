@@ -149,7 +149,7 @@ PROVIDERS_SEEN = set()
 SETUP_BOX = """<div class="steplabel"><span class="n">1</span><b>Set treg up in your agent</b>
   <span class="once">first time only</span></div>
 <p class="stephint">Paste this into the same agent. It installs the CLI, signs you in and registers the
-tools. One line, once &mdash; already set up? Skip to step 2.</p>
+tools. One line, once. Already set up? Skip to step 2.</p>
 <div class="promptbox">
   <div class="ph"><span>setup</span>
     <button class="copybtn" data-copy="#setup" data-ev="lp_copy_setup" data-page="{page_id}">copy</button>
@@ -230,6 +230,25 @@ def add_logos(tbl_html):
 
 # ---------------------------------------------------------------- sections
 
+
+def catalog_counts():
+    """The kicker's numbers, read from the live catalog at build time and floored to a bound
+    (F-01's convention: a static page states a rounded-DOWN claim that stays true as the catalog
+    grows — an exact number here would be false the day a provider lands). It shipped hand-typed
+    as 2,600+/40+ and could never tighten; now it re-floors on every build. Mirrors web._pub:
+    hidden kinds out, and the routed meta-rows out with them. Fails the build loudly rather than
+    emit a guessed number."""
+    sys.path.insert(0, str(HERE.parent.parent / "src"))
+    from treg.domain.catalog import store as cs
+    eps = [e for e in cs.load().endpoints
+           if e["kind"] not in cs.HIDDEN_KINDS and e.get("kind") != "routed"]
+    n, p = len(eps), len({e["provider"] for e in eps})
+    return n // 100 * 100, p // 5 * 5
+
+
+N_TOOLS, N_PROVIDERS = catalog_counts()
+
+
 def render_hero(body, page_id):
     bs = blocks(body)
     head = lede = trust = sub = ""
@@ -238,16 +257,29 @@ def render_hero(body, page_id):
         s = b.strip()
         if s.startswith("### "):
             head = s[4:].strip()
+        elif s.startswith("```"):
+            # The hero's fence is the example prompt. inline() knows nothing about fences, so the
+            # first cut shipped `<code>text\nUsing treg…` — the info string and all. Strip it with
+            # code_text like every other section, and give it the same copy affordance.
+            lede = (f'<div class="promptbox"><div class="ph"><span>the prompt</span>'
+                    f'<button class="copybtn" data-copy="#heroprompt" data-ev="lp_copy_hero" '
+                    f'data-page="{page_id}">copy</button></div>'
+                    f'<pre id="heroprompt">{html.escape(code_text(b))}</pre></div>')
         elif is_cta(s):
             ctas = cta_html(s, page_id)
         elif s.startswith("*Sub-line:*"):
             sub = inline(s.replace("*Sub-line:*", "").strip())
+        elif s.startswith("**"):
+            # The bold price line under the prompt: the first-fold catalog numbers. It was silently
+            # dropped when the fence claimed the lede slot. (CTAs also open with ** but is_cta has
+            # already claimed them above.)
+            sub = inline(s)
         elif s.startswith("$1.00"):
             trust = html.escape(s)
         elif not lede:
             lede = inline(s)
     return f"""<header class="hero"><div class="wrap">
-  <div class="kicker">2,600+ tools · 40+ providers · one key</div>
+  <div class="kicker">{N_TOOLS:,}+ tools · {N_PROVIDERS}+ providers · one key</div>
   <h1>{html.escape(head)}</h1>
   <div class="lede">{lede}</div>
   {ctas}
@@ -394,7 +426,18 @@ def render_faq(title, body, label=None):
     # on that line. The previous pattern let the capture start at any bold run, so an answer that
     # merely opened with bold (p3's "**62%** of calls…") swallowed the following question and
     # produced a 433-character <summary>. It rendered on a live page and every test still passed.
-    lines = body.splitlines()
+    # Two source shapes: the question alone on its line with the answer below, and the compact
+    # `**Question?**: answer` one-liner the rewritten pages use. Split the one-liner first — fed
+    # to the block rule below it reads as answer text, and several visible FAQs collapsed into one
+    # JSON-LD acceptedAnswer that way. `[^*]*` (no inner asterisks) keeps the old guard: an answer
+    # that merely OPENS with a bold run still never reads as a question.
+    lines = []
+    for ln in body.splitlines():
+        m = re.fullmatch(r"(\*\*[^*][^*]*\?\*\*):?\s+(\S.*)", ln.strip())
+        if m:
+            lines += [m.group(1), m.group(2)]
+        else:
+            lines.append(ln)
     starts = [i for i, ln in enumerate(lines)
               if re.fullmatch(r"\*\*[^*].*\?\*\*", ln.strip())]
     qs = []
@@ -474,7 +517,6 @@ TEMPLATE = """<!doctype html>
 <title>{title}</title>
 <meta name="description" content="{desc}"/>
 <link rel="canonical" href="{{BASE}}/use-cases/{slug}"/>
-<link rel="alternate" type="text/markdown" href="{{BASE}}/use-cases/{slug}.md"/>
 <meta property="og:title" content="{title}"/>
 <meta property="og:description" content="{desc}"/>
 <meta property="og:url" content="{{BASE}}/use-cases/{slug}"/>
@@ -490,7 +532,7 @@ TEMPLATE = """<!doctype html>
 <body data-page="{page_id}">
 
 <div class="navwrap"><nav class="nav">
-  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
   <div class="links">
     <a class="hidem" href="/tutorial">docs</a>
     <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">repo</a>
@@ -502,7 +544,7 @@ TEMPLATE = """<!doctype html>
 
 <footer>
   <div class="foot-in">
-    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
     <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
@@ -569,6 +611,7 @@ TEMPLATE = """<!doctype html>
   }}
 }})();
 </script>
+<script src="/sitetrack.js"></script>
 <script src="/adtrack.js"></script>
 </body>
 </html>
@@ -681,7 +724,7 @@ HUB = """<!doctype html>
 <body data-page="hub">
 
 <div class="navwrap"><nav class="nav">
-  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+  <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
   <div class="links">
     <a class="hidem" href="/tutorial">docs</a>
     <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">repo</a>
@@ -716,7 +759,7 @@ HUB = """<!doctype html>
 
 <footer>
   <div class="foot-in">
-    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
+    <a class="brand" href="/"><span class="glyph">&#9626;</span> treg.to</a>
     <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
@@ -725,6 +768,7 @@ HUB = """<!doctype html>
   </div>
 </footer>
 
+<script src="/sitetrack.js"></script>
 <script src="/adtrack.js"></script>
 </body>
 </html>
@@ -737,7 +781,9 @@ def build_hub(rows):
         f'<p>{html.escape(blurb)}</p></a>'
         for slug, h1, blurb in rows)
     dest = WEB / "resources.html"
-    page = HUB.replace("{cards}", cards)
+    page = (HUB.replace("{cards}", cards)
+            .replace("2,600+ tools &middot; 40+ providers",
+                     f"{N_TOOLS:,}+ tools &middot; {N_PROVIDERS}+ providers"))
     dest.write_text(page)
     return dest, len(page)
 

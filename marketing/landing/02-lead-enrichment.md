@@ -8,8 +8,8 @@ hub_title: "Lead enrichment"
 hub_blurb: "Find companies, identify the decision-maker, verify the work email. Misses are free."
 price_old: "$142/mo"
 price_old_label: "Apollo + Hunter + Lusha, at list"
-price_new: "$0.0245"
-price_new_label: "what our run actually cost"
+price_new: "$3.62"
+price_new_label: "50 companies found, verified and enriched, from a real run"
 seo_terms:
   primary: "lead enrichment for ai agents"
   secondary:
@@ -27,7 +27,7 @@ capabilities: [people.email.find, people.email.verify, people.enrich, companies.
 facts_used: [F-01, F-02, F-03, F-04, F-05, F-06, F-07, F-08, F-09, F-10, F-11, F-13, F-21, F-40, F-41, F-42, F-50, F-80, F-90, F-92, F-43]
 hypothesis: "Highest commercial intent of the five. Predict the lowest cost per first successful call."
 verify_after: 2026-08-31
-status: proof populated from a real run 2026-08-17 ($0.0245) · ready for build · revised against 30-day telemetry 2026-08-17
+status: proof populated from the 50-company workflow run 2026-08-26 ($3.62) · ready for build · revised against 30-day telemetry 2026-08-17
 ---
 
 # Page 2: Lead enrichment
@@ -69,7 +69,7 @@ work email, verify it, and pull the latest news so I have an opener.
 ### Copy this into Claude Code, Cursor, Codex or opencode
 
 ```text
-Find 50 recently funded AI companies with 20–200 employees. Identify their
+Find 50 recently funded AI companies with 20 to 200 employees. Identify their
 head of growth or VP of marketing and verify their work email.
 ```
 
@@ -111,7 +111,7 @@ reputation, which is why the teams already doing this at volume verify more than
 ### What comes back
 
 ```text
-50 companies · 20–200 employees · funded in the window · pulled [date]
+50 companies · 20 to 200 employees · funded in the window · pulled [date]
 
 COMPANY          SIZE   LAST ROUND      CONTACT              TITLE              EMAIL          STATUS
 <company>        84     <round, date>   <name>               VP Marketing       <email>        verified
@@ -131,33 +131,27 @@ COST      $[from your run]   (misses were not charged)
 
 ## Proof from one real run
 
-*Run on treg.to, 17 Aug 2026. Every figure below is from the Activity log of that run.*
+*Run on treg.to, 26 Aug 2026: the full 50-company workflow, one prompt, one key. Every figure is
+from that run's receipt, published with its CSV at
+[/workflows/find-and-verify-a-lead-list](/workflows/find-and-verify-a-lead-list).*
 
 | Field | Value |
 |---|---|
-| Providers considered | **11** for company search, **3** for finding a work email |
-| Providers selected | `hunter.x.discover-companies` (free) · `hunter.people.email.find` |
-| Why | Discovery is free on Hunter and takes a plain-English brief. For the email, Hunter's finder carries one of the longest records in the catalog: **582 calls, 100% success, 1.4 s median**: and it only charges when it finds one |
-| Total cost of the run | **$0.0245**: company discovery was free, one email was found and charged |
-| Subscription cost avoided | **$142/mo** at list: Apollo $59/seat + Hunter $34 + Lusha $49 |
-| Time to completion | Under 5 seconds across both calls |
-| Data freshness | The address came back **verified `valid` on 2026-08-17**, sourced from a page last seen 2026-07-30 |
-| Companies returned | 9, all matching "AI infrastructure, recently funded, 20–200 employees" |
-| Emails found and verified | 1 of 1 attempted, confidence score 80 |
+| Companies matched | **746** on Apollo; the first page of 50 taken, one charge of $0.026 |
+| Rows with a usable domain | **47 of 50** |
+| A named marketing lead found | **40 of 47** (27 by Findymail, 13 by LeadMagic's role finder) |
+| Work email found | **31 of 40** (22 by Tomba, 9 by Hunter on Tomba's misses) |
+| Verified deliverable | **27 of 31**; 4 invalid; 0 unknown or catch-all |
+| A news event for the opener | **29 of 31** (PredictLeads) |
+| Wall clock, one call at a time | about 21 minutes |
+| Total metered | **$3.62** for 50 companies, or **$0.13 per deliverable lead** |
 
-**What the discovery call returned, for $0.00:** nine companies with their domains and a count of known
-addresses at each: Daloopa (223), ZincFive (64), Ethernovia (51), RunPod (33), AttoTude (19), Netris (17),
-Bobyard (16), Normal Computing (9), Arycs Technologies (4). Hunter resolved the plain-English brief into
-explicit filters and returned them: headcount bands `20-50` and `51-200`, funding series pre-seed through
-series C+.
+**Misses cost nothing on the finder steps.** Findymail, Tomba and Hunter bill per found address, so
+the 9 rows that never produced an email added $0.00 to the receipt.
 
-**One call in this run failed and cost nothing.** A company-search request was rejected for sending a
-boolean as a string: HTTP 400, `$0.00` charged. Your parameter mistakes are free; only answers are billed.
-
-> **The honest read of this run:** one verified email is a demonstration, not a benchmark. Hunter's 100%
-> over 582 calls is the measured **success rate of the endpoint**, not a promise that it finds every
-> person you ask for. The number that matters for your list is the hit rate on *your* market, which is
-> what the free tier is for: and misses cost nothing either way.
+> **The honest read of this run:** 27 deliverable leads from 50 companies is one market on one day,
+> not a benchmark. The hit rate on *your* market is what the $1.00 free credit is for: run ten rows
+> first and read your own receipt before you commit to a list.
 
 ---
 
@@ -242,7 +236,7 @@ Run the complete lead generation workflow that produced the numbers on this page
 ### Individual jobs this workflow calls
 
 - [Find Professional Emails](/use-cases/find-professional-emails)
-- [Verify an Email Before You Send](/use-cases/verify-an-email-before-you-send)
+- [Verify an Email Before You Send](/use-cases/verify-an-email)
 - [Build a Company List](/use-cases/build-a-company-list-by-industry-size-or-tech)
 
 ---

@@ -267,8 +267,10 @@ calls), because an invented subscription number is worse than no anchor.
 
 **Two halves, one rule each.** The hand-written half lives in `src/treg/agent_pages.py` — a module
 with no heavy imports so it costs the light CLI nothing and can be reviewed without reading routing
-code. It holds `ROLES` (the rotating "ChatGPT for *SEO experts / social media managers / SDRs*…"
-hero; the first role is server-rendered in the H1 so a crawler reads a full sentence), the install
+code. It holds `ROLES` (the rotating "for *SEO experts / social media managers / SDRs*…" line; the
+H1 itself is the keyword and the promise — "The ChatGPT Connector: call {n} APIs without keys" —
+because a persona in the H1 read as the page's audience, and the first role is server-rendered on
+the roleline so a crawler still gets a full phrase), the install
 steps and screenshot, one example prompt per category, the FAQ, and `USE_CASES`: the buyer's menu —
 plain-words jobs ("Find professional emails", "Find creators by keyword") under fourteen buyer
 categories, each mapped to the capability ids that do it. That taxonomy is the map of the whole
@@ -521,11 +523,12 @@ The five Google Ads landing pages (`/use-cases/seo-data-for-ai-agents`, `/use-ca
 `/use-cases/company-research-for-ai-agents`) are built from markdown sources in `marketing/landing/` via
 `build.py` and `build_html.py`, served as static HTML with `{BASE}` templating applied at request time.
 
-**Title matches H1, and both are buyer-job focused.** The H1s name the buyer's task, not a vendor
-alternative or MCP keyword: "SEO Data: Google Results, Keywords and Backlinks", "GTM Data: Find and
-Verify Work Emails", "Social Trends: TikTok, Reddit, YouTube and X Data", "Competitor Ads: Meta,
-Google, TikTok and LinkedIn", "Company Research: Funding, Headcount and Leadership". Vendor MCP
-keywords belong on `/tools/<provider>` (PR #276), not these hubs.
+**Title matches H1, and both carry the measured buyer term.** The shipped H1s: "SEO Data: Google
+Results, Keywords and Backlinks", "Waterfall Enrichment: Find and Verify Work Emails", "Social Data
+MCP: Reddit, Instagram, TikTok, YouTube", "Ad Library API: Meta, Google, TikTok, LinkedIn Ads",
+"Company Research: Funding, Headcount and Leadership". Per-vendor MCP keywords still belong on
+`/tools/<provider>`; a category-level term ("social data mcp", "ad library api") may lead a hub when
+it is the measured phrase.
 
 **CTAs are "Start Free" and "Paste llms.txt".** The primary CTA links `/app?ref=<page_id>`, the
 secondary links `/llms.txt` directly. The copy-paste prompt in each page's workflow section is the
@@ -534,6 +537,22 @@ action the page exists to produce.
 **JSON-LD: BreadcrumbList and FAQPage.** Every page carries both schemas. The breadcrumb names
 "treg.to" (never bare "treg") as the root. FAQ pairs are extracted from the "Before you sign up"
 section during build.
+
+**What the 2026-08-31 review fixed in the build** (each shipped past green tests and was caught by
+reading the rendered pages): the hero's fenced prompt rendered as `<code>text\n…` — `render_hero`
+now strips the fence with `code_text` and gives it the copy affordance, and the bold price line
+under it (previously dropped) renders as the subline. The FAQ parser only knew full-line bold
+questions, so the rewritten `**Q?**: answer` one-liners folded several visible FAQs into one
+JSON-LD acceptedAnswer; it now splits the one-line form first. The kicker was hand-typed
+("2,600+ tools · 40+ providers") — it is now read from the catalog at build time and floored to a
+bound (F-01's convention: a static page states a rounded-down claim that stays true as the catalog
+grows). `sitetrack.js` had been dropped in the rewrite (the attribution test caught it) and is
+restored before `adtrack.js` on all six files. The advertised `.md` alternates are gone — the
+legacy-hub route serves no `.md`, so every one 404ed. The brand anchor reads `treg.to`. And the
+lead-enrichment "Proof from one real run" block no longer shows the 1-email $0.0245 demo: it
+carries the receipt of the 50-company workflow run (2026-08-26, $3.62, $0.13 per deliverable
+lead) and points at `/workflows/find-and-verify-a-lead-list`, so the hub sells the workflow
+instead of competing with it.
 
 **Links to job pages, not competing with them.** The "Next steps" section links real job pages and
 workflows: lead-enrichment links `/workflows/find-and-verify-a-lead-list` ($3.62 from a real run) and
@@ -623,7 +642,12 @@ pricing", "1688 api pricing"), not "api for agents". So:
   providers get `{Provider}: connect your own account | treg.to`). **Title and H1 now match**:
   metered H1 is `{Provider}: {n} tools from {price}`, own-account H1 is `{Provider}: connect your own account`.
   The kicker carries the measured line (calls observed, ok rate weighted by DECIDED calls, median p50)
-  read through `_observed_or_empty`.
+  read through `_observed_or_empty`. Descriptions go through `_serp_desc` (sentence-fit under
+  Google's cut), and the HowTo's steps mirror the visible setup section in order — the one-line
+  install first, direct MCP second — because schema describing a different flow than the page
+  shows is the mismatch Google treats as a violation. The setup line on these pages is the
+  canonical `set up treg — {base}/llms.txt` (the em-dash is the documented exception, and a
+  colon variant that shipped briefly forked the product's one paste-line).
 - compare-form job titles get `, from $X` appended when the hand-written title carries no price and
   the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
 
