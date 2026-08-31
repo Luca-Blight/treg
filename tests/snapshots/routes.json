@@ -1804,6 +1804,14 @@
   {
     "kind": "APIRoute",
     "methods": [
+      "POST"
+    ],
+    "name": "admin_credit_org",
+    "path": "/admin/orgs/{org_id}/credit"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
       "GET",
       "HEAD"
     ],
