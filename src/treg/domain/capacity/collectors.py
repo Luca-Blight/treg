@@ -335,12 +335,14 @@ async def _crustdata(c, key):
 
 async def _akta(c, key):
     # GET /mcp/account is free — returns plan tier and remaining credit balance.
+    # Response: {credit_balance, balance_amount, currency, package_type, is_enterprise, ...}
     d = await _get(c, "https://api.akta.pro/api/v1/mcp/account",
                    headers={"x-api-key": key})
     tier = d.get("package_type", "unknown")
     enterprise = " (enterprise)" if d.get("is_enterprise") else ""
-    return {"value": d.get("credits"), "unit": "credits",
-            "note": f"tier {tier}{enterprise}"}
+    # credit_balance is the prepaid credits; balance_amount is USD if any
+    return {"value": d.get("credit_balance"), "unit": "credits",
+            "note": f"tier {tier}{enterprise}, lifetime {d.get('lifetime_consumed_credits', 0)} used"}
 
 
 BALANCE_ROUTES = {

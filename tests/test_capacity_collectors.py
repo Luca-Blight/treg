@@ -101,27 +101,32 @@ async def test_crustdata_collector_handles_no_recurring_grant():
 
 async def test_akta_collector_parses_credits_and_tier():
     resp = MockResponse({
-        "credits": 9500,
+        "credit_balance": 9500.0,
+        "balance_amount": 0.0,
+        "currency": "USD",
         "package_type": "premium",
-        "is_enterprise": False
+        "is_enterprise": False,
+        "lifetime_consumed_credits": 100.0
     })
     client = MockClient(get_response=resp)
     result = await collectors._akta(client, "test-key")
-    assert result["value"] == 9500
+    assert result["value"] == 9500.0
     assert result["unit"] == "credits"
     assert "tier premium" in result["note"]
     assert "(enterprise)" not in result["note"]
+    assert "lifetime 100.0 used" in result["note"]
 
 
 async def test_akta_collector_marks_enterprise_accounts():
     resp = MockResponse({
-        "credits": 50000,
+        "credit_balance": 50000.0,
         "package_type": "scale",
-        "is_enterprise": True
+        "is_enterprise": True,
+        "lifetime_consumed_credits": 0
     })
     client = MockClient(get_response=resp)
     result = await collectors._akta(client, "test-key")
-    assert result["value"] == 50000
+    assert result["value"] == 50000.0
     assert "(enterprise)" in result["note"]
 
 
