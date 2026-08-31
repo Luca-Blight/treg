@@ -334,6 +334,7 @@ SETUP_LINE = "set up treg — {base}/llms.txt"
 AGENTS: dict[str, dict] = {
     "chatgpt": {
         "name": "ChatGPT",
+        "h1_noun": "Connector",
         "title": "ChatGPT Connector: call {n} APIs without keys | treg.to",
         "description": (
             "treg.to is a ChatGPT Connector that lets ChatGPT call {n} APIs across {p} platforms: "
@@ -605,6 +606,7 @@ USE_CASE_PAGES["find-creators-by-keyword"] = {
 }
 AGENTS["claude"] = {
     "name": "Claude",
+    "h1_noun": "MCP server",
     "title": "Claude MCP server: {n} APIs without keys | treg.to",
     "description": (
         "treg.to gives Claude {n} ready-to-call APIs across {p} platforms: work emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor ads. Priced per call at the provider's own rate with no markup and no provider signup."),
@@ -645,6 +647,7 @@ AGENTS["claude"] = {
 
 AGENTS["claude-code"] = {
     "name": "Claude Code",
+    "h1_noun": "MCP server",
     "title": "Claude Code MCP server: {n} APIs, no keys | treg.to",
     "description": (
         "treg.to gives Claude Code {n} ready-to-call APIs across {p} platforms: work emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor ads. Priced per call at the provider's own rate with no markup and no provider signup."),
@@ -685,6 +688,7 @@ AGENTS["claude-code"] = {
 
 AGENTS["cursor"] = {
     "name": "Cursor",
+    "h1_noun": "MCP server",
     "title": "Cursor MCP server: {n} APIs, no keys | treg.to",
     "description": (
         "treg.to gives Cursor {n} ready-to-call APIs across {p} platforms: work emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor ads. Priced per call at the provider's own rate with no markup and no provider signup."),
@@ -2663,6 +2667,7 @@ USE_CASE_PAGES["current-quote-for-a-ticker"] = {
 
 AGENTS["grok-bot"] = {
     "name": "Grok Bot",
+    "h1_noun": "MCP server",
     "title": "Grok MCP server: {n} tools without keys | treg.to",
     "description": (
         "treg.to is an MCP server that gives Grok Bot {n} tools across {p} platforms: find work "

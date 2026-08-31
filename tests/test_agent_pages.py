@@ -55,7 +55,7 @@ async def test_chatgpt_page_hero_rotates_through_the_roles(clients: AsyncClient)
     server-rendered H1 so a crawler reads a complete sentence; the rest ride along for the JS."""
     html = (await clients.get("/agents/chatgpt")).text
     h1 = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S).group(1)
-    assert "ChatGPT plugin for" in h1 and html_mod.escape(agent_pages.ROLES[0]) in h1
+    assert "ChatGPT Connector for" in h1 and html_mod.escape(agent_pages.ROLES[0]) in h1
     # only ONE role in the H1 itself — the rest are appended by JS from data-more
     assert html_mod.escape(agent_pages.ROLES[1]) not in h1
     more = json.loads(re.search(r'<script type="application/json" id="roles-more">(.*?)</script>', html, re.S).group(1))

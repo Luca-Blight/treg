@@ -769,7 +769,7 @@ async def agent_page(request: Request, agent: str):
         f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
         f'<a href="/agents/{_esc_html(agent)}">{_esc_html(name)}</a></div>'
         f'<div class="kicker">{n} endpoints &middot; {p} platforms &middot; $0.000 markup</div>'
-        f'<h1>The {_esc_html(name)} plugin for <span class="roleslot" id="roleslot">'
+        f'<h1>The {_esc_html(name)} {_esc_html(spec.get("h1_noun", "plugin"))} for <span class="roleslot" id="roleslot">'
         f'<span class="rw" id="rolewheel">{roles}</span></span></h1>'
         f'<script type="application/json" id="roles-more">{more_roles}</script>'
         f'<div class="lede">{_esc_html(definition)}</div>'
