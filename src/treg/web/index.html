@@ -506,6 +506,11 @@ addEventListener('load', function(){
     .mob-menu{display:grid;place-items:center;order:-1}
     /* Show close button in sidebar on mobile */
     .mob-close{display:block}}
+  /* Medium viewports: sidebar visible but content area is narrow — reduce padding so tabs fit.
+     Remove the fade mask here since it cuts into visible tab text; scrolling is still available. */
+  @media(min-width:761px) and (max-width:1200px){
+    main{padding:18px 14px}
+    .mk-tabs{-webkit-mask-image:none;mask-image:none}}
   /* ---- landing page (logged-out) ---- */
   .lp{max-width:1040px;margin:0 auto;padding:0 20px 60px}
   .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:20}
