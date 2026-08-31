@@ -878,6 +878,11 @@ _UNIT_WORDS = {"per_success": "found", "per_call": "call", "per_result": "result
 def _uc_providers(cat, eps: list[dict], obs: dict) -> list[dict]:
     """One row per provider for this job: cheapest priced endpoint, best-sampled observed stats,
     the union of its accepted inputs, and the platform it serves."""
+    # Routed endpoints (kind:routed) are the first-party meta-rows that delegate to children; they
+    # appear as provider "treg" and must not show as a row in comparison tables. Filter them here
+    # rather than at each call site, since every use-case comparison needs the same exclusion.
+    eps = [e for e in eps if e.get("kind") != "routed"]
+
     def usd(e):
         cv = cat.cost_view(e.get("cost"), e.get("provider"))
         return cv["usd"] if cv and cv["usd"] else None
@@ -976,6 +981,11 @@ async def use_case_job_page(request: Request, job: str,
             raise HTTPException(status_code=404, detail=f"{legacy} not bundled")
         # no-cache: these are edited against live campaign data and must never serve stale.
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    # Possessive slugs that shipped before GSC indexing: redirect to the clean slug with 301 so
+    # the canonical stays clean and search engines update before indexing the old URL.
+    redirect_to = agent_pages.USE_CASE_REDIRECTS.get(raw.lower())
+    if redirect_to:
+        return RedirectResponse(f"/use-cases/{redirect_to}" + (".md" if as_md else ""), status_code=301)
     # Same rule as `agent_page`: the slug reaches the canonical and the JSON-LD, so it comes from
     # the table's own key, and a differently-cased URL is redirected rather than duplicated.
     key = next((k for k in agent_pages.USE_CASE_PAGES if k == raw.lower()), None)
@@ -1084,7 +1094,11 @@ async def use_case_job_page(request: Request, job: str,
               f"Setup line (paste into any agent): `{setup}`", "",
               f'Then ask: "{spec["prompt"]}"', ""]
         md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
-        md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in agent_pages.WHY_TREG]
+        # Free own-key jobs (GA4, Search Console, YouTube on your own account) are never metered, so
+        # the "9 accounts" and "Hunter" cards are false; use the own-key subset instead.
+        own_key_free = form == "short" and provs[0]["free"]
+        why_treg = agent_pages.WHY_TREG_OWN_KEY if own_key_free else agent_pages.WHY_TREG
+        md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in why_treg]
         if trial_single:
             e0 = provs[0]["eps"][0]
             md += ["", "## How it works", "",
@@ -1170,8 +1184,12 @@ async def use_case_job_page(request: Request, job: str,
 
     why_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
                         for t, d in spec["prompt_why"])
+    # Free own-key jobs (GA4, Search Console, YouTube on your own account) are never metered, so
+    # the "9 accounts" and "Hunter" cards are false; use the own-key subset instead.
+    own_key_free = form == "short" and provs[0]["free"]
+    why_treg = agent_pages.WHY_TREG_OWN_KEY if own_key_free else agent_pages.WHY_TREG
     treg_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
-                         for t, d in agent_pages.WHY_TREG)
+                         for t, d in why_treg)
 
     def price_cell(p: dict) -> str:
         if p["usd"]:

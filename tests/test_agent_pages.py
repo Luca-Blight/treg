@@ -164,8 +164,10 @@ async def test_use_case_page_answers_the_four_questions_in_order(clients: AsyncC
 
 async def test_use_case_page_compares_one_row_per_provider_with_every_endpoint_collapsed(clients: AsyncClient):
     cat = catalog_store.load()
+    # Routed endpoints (kind:routed) are filtered out of the comparison table so they don't appear
+    # as a fake "treg" provider row. Match that filter here.
     eps = [e for e in cat.for_capability("people.email.find")
-           if e["kind"] not in catalog_store.HIDDEN_KINDS]
+           if e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed"]
     provs = {e["provider"] for e in eps}
     assert len(provs) >= 2
     html = (await clients.get(USECASE)).text

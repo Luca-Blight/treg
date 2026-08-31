@@ -455,13 +455,27 @@ trial allowance with `max()` over the rows that have a `cost_view`; TikHub's Lin
 carries no cost at all, so on the comments job the generator was empty and the page 500ed past every
 green test (the tests render other jobs). `default=0` now; the cell prints "no dollar rate published".
 
-**Routed rows appear on the pages as a provider called treg** (2026-08-29). PR #242's first-party routed
-endpoints (`treg.<capability>`, `kind: routed`, `architecture/catalog.md` § Routing) are catalog rows
-on the capability, so `_uc_providers` lists them beside the children with the children's cheapest rate
-and "unverified". The template's "treg.to does not choose for you" line is now half true: the routed row
-is the explicit opt-in where it does choose, own keys first, naming the child that served. The five
-pages of 2026-08-29 say exactly that in a note; the earlier pages and the template line have not been
-revisited, which is a decision for whoever owns the routing copy.
+**Routed rows no longer appear on comparison tables** (2026-08-31). PR #242's first-party routed
+endpoints (`treg.<capability>`, `kind: routed`) were leaking into `_uc_providers` and appearing as a
+fake "treg" provider row on use-case comparison tables. `_uc_providers` now filters out `kind:routed`
+endpoints at the start, so only the real child providers appear. The public name is treg.to; a bare
+"treg" vendor row should never appear on any page.
+
+**Free own-key jobs use a filtered WHY_TREG** (2026-08-31). `WHY_TREG` contains cards like "One key,
+not 9 accounts" and "Already pay Hunter? Register it..." that are false for jobs running free on the
+user's own connected account (GA4, Search Console, YouTube Data API on your own channel). Those pages
+now render `WHY_TREG_OWN_KEY` instead, which keeps only the cards that stay true ("No code to write",
+"Nothing to integrate").
+
+**Possessive slugs 301 to clean slugs** (2026-08-31). Five use-case pages shipped with possessive slugs
+containing `-s-` (e.g. `get-a-video-s-transcript`, `a-company-s-email-format`). Before GSC indexed them,
+the keys in `USE_CASE_PAGES` were renamed to clean slugs (`youtube-transcript-api`, `company-email-format`,
+etc.) and `USE_CASE_REDIRECTS` maps old to new. The route checks `USE_CASE_REDIRECTS` first and 301s;
+the old slugs are not in the sitemap (only `USE_CASE_PAGES` keys appear) and the canonical is on the
+new slug. Redirects: `get-a-video-s-transcript` -> `youtube-transcript-api`,
+`a-channel-s-profile-and-lifetime-stats` -> `youtube-channel-stats`, `a-video-s-comments` ->
+`youtube-video-comments`, `a-business-s-reviews` -> `business-reviews`, `a-company-s-email-format` ->
+`company-email-format`.
 
 **The related-card test hard-coded the agent-page anchor** (2026-08-29). It asserted the email-finder
 page links to `/agents/chatgpt#`, which was only ever the fallback for a related label with no page;

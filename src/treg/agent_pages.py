@@ -304,7 +304,8 @@ PROVIDER_DOMAINS: dict[str, str] = {
     "youtube": "youtube.com", "akta": "akta.pro",
 }
 
-# Why go through treg.to at all: (lead, one short line). Same on every use-case page.
+# Why go through treg.to at all: (lead, one short line). Same on every use-case page, except for
+# free own-key jobs where the metering/multi-account cards are misleading.
 WHY_TREG: tuple[tuple[str, str], ...] = (
     ("One key, not 9 accounts", "treg.to holds the provider keys. Neither you nor the agent sees them."),
     ("Price before the call", "The provider's own rate, $0.000 markup, from a prepaid balance."),
@@ -313,6 +314,25 @@ WHY_TREG: tuple[tuple[str, str], ...] = (
     ("Switch by changing a word", "Another provider is a different word in the prompt, not a new integration."),
     ("Nothing to integrate", "No SDK, no OAuth dance per vendor, no seats."),
 )
+
+# The subset of WHY_TREG that applies to free own-key jobs (Google Search Console, GA4, YouTube Data
+# API on your own account, etc). "9 accounts" and "Hunter" are false when the call runs free on the
+# user's own connected account, so we keep only the cards that stay true.
+WHY_TREG_OWN_KEY: tuple[tuple[str, str], ...] = (
+    ("No code to write", "Connect once, keep the token server side, and call from any agent."),
+    ("Nothing to integrate", "No SDK, no OAuth dance per vendor, no seats."),
+)
+
+# 301 redirects from old possessive slugs to clean slugs. These pages shipped before GSC indexing,
+# so redirect now while they are still largely unindexed. The old slugs are not in the sitemap
+# (they are not keys of USE_CASE_PAGES) and the canonical is on the new slug.
+USE_CASE_REDIRECTS: dict[str, str] = {
+    "get-a-video-s-transcript": "youtube-transcript-api",
+    "a-channel-s-profile-and-lifetime-stats": "youtube-channel-stats",
+    "a-video-s-comments": "youtube-video-comments",
+    "a-business-s-reviews": "business-reviews",
+    "a-company-s-email-format": "company-email-format",
+}
 
 # The client used as the example throughout the use-case pages. One constant, so the pages are a
 # template rather than ChatGPT-specific prose.
@@ -1075,7 +1095,7 @@ USE_CASE_PAGES["enrich-a-company"] = {
 }
 
 
-USE_CASE_PAGES["get-a-video-s-transcript"] = {
+USE_CASE_PAGES["youtube-transcript-api"] = {
     "label": "Get a video's transcript",
     "sentence": "YouTube transcript API: a video's captions as plain text",
     "title": "YouTube transcript API: {n} providers compared | treg.to",
@@ -1275,7 +1295,7 @@ USE_CASE_PAGES["video-details-views-and-stats"] = {
                 "A channel's profile and lifetime stats", "Search videos and channels by keyword"),
 }
 
-USE_CASE_PAGES["a-channel-s-profile-and-lifetime-stats"] = {
+USE_CASE_PAGES["youtube-channel-stats"] = {
     "label": "A channel's profile and lifetime stats",
     "sentence": "YouTube channel stats API: subscribers, total views and profile",
     "title": "YouTube channel stats API: {n} providers | treg.to",
@@ -1472,7 +1492,7 @@ USE_CASE_PAGES["search-videos-and-channels-by-keyword"] = {
                 "Trending videos", "Find creators by keyword"),
 }
 
-USE_CASE_PAGES["a-video-s-comments"] = {
+USE_CASE_PAGES["youtube-video-comments"] = {
     "label": "A video's comments",
     "sentence": "YouTube comment scraper: every comment on a video, as data",
     "title": "YouTube comment scraper API: {n} providers | treg.to",
@@ -2374,7 +2394,7 @@ USE_CASE_PAGES["your-google-business-profile-reviews-and-reply-to-them"] = {
                 "Search terms that surfaced your listing on Maps", "Search Console: clicks, impressions and top queries"),
 }
 
-USE_CASE_PAGES["a-business-s-reviews"] = {
+USE_CASE_PAGES["business-reviews"] = {
     "label": "A business's reviews",
     "sentence": "Review scraper API: a business's reviews from Tripadvisor, Trustpilot and Yelp, as data",
     "title": "Tripadvisor, Trustpilot and Yelp reviews API | treg.to",
@@ -4524,7 +4544,7 @@ WORKFLOWS["find-and-verify-a-lead-list"] = {
 }
 
 
-USE_CASE_PAGES["a-company-s-email-format"] = {
+USE_CASE_PAGES["company-email-format"] = {
     "label": "A company's email format",
     "sentence": "Company email format finder: the pattern a domain uses, so a name becomes an address",
     "title": "Company email format finder API, by domain | treg.to",
