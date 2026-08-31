@@ -150,7 +150,7 @@ def _lifespan() -> dict[str, Any]:
             {"action": "await close", "task": "app.state.http"},
         ],
         "startup": [
-            {"action": "await", "task": "treg.db.verify_db"},
+            {"action": "await", "task": "treg.infra.db.verify_db"},
             {"action": "create", "task": "app.state.http (httpx.AsyncClient)"},
         ],
     }

@@ -7,13 +7,15 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ... import billing, catalog_store, ledger
+from ...application import billing
 from ...caller_metadata import TAG_DEFAULT
 from ...config import get_settings
-from ...db import session_maker
+from ...domain import money as ledger
+from ...domain.catalog import store as catalog_store
 from ...domain.governance import budgets as budget_policy
 from ...domain.governance.usage import _day_start_utc
 from ...domain.identity.access import Caller
+from ...infra.db import session_maker
 from ...models import CallRecord, Org, TagBudget
 from .intake import CallMeta, _NO_META
 from .resolve import MarketplaceCall
@@ -48,7 +50,7 @@ async def _enforce_trial_allowance(caller: Caller, provider: str, db: AsyncSessi
                 CallRecord.status_code >= 200, CallRecord.status_code < 300,
                 CallRecord.created_at >= day_start))).scalar_one()
     except Exception as exc:  # noqa: BLE001 — cannot verify the pool ⇒ do not drain it
-        logging.getLogger("treg.ledger").warning(
+        logging.getLogger("treg.domain.money").warning(
             "trial-allowance check failed for org %s / %s: %s", caller.org_id, provider, exc)
         raise ReservationFailed("trial_allowance_unavailable", status_code=429, detail=(
             f"cannot verify today's {provider} trial usage right now — retry shortly, or use "
@@ -73,7 +75,7 @@ async def _enforce_platform_daily_cap(caller: Caller, add_micro: int, db: AsyncS
     try:
         spent = await ledger.spent_today(db, caller.org_id)
     except Exception as exc:  # noqa: BLE001 — cannot verify the ceiling ⇒ do not spend
-        logging.getLogger("treg.ledger").warning(
+        logging.getLogger("treg.domain.money").warning(
             "platform daily-cap check failed for org %s: %s", caller.org_id, exc)
         raise ReservationFailed("platform_cap_unavailable", status_code=429, detail=(
             "cannot verify today's platform spend right now — refusing to spend the team balance "
@@ -127,7 +129,7 @@ async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
     the cap; the overshoot is bounded by concurrency × per-call estimate. That is acceptable ONLY
     because the hard gates sit behind this one: the org balance and the platform daily cap. Making it
     exact would need a second materialized authority on spend, reset daily, decremented on release and
-    corrected on settle divergence — four new ways to disagree with ledger.py, which is the one module
+    corrected on settle divergence — four new ways to disagree with domain/money, which is the one module
     allowed to move money. Never document these caps to builders as hard limits.
     """
     if not meta.tags:
@@ -152,7 +154,7 @@ async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
             raise ReservationFailed(
                 kind, status_code=exc.status_code, detail=exc.detail) from exc
         except Exception as exc:  # noqa: BLE001 — cannot verify a ceiling ⇒ do not spend
-            logging.getLogger("treg.ledger").warning(
+            logging.getLogger("treg.domain.money").warning(
                 "tag budget check failed for org %s (%s=%s): %s", caller.org_id, dim, val, exc)
             raise ReservationFailed("tag_budget_unavailable", status_code=429, detail={
                 "error": "tag_budget_unavailable", "dim": dim, "val": val,

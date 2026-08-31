@@ -1,7 +1,7 @@
 """Framework-neutral authorization for a resolved proxied call."""
 
 from ... import sandbox as demo_sandbox
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.governance import access as access_policy
 from ...domain.governance import publicdemo as publicdemo_policy
 from ...domain.governance import usage as usage_policy

@@ -12,9 +12,10 @@ from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import catalog_store, crypto, health, oauth, oauth_providers
+from .. import crypto, health, oauth, oauth_providers
 from ..config import get_settings
-from ..db import session_maker
+from ..domain.catalog import store as catalog_store
+from ..infra.db import session_maker
 from ..models import PendingOAuth, Secret, Tool
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive

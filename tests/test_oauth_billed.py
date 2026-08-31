@@ -22,7 +22,7 @@ from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import crypto
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Org, Secret, Tool
 
 POSTS = "x.x.user.posts"        # GET /2/users/{id}/tweets — per_result $0.005/post

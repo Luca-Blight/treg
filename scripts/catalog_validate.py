@@ -47,9 +47,9 @@ CATALOG = ROOT / "src" / "treg" / "catalog"
 sys.path.insert(0, str(ROOT / "src"))
 # The enums the SERVER reads the same files with. Imported, never re-typed: a validator that
 # accepts a unit `cost_view` cannot price is worse than no validator.
-from treg.catalog_store import COST_SOURCES as _SOURCES  # noqa: E402
-from treg.catalog_store import COST_UNITS as _UNITS  # noqa: E402
-from treg.catalog_store import CONFIDENCES as _CONFIDENCES  # noqa: E402
+from treg.domain.catalog.store import COST_SOURCES as _SOURCES  # noqa: E402
+from treg.domain.catalog.store import COST_UNITS as _UNITS  # noqa: E402
+from treg.domain.catalog.store import CONFIDENCES as _CONFIDENCES  # noqa: E402
 
 SCOPES = {"any_account", "own_account"}
 METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}

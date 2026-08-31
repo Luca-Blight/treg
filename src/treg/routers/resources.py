@@ -15,12 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .. import convert as _convert
-from .. import crypto, health, injectors, sandbox as demo_sandbox
-from .. import db as _db
+from .. import crypto, health, sandbox as demo_sandbox
+from ..infra import db as _db
 from .. import providers as _providers
 from .. import skills as _skills
 from ..config import get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..domain.governance import access as access_policy
 from ..domain.governance import sandbox as sandbox_policy
 from ..domain.tools import SecretOwnershipError, ToolConfigError
@@ -33,6 +33,7 @@ from ..domain.identity.access import (
     _role_at_least,
     require_member,
 )
+from ..infra.upstream import injectors
 from ..models import Bundle, Secret, Tool
 from .orgs import _resolve_project
 
@@ -706,7 +707,7 @@ async def import_skill_folder(
             select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()}
         existing_secrets = {s.name for s in (await db.execute(
             select(Secret).where(Secret.org_id == caller.org_id))).scalars().all()}
-        from .db import session_maker
+        from ..infra.db import session_maker
         results = []
         for d in chosen:
             if d.gaps:

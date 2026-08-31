@@ -17,10 +17,12 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse, PlainTe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import adsconv, agent_pages, catalog_store, oauth_providers, referrals
+from .. import adsconv, agent_pages, oauth_providers
+from ..domain import referrals
+from ..domain.catalog import store as catalog_store
 from ..domain.identity import session as sess
 from ..config import PUBLIC_HOST_ALIASES, get_settings
-from ..db import get_session
+from ..infra.db import get_session
 from ..models import User
 from ..domain.catalog import stats as endpoint_stats
 from .catalog import (_endpoint_observation_reader, _observed_or_empty, _platform_rows,

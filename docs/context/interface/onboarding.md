@@ -5,7 +5,6 @@ sources:
   - src/treg/application/auth.py
   - src/treg/application/onboard/__init__.py
   - src/treg/application/onboard/demo.py
-  - src/treg/demo.py
   - src/treg/cli.py
   - src/treg/routers/auth.py
   - src/treg/routers/onboard.py
@@ -114,7 +113,7 @@ tool seeding, and teammate acceptance run in short use-case-owned sessions.
   a login. `admin_stats` excludes the whole demo footprint (demo users, demo orgs, and everything
   scoped to them) so platform totals stay honest.
 - **Schema:** `User.onboarded` / `User.demo` / `Org.demo` (see [data-model](../architecture/data-model.md);
-  additive migrations in `db.py`, and `_rebuild_user_table` + the legacy org backfill carry the new cols).
+  schema changes are Alembic revisions under `src/treg/alembic/`).
 
 ## CLI face (`treg onboard`)
 

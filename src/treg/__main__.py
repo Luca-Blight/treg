@@ -10,7 +10,7 @@ async def _prepare_serve() -> None:
     """Apply release maintenance, then provision this local box when single-user mode allows it."""
     # Both imports are deliberately lazy so `python -m treg keygen` stays on the light path.
     from . import api, maintenance
-    from .db import dispose_engine
+    from .infra.db import dispose_engine
 
     await maintenance.upgrade()
     await api._bootstrap_single_user()
@@ -19,7 +19,7 @@ async def _prepare_serve() -> None:
 
 async def _run_upgrade() -> None:
     from . import maintenance
-    from .db import dispose_engine
+    from .infra.db import dispose_engine
 
     await maintenance.upgrade()
     await dispose_engine()

@@ -11,11 +11,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 
-from ... import analytics, archive, audit, catalog_store, oauth
+from ... import analytics, archive, audit, oauth
 from ... import sandbox as demo_sandbox
 from ...client_identity import _norm_client
 from ...config import get_settings
-from ...db import session_maker
+from ...domain.catalog import store as catalog_store
+from ...infra.db import session_maker
 from ...models import Secret
 from ...sandbox_identity import visitor_name
 from ...domain.capacity import signatures as capacity_signatures

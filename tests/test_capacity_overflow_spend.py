@@ -6,7 +6,7 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.domain.capacity import overflow_spend as spend_ledger
 from treg.domain.capacity.overflow_spend import add_in_transaction
 from treg.models import OverflowSpend

@@ -55,7 +55,7 @@ def _create_unstamped_schema(env: dict[str, str]) -> None:
         from sqlmodel import SQLModel
 
         from treg import models
-        from treg.db import _engine, dispose_engine
+        from treg.infra.db import _engine, dispose_engine
 
         async def main():
             async with _engine.begin() as connection:
@@ -104,7 +104,7 @@ def _seed_connection(env: dict[str, str]) -> None:
         import asyncio
 
         from treg import oauth_providers
-        from treg.db import session_maker
+        from treg.infra.db import session_maker
         from treg.models import Org, Secret, Tool
 
         async def seed():

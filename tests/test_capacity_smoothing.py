@@ -13,7 +13,7 @@ from httpx import AsyncClient
 from treg import ratestore
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
-from treg.db import _engine, session_maker
+from treg.infra.db import _engine, session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view

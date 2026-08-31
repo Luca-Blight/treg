@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from .db import session_maker
+from .infra.db import session_maker
 from .models import CallRecord, RunRecord, SearchMiss
 
 _pending: set[asyncio.Task] = set()
