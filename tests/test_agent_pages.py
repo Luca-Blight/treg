@@ -45,7 +45,10 @@ async def test_chatgpt_page_counts_come_from_the_catalog(clients: AsyncClient):
     """The title's tool count is computed, never typed — the landing, llms.txt and the schema had
     drifted to three different numbers before this rule existed."""
     cat = catalog_store.load()
-    n = sum(1 for e in cat.endpoints if e["kind"] not in catalog_store.HIDDEN_KINDS)
+    # Mirrors web._pub: routed meta-rows delegate to children already counted, so the
+    # advertised total excludes them along with the hidden kinds.
+    n = sum(1 for e in cat.endpoints
+            if e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed")
     html = (await clients.get("/agents/chatgpt")).text
     assert f"{n:,}" in re.search(r"<title>(.*?)</title>", html).group(1)
 
@@ -164,8 +167,10 @@ async def test_use_case_page_answers_the_four_questions_in_order(clients: AsyncC
 
 async def test_use_case_page_compares_one_row_per_provider_with_every_endpoint_collapsed(clients: AsyncClient):
     cat = catalog_store.load()
+    # Routed endpoints (kind:routed) are filtered out of the comparison table so they don't appear
+    # as a fake "treg" provider row. Match that filter here.
     eps = [e for e in cat.for_capability("people.email.find")
-           if e["kind"] not in catalog_store.HIDDEN_KINDS]
+           if e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed"]
     provs = {e["provider"] for e in eps}
     assert len(provs) >= 2
     html = (await clients.get(USECASE)).text
@@ -663,3 +668,47 @@ async def test_pages_off_the_shared_shell_carry_adtrack(clients: AsyncClient, pa
     html = r.text
     assert html.count('<script src="/adtrack.js"></script>') == 1, (
         f"{path} must load adtrack.js exactly once")
+
+
+async def test_possessive_slug_redirects_hold_in_every_shape_they_were_live(clients: AsyncClient):
+    """The five renamed slugs 301 from the flat form, the .md form, and the nested form that
+    shipped first — the nested handler used to reject a renamed slug before consulting the map,
+    turning the promised 301 into a 404. The old slugs also leave the sitemap with the rename."""
+    sitemap = (await clients.get("/sitemap.xml")).text
+    for old, new in agent_pages.USE_CASE_REDIRECTS.items():
+        assert new in agent_pages.USE_CASE_PAGES, (old, new)
+        r = await clients.get(f"/use-cases/{old}", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}", old
+        r = await clients.get(f"/use-cases/{old}.md", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}.md", old
+        r = await clients.get(f"/use-cases/anything/{old}", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}", old
+        assert f"/use-cases/{old}<" not in sitemap and f"{old}</loc>" not in sitemap, old
+        assert f"{_base()}/use-cases/{new}" in sitemap, new
+
+
+async def test_own_account_pages_do_not_carry_the_metering_cards(clients: AsyncClient):
+    """"One key, not 9 accounts" and "Already pay Hunter?" are false wherever the reader's own
+    connected account does the job — the short own-account pages, and the YouTube comparisons
+    whose official Data API row is $0.00 on the reader's own quota."""
+    for path in ("/use-cases/search-console-queries", "/use-cases/video-details-views-and-stats"):
+        html = (await clients.get(path)).text
+        assert "Already pay Hunter" not in html, path
+        assert "not 9 accounts" not in html, path
+    # and a fully metered job keeps the full pitch
+    assert "Already pay Hunter" in (await clients.get(USECASE)).text
+
+
+async def test_routed_rows_never_surface_a_provider_named_treg(clients: AsyncClient):
+    """PR #242's `kind: routed` meta-rows delegate to children that are already listed, so on any
+    public surface they double-count and print a vendor named "treg" (the brand is treg.to, and
+    treg is not a vendor). `_pub` is the one filter every public page reads, and the provider grid
+    feeds both the sitemap and /catalog's prerender — so /tools/treg must not exist."""
+    from treg.routers.web import _provider_rows, _pub
+    cat = catalog_store.load()
+    routed = [e for e in cat.endpoints if e.get("kind") == "routed"]
+    assert routed, "no routed rows in the catalog — retire this test's premise"
+    assert not any(_pub(e) for e in routed)
+    assert "treg" not in {r["service"] for r in _provider_rows()}
+    assert (await clients.get("/tools/treg")).status_code == 404
+    assert "/tools/treg<" not in (await clients.get("/sitemap.xml")).text

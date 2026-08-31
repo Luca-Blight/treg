@@ -455,13 +455,37 @@ trial allowance with `max()` over the rows that have a `cost_view`; TikHub's Lin
 carries no cost at all, so on the comments job the generator was empty and the page 500ed past every
 green test (the tests render other jobs). `default=0` now; the cell prints "no dollar rate published".
 
-**Routed rows appear on the pages as a provider called treg** (2026-08-29). PR #242's first-party routed
-endpoints (`treg.<capability>`, `kind: routed`, `architecture/catalog.md` § Routing) are catalog rows
-on the capability, so `_uc_providers` lists them beside the children with the children's cheapest rate
-and "unverified". The template's "treg.to does not choose for you" line is now half true: the routed row
-is the explicit opt-in where it does choose, own keys first, naming the child that served. The five
-pages of 2026-08-29 say exactly that in a note; the earlier pages and the template line have not been
-revisited, which is a decision for whoever owns the routing copy.
+**Routed rows are off every public surface, not just comparison tables** (2026-08-31). PR #242's
+first-party routed endpoints (`treg.<capability>`, `kind: routed`) were leaking into `_uc_providers`
+as a fake "treg" provider row — and, found while fixing that, into every other public projection of
+the catalog: the agent-page menu counted "treg" as an extra provider on every routed job, the
+use-case hub's card metas did the same, `_provider_rows` published a self-referential `/tools/treg`
+page into the sitemap, and `_catalog_census` counted the 76 meta-rows on top of the children they
+delegate to. `_pub()` in `routers.web` is now the one filter every public page reads (hidden kinds
+plus routed), `/tools/treg` 404s (the all-rows-hidden fallback in `tools_provider` no longer
+resurrects routed rows), and the advertised tool count dropped accordingly (2,745 → 2,669). The
+public name is treg.to; a bare "treg" vendor row must never appear on any page —
+`test_routed_rows_never_surface_a_provider_named_treg` pins it.
+
+**Pages with a free own-account row use a filtered WHY_TREG** (2026-08-31). `WHY_TREG` contains
+cards like "One key, not 9 accounts" and "Already pay Hunter? Register it..." that are false
+wherever the reader's own connected account does the job. That is the short own-account pages (GA4,
+Search Console) — and also the YouTube comparison pages whose official Data API row is a $0.00
+own-account row, so the condition is `any(p["free"] for p in provs)`, not "short form only" (the
+first cut missed the YouTube pages). Those pages render `WHY_TREG_OWN_KEY` instead, keeping only the
+cards that stay true ("No code to write", "Nothing to integrate").
+
+**Possessive slugs 301 to clean slugs** (2026-08-31). Five use-case pages shipped with possessive slugs
+containing `-s-` (e.g. `get-a-video-s-transcript`, `a-company-s-email-format`). Before GSC indexed them,
+the keys in `USE_CASE_PAGES` were renamed to clean slugs (`youtube-transcript-api`, `company-email-format`,
+etc.) and `USE_CASE_REDIRECTS` maps old to new. The flat route checks `USE_CASE_REDIRECTS` first and 301s, and the nested legacy route resolves
+through the same map before its own lookup (it used to reject a renamed slug first, turning the
+promised 301 into a 404 on the nested shape);
+the old slugs are not in the sitemap (only `USE_CASE_PAGES` keys appear) and the canonical is on the
+new slug. Redirects: `get-a-video-s-transcript` -> `youtube-transcript-api`,
+`a-channel-s-profile-and-lifetime-stats` -> `youtube-channel-stats`, `a-video-s-comments` ->
+`youtube-video-comments`, `a-business-s-reviews` -> `business-reviews`, `a-company-s-email-format` ->
+`company-email-format`.
 
 **The related-card test hard-coded the agent-page anchor** (2026-08-29). It asserted the email-finder
 page links to `/agents/chatgpt#`, which was only ever the fallback for a related label with no page;
