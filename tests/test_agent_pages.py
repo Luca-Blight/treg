@@ -84,9 +84,9 @@ def test_every_use_case_capability_exists_in_the_catalog():
     assert not missing, missing
 
 
-async def test_chatgpt_page_install_block_names_the_connectors_directory(clients: AsyncClient):
+async def test_chatgpt_page_install_block_has_the_setup_line(clients: AsyncClient):
     html = (await clients.get("/agents/chatgpt")).text
-    assert "Connectors" in html and "Add" in html
+    assert "set up treg" in html and "treg.to/llms.txt" in html
     # never a CTA into the authenticated app: a logged-out /app visit bounces to the landing
     body = html.split("<body>", 1)[1].split("<footer>", 1)[0]
     assert 'href="/app"' not in body.replace('href="/agents/', "")
@@ -271,10 +271,13 @@ async def test_agent_page_rows_carry_logos_and_free_badges(clients: AsyncClient)
 
 async def test_no_em_dashes_in_the_hand_written_copy():
     """House style: no em-dashes in page copy. The setup line is the product's literal command and
-    is the one exception."""
+    is the one exception (both the SETUP_LINE constant and its literal uses in install_steps)."""
     import inspect
     src = inspect.getsource(agent_pages)
-    body = "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#") and "SETUP_LINE" not in l)
+    body = "\n".join(l for l in src.splitlines()
+                     if not l.lstrip().startswith("#")
+                     and "SETUP_LINE" not in l
+                     and "set up treg —" not in l)  # the literal setup line in install_steps
     # docstrings are not page copy; strip the module docstring
     body = body.split('"""', 2)[-1]
     assert "—" not in body, [l for l in body.splitlines() if "—" in l][:3]

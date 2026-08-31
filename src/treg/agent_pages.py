@@ -347,20 +347,18 @@ AGENTS: dict[str, dict] = {
             "ads and e-commerce. Calls run on treg.to's own keys and are metered from a prepaid "
             "balance at the provider's rate with $0.000 markup. Every new team starts with $1.00 "
             "free, and there are no provider accounts to open."),
-        # Steps shown as numbered HTML list items. Plain text; escaped by the route.
+        # Steps shown as numbered HTML list items. The setup line is the universal install.
         # {n} is interpolated from the catalog count at render time.
         "install_steps": [
-            "In ChatGPT, open <b>Connectors</b> in the left sidebar.",
-            "Search for <b>treg</b> and click <b>Add</b>. The connector gives ChatGPT access to "
-            "{n} APIs without keys.",
-            "Sign in when ChatGPT asks; your first team starts with $1.00 of free calls.",
+            "Give ChatGPT this line: <b>set up treg — https://treg.to/llms.txt</b>",
+            "ChatGPT reads the skill, signs you in, and is ready to call {n} APIs.",
             "Ask for what you want done. ChatGPT searches the catalog, tells you the price, and "
             "calls the endpoint. You never hold a provider key.",
         ],
-        "install_image": "/media/install/chatgpt-connectors.png",
-        "install_image_alt": "ChatGPT's Connectors directory with treg searched and its Add button",
-        "install_image_bar": "chatgpt.com  ·  Connectors",
-        "install_image_caption": "Steps 1 and 2: Connectors in the sidebar, search treg, Add.",
+        "install_image": "/media/install/chatgpt-setup.png",
+        "install_image_alt": "ChatGPT with the treg setup line pasted into the chat",
+        "install_image_bar": "chatgpt.com",
+        "install_image_caption": "Paste the setup line and ChatGPT handles the rest.",
         "faq": [
             ("Is treg.to free to use in ChatGPT?",
              "Installing is free and every new team starts with $1.00 of calls. After that, each call "
@@ -2681,17 +2679,15 @@ AGENTS["grok-bot"] = {
         "accounts to open."),
     # {n} is interpolated from the catalog count at render time.
     "install_steps": [
-        "In Grok Bot, open <b>Tool Settings</b> (the gear icon next to Tools).",
-        "Under <b>MCP Connectors</b>, click <b>Add Remote</b> and paste "
-        "<b>https://treg.to/mcp</b>.",
-        "Sign in when it asks; your first team starts with $1.00 of free calls.",
-        "Ask for what you want done. Grok searches the catalog ({n} tools), tells you the price, "
-        "and calls the endpoint. You never hold a provider key.",
+        "Give Grok this line: <b>set up treg — https://treg.to/llms.txt</b>",
+        "Grok reads the skill, signs you in, and is ready to call {n} tools.",
+        "Ask for what you want done. Grok searches the catalog, tells you the price, and "
+        "calls the endpoint. You never hold a provider key.",
     ],
-    "install_image": "/media/install/grok-bot-mcp.png",
-    "install_image_alt": "Grok Bot's Tool Settings with treg.to/mcp added as a remote MCP connector",
-    "install_image_bar": "Grok Bot  ·  Tool Settings",
-    "install_image_caption": "Steps 1 and 2: Tool Settings, Add Remote MCP connector, paste the URL.",
+    "install_image": "/media/install/grok-bot-setup.png",
+    "install_image_alt": "Grok Bot with the treg setup line pasted into the chat",
+    "install_image_bar": "Grok Bot",
+    "install_image_caption": "Paste the setup line and Grok handles the rest.",
     "faq": [
         ("Can Grok Bot do lead generation with this?",
          "Yes, and it is the sequence most people ask for first. A research bot or a sales bot in "
