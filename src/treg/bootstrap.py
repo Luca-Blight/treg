@@ -48,6 +48,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/catalog/examples/{endpoint_id}', ('GET',), 'catalog_example'),
     ('/catalog', ('GET',), 'catalog_index'),
     ('/catalog/{slug}', ('GET',), 'catalog_page'),
+    ('/agents', ('GET',), 'agents_hub'),
     ('/agents/{agent}', ('GET',), 'agent_page'),
     ('/agents/{agent}.md', ('GET',), 'agent_page'),
     ('/use-cases/{category}/{job}', ('GET',), 'use_case_job_page_nested'),

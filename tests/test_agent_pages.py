@@ -45,19 +45,28 @@ async def test_chatgpt_page_counts_come_from_the_catalog(clients: AsyncClient):
     """The title's tool count is computed, never typed — the landing, llms.txt and the schema had
     drifted to three different numbers before this rule existed."""
     cat = catalog_store.load()
-    n = sum(1 for e in cat.endpoints if e["kind"] not in catalog_store.HIDDEN_KINDS)
+    # Mirrors web._pub: routed meta-rows delegate to children already counted, so the
+    # advertised total excludes them along with the hidden kinds.
+    n = sum(1 for e in cat.endpoints
+            if e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed")
     html = (await clients.get("/agents/chatgpt")).text
     assert f"{n:,}" in re.search(r"<title>(.*?)</title>", html).group(1)
 
 
 async def test_chatgpt_page_hero_rotates_through_the_roles(clients: AsyncClient):
-    """"ChatGPT for SEO experts / social media managers / SDRs …" — the first role is in the
-    server-rendered H1 so a crawler reads a complete sentence; the rest ride along for the JS."""
+    """"for SEO experts / social media managers / SDRs …" — the first role is server-rendered on
+    the roleline under the keyword H1, so a crawler reads a complete phrase; the rest ride in
+    the JSON block for the JS."""
     html = (await clients.get("/agents/chatgpt")).text
     h1 = re.search(r"<h1[^>]*>(.*?)</h1>", html, re.S).group(1)
-    assert "ChatGPT plugin for" in h1 and html_mod.escape(agent_pages.ROLES[0]) in h1
-    # only ONE role in the H1 itself — the rest are appended by JS from data-more
-    assert html_mod.escape(agent_pages.ROLES[1]) not in h1
+    # The H1 carries the term and the promise, never a persona: "…for SEO experts" read as the
+    # page's audience to a crawler. The wheel lives on its own line below.
+    assert "ChatGPT Connector" in h1 and "call" in h1
+    assert html_mod.escape(agent_pages.ROLES[0]) not in h1
+    roleline = re.search(r'<div class="roleline">(.*?)</div>', html, re.S).group(1)
+    assert html_mod.escape(agent_pages.ROLES[0]) in roleline
+    # only ONE role server-rendered — the rest are appended by JS from the json block
+    assert html_mod.escape(agent_pages.ROLES[1]) not in roleline
     more = json.loads(re.search(r'<script type="application/json" id="roles-more">(.*?)</script>', html, re.S).group(1))
     assert tuple(more) == agent_pages.ROLES[1:]
 
@@ -84,9 +93,9 @@ def test_every_use_case_capability_exists_in_the_catalog():
     assert not missing, missing
 
 
-async def test_chatgpt_page_install_block_names_the_plugins_directory(clients: AsyncClient):
+async def test_chatgpt_page_install_block_has_the_setup_line(clients: AsyncClient):
     html = (await clients.get("/agents/chatgpt")).text
-    assert "Plugins" in html and "Install" in html
+    assert "set up treg" in html and "treg.to/llms.txt" in html
     # never a CTA into the authenticated app: a logged-out /app visit bounces to the landing
     body = html.split("<body>", 1)[1].split("<footer>", 1)[0]
     assert 'href="/app"' not in body.replace('href="/agents/', "")
@@ -121,16 +130,31 @@ async def test_agent_page_is_in_the_sitemap_and_reachable_by_robots(clients: Asy
 
 
 async def test_agent_pages_are_hosted_only(monkeypatch):
-    """The install copy says "search treg in ChatGPT's Plugins directory" — true of treg.to, false of
+    """The install copy describes treg.to's own hosted listing and grant — true of treg.to, false of
     every self-hosted registry. So off the reference hosts the page 404s and leaves the sitemap."""
     monkeypatch.setenv("TREG_PUBLIC_URL", "https://registry.example.internal")
     get_settings.cache_clear()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
             assert (await c.get("/agents/chatgpt")).status_code == 404
-            assert "/agents/chatgpt" not in (await c.get("/sitemap.xml")).text
+            assert (await c.get("/agents")).status_code == 404
+            assert "/agents" not in (await c.get("/sitemap.xml")).text
     finally:
         get_settings.cache_clear()
+
+
+async def test_agents_hub_lists_every_agent(clients: AsyncClient):
+    """The nav's "Agents" link pointed at /agents/claude-code because no hub existed, and the bare
+    /agents URL 404ed while pages linked toward it. One card per client, the nav points here, and
+    the sitemap carries it."""
+    r = await clients.get("/agents")
+    assert r.status_code == 200, r.text[:200]
+    html = r.text
+    for slug, spec in agent_pages.AGENTS.items():
+        assert f'href="/agents/{slug}"' in html, slug
+        assert spec["name"] in html, slug
+    assert 'href="/agents"' in (await clients.get("/agents/chatgpt")).text  # nav + breadcrumb parent
+    assert f"<loc>{_base()}/agents</loc>" in (await clients.get("/sitemap.xml")).text
 
 
 # ------------------------------------------------------------------ use-case pages (the spokes)
@@ -164,8 +188,10 @@ async def test_use_case_page_answers_the_four_questions_in_order(clients: AsyncC
 
 async def test_use_case_page_compares_one_row_per_provider_with_every_endpoint_collapsed(clients: AsyncClient):
     cat = catalog_store.load()
+    # Routed endpoints (kind:routed) are filtered out of the comparison table so they don't appear
+    # as a fake "treg" provider row. Match that filter here.
     eps = [e for e in cat.for_capability("people.email.find")
-           if e["kind"] not in catalog_store.HIDDEN_KINDS]
+           if e["kind"] not in catalog_store.HIDDEN_KINDS and e.get("kind") != "routed"]
     provs = {e["provider"] for e in eps}
     assert len(provs) >= 2
     html = (await clients.get(USECASE)).text
@@ -271,10 +297,13 @@ async def test_agent_page_rows_carry_logos_and_free_badges(clients: AsyncClient)
 
 async def test_no_em_dashes_in_the_hand_written_copy():
     """House style: no em-dashes in page copy. The setup line is the product's literal command and
-    is the one exception."""
+    is the one exception (both the SETUP_LINE constant and its literal uses in install_steps)."""
     import inspect
     src = inspect.getsource(agent_pages)
-    body = "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#") and "SETUP_LINE" not in l)
+    body = "\n".join(l for l in src.splitlines()
+                     if not l.lstrip().startswith("#")
+                     and "SETUP_LINE" not in l
+                     and "set up treg —" not in l)  # the literal setup line in install_steps
     # docstrings are not page copy; strip the module docstring
     body = body.split('"""', 2)[-1]
     assert "—" not in body, [l for l in body.splitlines() if "—" in l][:3]
@@ -352,7 +381,7 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
 
 # Every page that ships, not a hand-kept list: this set grows by 59 as the use-case pages land, and
 # a title that overflows is invisible in exactly the way nobody notices during review.
-ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases", "/workflows"]
+ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/agents", "/use-cases", "/workflows"]
              + [f"/use-cases/{j}" for j in agent_pages.USE_CASE_PAGES]
              + [f"/workflows/{w}" for w in agent_pages.WORKFLOWS])
 
@@ -639,6 +668,7 @@ def test_workflow_copy_has_no_em_dashes():
 
 @pytest.mark.parametrize("path", [
     "/agents/chatgpt",
+    "/agents",
     "/use-cases/verify-an-email",
     "/use-cases",
     "/workflows",
@@ -663,3 +693,47 @@ async def test_pages_off_the_shared_shell_carry_adtrack(clients: AsyncClient, pa
     html = r.text
     assert html.count('<script src="/adtrack.js"></script>') == 1, (
         f"{path} must load adtrack.js exactly once")
+
+
+async def test_possessive_slug_redirects_hold_in_every_shape_they_were_live(clients: AsyncClient):
+    """The five renamed slugs 301 from the flat form, the .md form, and the nested form that
+    shipped first — the nested handler used to reject a renamed slug before consulting the map,
+    turning the promised 301 into a 404. The old slugs also leave the sitemap with the rename."""
+    sitemap = (await clients.get("/sitemap.xml")).text
+    for old, new in agent_pages.USE_CASE_REDIRECTS.items():
+        assert new in agent_pages.USE_CASE_PAGES, (old, new)
+        r = await clients.get(f"/use-cases/{old}", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}", old
+        r = await clients.get(f"/use-cases/{old}.md", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}.md", old
+        r = await clients.get(f"/use-cases/anything/{old}", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{new}", old
+        assert f"/use-cases/{old}<" not in sitemap and f"{old}</loc>" not in sitemap, old
+        assert f"{_base()}/use-cases/{new}" in sitemap, new
+
+
+async def test_own_account_pages_do_not_carry_the_metering_cards(clients: AsyncClient):
+    """"One key, not 9 accounts" and "Already pay Hunter?" are false wherever the reader's own
+    connected account does the job — the short own-account pages, and the YouTube comparisons
+    whose official Data API row is $0.00 on the reader's own quota."""
+    for path in ("/use-cases/search-console-queries", "/use-cases/video-details-views-and-stats"):
+        html = (await clients.get(path)).text
+        assert "Already pay Hunter" not in html, path
+        assert "not 9 accounts" not in html, path
+    # and a fully metered job keeps the full pitch
+    assert "Already pay Hunter" in (await clients.get(USECASE)).text
+
+
+async def test_routed_rows_never_surface_a_provider_named_treg(clients: AsyncClient):
+    """PR #242's `kind: routed` meta-rows delegate to children that are already listed, so on any
+    public surface they double-count and print a vendor named "treg" (the brand is treg.to, and
+    treg is not a vendor). `_pub` is the one filter every public page reads, and the provider grid
+    feeds both the sitemap and /catalog's prerender — so /tools/treg must not exist."""
+    from treg.routers.web import _provider_rows, _pub
+    cat = catalog_store.load()
+    routed = [e for e in cat.endpoints if e.get("kind") == "routed"]
+    assert routed, "no routed rows in the catalog — retire this test's premise"
+    assert not any(_pub(e) for e in routed)
+    assert "treg" not in {r["service"] for r in _provider_rows()}
+    assert (await clients.get("/tools/treg")).status_code == 404
+    assert "/tools/treg<" not in (await clients.get("/sitemap.xml")).text
