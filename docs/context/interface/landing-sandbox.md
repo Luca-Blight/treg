@@ -4,7 +4,6 @@ status: shipped
 sources:
   - src/treg/sandbox.py
   - src/treg/sandbox_identity.py
-  - src/treg/pubfeed.py
   - src/treg/application/onboard/pubfeed.py
   - src/treg/application/onboard/sandbox.py
   - src/treg/application/onboard/__init__.py

@@ -12,7 +12,6 @@ sources:
   - src/treg/web/tour/index.html
   - src/treg/api.py
   - src/treg/routers/web.py
-  - src/treg/session.py
   - src/treg/domain/identity/session.py
 related:
   - interface/api.md

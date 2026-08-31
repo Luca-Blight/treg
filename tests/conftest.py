@@ -58,7 +58,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 from treg import audit  # noqa: E402
 from treg.api import app  # noqa: E402
 from treg import archive  # noqa: E402
-from treg.db import reset_db  # noqa: E402
+from treg.infra.db import reset_db  # noqa: E402
 
 
 # The OTP-start + sandbox throttles (and the OTP codes) now live in the DB's `ephemeral` table, not in

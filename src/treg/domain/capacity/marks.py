@@ -15,7 +15,7 @@ import logging
 from datetime import datetime, timedelta
 
 from ... import ratestore
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...timeutil import utcnow_naive
 from .policy import LatestState
 from .sweep import STATE_NS, STATE_TTL_S

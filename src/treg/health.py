@@ -15,7 +15,8 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import crypto, injectors, oauth
+from . import crypto, oauth
+from .infra.upstream import injectors
 from .infra.upstream.ssrf import host_is_public, safe_webhook_url
 from .models import Invite, Membership, PendingOAuth, Secret, Tool, User
 from .timeutil import utcnow_naive

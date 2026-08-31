@@ -5,7 +5,7 @@ reserves against a balance that only affords K yield exactly K successes — the
 conditional UPDATE exists for); a settle below the reserve refunding the difference; promotional
 credit burning before purchased; the stale-hold reaper; and the balance endpoint's auth gate.
 
-The invariant asserted throughout is the one from ledger.py:
+The invariant asserted throughout is the one from domain/money:
     org.balance_micro == sum(block.remaining_micro) - sum(open hold.amount_micro)
 """
 
@@ -19,10 +19,10 @@ from sqlmodel import select
 
 from conftest import make_upstream
 
-from treg import ledger
+from treg.domain import money as ledger
 from treg.api import app
 from treg.config import get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import CreditBlock, Hold, LedgerEntry, Org
 
 
@@ -211,7 +211,7 @@ async def test_concurrent_sweeps_pay_a_referral_once(c: AsyncClient):
     """
     from datetime import timedelta
 
-    from treg import referrals
+    from treg.domain import referrals
     from treg.models import Referral
 
     r = await c.post("/users", json={"email": "referrer@superdesign.dev"})
@@ -259,7 +259,7 @@ async def test_sweep_grants_and_stamps_commit_together(c: AsyncClient, monkeypat
     where each grant committed itself, leaves the referee's money durable with no stamp."""
     from datetime import timedelta
 
-    from treg import referrals
+    from treg.domain import referrals
     from treg.models import Referral
 
     r = await c.post("/users", json={"email": "atomic-ref@superdesign.dev"})
@@ -305,7 +305,7 @@ async def test_referee_instant_grant_failure_after_staging_never_raises(
     (MissingGreenlet), which broke the never-raises contract exactly when it mattered."""
     import logging as _logging
 
-    from treg import referrals
+    from treg.domain import referrals
     from treg.models import Referral
 
     r = await c.post("/users", json={"email": "ref-boom-a@superdesign.dev"})
@@ -348,7 +348,7 @@ async def test_sweep_grant_failure_after_staging_never_raises(c: AsyncClient, mo
     import logging as _logging
     from datetime import timedelta
 
-    from treg import referrals
+    from treg.domain import referrals
     from treg.models import Referral
 
     r = await c.post("/users", json={"email": "sweep-boom-ref@superdesign.dev"})
@@ -392,7 +392,7 @@ async def test_referrals_page_survives_a_sweep_rollback(c: AsyncClient, monkeypa
     the user row and `user.id` in the handler would 500 the page it protects."""
     import logging as _logging
 
-    from treg import referrals
+    from treg.domain import referrals
     from treg.application import referrals as referrals_app
 
     r = await c.post("/users", json={"email": "page-boom@superdesign.dev"})

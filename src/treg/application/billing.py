@@ -1,4 +1,4 @@
-"""The ONE module that talks to Stripe — the mirror of `ledger.py`, which is the one module that
+"""The ONE module that talks to Stripe — the mirror of `domain/money`, which is the one module that
 moves money. Neither reaches into the other's job: Stripe authorizes a payment here, and the ledger
 credits balance there, and the only thing that crosses between them is
 `ledger.topup(org, amount_micro, payment_ref)`.
@@ -43,10 +43,10 @@ from sqlmodel import select
 
 from .. import adsconv
 from .. import analytics
-from .. import db as _db
+from ..infra import db as _db
 from .. import email as email_mod
-from .. import ledger
-from .. import referrals
+from ..domain import money as ledger
+from ..domain import referrals
 from ..config import get_settings
 from ..infra import stripe as stripe_adapter
 from ..models import CreditBlock, LedgerEntry, Membership, Org, User
@@ -55,7 +55,7 @@ from ..models import CreditBlock, LedgerEntry, Membership, Org, User
 # _run_autotopup retains its relative local import; removing the alias breaks task-owned sessions.
 sys.modules.setdefault("treg.application.db", _db)
 
-log = logging.getLogger("treg.billing")
+log = logging.getLogger("treg.application.billing")
 
 MICRO_PER_CENT = 10_000
 MICRO_PER_USD = 1_000_000
@@ -838,7 +838,7 @@ def maybe_schedule_autotopup(org: Org) -> bool:
 async def _run_autotopup(org_id: int) -> None:
     """The scheduled task's body: its OWN session, because the request that scheduled it will have
     closed its session (and committed or rolled back) long before this runs."""
-    from .db import session_maker
+    from ..infra.db import session_maker
     try:
         async with session_maker() as db:
             result = await attempt_auto_topup(db, org_id)
@@ -1082,7 +1082,7 @@ async def _on_payment_reversed(db: AsyncSession, charge_or_dispute: dict, kind: 
     landed yet — and does NOTHING to the balance itself.
 
     That split is deliberate and it is the reason the hold window exists. treg has never reversed a
-    top-up automatically: `ledger.py` has no path that drives a balance negative, blocks burn
+    top-up automatically: `domain/money` has no path that drives a balance negative, blocks burn
     promotional-first precisely to keep the disputable pool small, and refund policy is a human
     decision. What IS safe to automate is not paying a third party a bounty funded by money that
     just went away. A bonus already granted is logged for a human instead (see

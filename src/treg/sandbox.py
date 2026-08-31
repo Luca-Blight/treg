@@ -22,7 +22,8 @@ from __future__ import annotations
 import json
 import re
 
-from . import crypto, injectors
+from . import crypto
+from .infra.upstream import injectors
 from .models import Org, Secret, Tool
 from .sandbox_identity import visitor_name
 

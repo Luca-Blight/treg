@@ -12,12 +12,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import crypto, demo as demo_seed, email as email_sender, health, ledger, localrun
+from .. import crypto, email as email_sender, health, localrun
 from .. import providers as _providers
+from ..application.onboard import demo as demo_seed
 from ..application import signup as signup_use_cases
 from ..caller_metadata import TAG_DEFAULT, _MAX_BUDGET_DIMS, _META_KEY_RE, _client_of, _norm_client
 from ..config import get_settings
-from ..db import get_session
+from ..domain import money as ledger
 from ..domain.governance import budgets as budget_policy
 from ..domain.governance import access as access_policy
 from ..domain.governance import usage as usage_policy
@@ -41,6 +42,7 @@ from ..domain.identity.access import (
     require_identity,
     require_member,
 )
+from ..infra.db import get_session
 from ..models import (
     ROLE_RANK,
     AdConversion,

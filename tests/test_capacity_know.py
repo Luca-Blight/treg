@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import select
 
 from treg import ratestore
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.domain.capacity import collectors
 from treg.domain.capacity.policy import (
     AGGREGATORS, LatestState, default_policy, ensure_policies, latest_state, policy_population,

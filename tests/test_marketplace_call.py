@@ -22,14 +22,16 @@ from datetime import datetime, timezone
 import pytest
 from httpx import AsyncClient
 
-from treg import api as A, audit, catalog_store, ledger, oauth_providers
+from treg import api as A, audit, oauth_providers
+from treg.domain import money as ledger
+from treg.domain.catalog import store as catalog_store
 from treg.application.call import resolve as call_resolution
 from treg.application.call import settle as call_settle
 from treg.application.call import service as call_service
 from treg.application.call.types import ResolutionFailed, UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Org
 
 EP = "tikhub.tiktok.video.comments"          # GET /api/v1/tiktok/web/fetch_post_comment, aweme_id required
@@ -900,7 +902,7 @@ def test_brightdata_documented_prices_are_billable(platform_on):
     on our token, so its prices can only ever be `documented` ($1.50/1000 records from the public
     pricing page) — and documented is now billable. The provider that motivated the policy must
     actually have eligible endpoints, or "enable all" silently enabled nothing."""
-    from treg import catalog_store
+    from treg.domain.catalog import store as catalog_store
 
     cat = catalog_store.load()
     rows = cat.for_provider("brightdata")
@@ -923,7 +925,7 @@ async def test_the_same_key_can_belong_to_two_different_CALLERS(clients: AsyncCl
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     # A second AGENT in the SAME team: the exact case this scoping is for. Two agents belonging to
@@ -956,7 +958,7 @@ async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
     import sqlalchemy.exc
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     async with session_maker() as db:
@@ -991,7 +993,7 @@ async def _seed_answer(clients: AsyncClient, key: str, *, body: bytes = b'{"seed
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1069,7 +1071,7 @@ async def test_one_callers_label_is_invisible_to_another(clients: AsyncClient, p
     second caller using the same label must reach the provider, not read the first one's answer."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     await _seed_answer(clients, "shared-label", body=b'{"owner":"first"}')
@@ -1118,7 +1120,7 @@ async def test_an_unmetered_call_is_not_stored(clients: AsyncClient):
     protect, and treg has no business holding their response."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall
 
     await clients.post("/secrets", json={"name": "tikhub", "value": "OWNKEY"})
@@ -1135,7 +1137,7 @@ async def test_a_FAILED_call_frees_its_label(clients: AsyncClient, platform_on):
     the caller retrying out of it. The label must be usable again immediately."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall
 
     bad = await clients.get(f"/call/{EP}", headers={"Idempotency-Key": "will-fail"})
@@ -1157,7 +1159,7 @@ async def test_a_second_call_while_the_first_is_IN_FLIGHT_is_refused(clients: As
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1186,7 +1188,7 @@ async def test_a_stale_label_reused_later_starts_fresh(clients: AsyncClient, pla
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1219,14 +1221,14 @@ async def test_the_sweep_clears_labels_NOBODY_COMES_BACK_FOR(clients: AsyncClien
     drops it. Without a sweep those rows accumulate forever, and they hold response BODIES. Any later
     call by the same caller clears them.
 
-    Lazy and caller-scoped, matching the hold reaper in ledger.py: a background timer would need a
+    Lazy and caller-scoped, matching the hold reaper in domain/money: a background timer would need a
     scheduler and a leader election on a multi-instance deploy, and would still only run on a timer.
     """
     from datetime import timedelta
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1257,7 +1259,7 @@ async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, p
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import IdempotentCall, Membership
 
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
@@ -1446,7 +1448,7 @@ async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, tri
 # the balance said $0.10, which is the one disagreement a published price must never have.
 
 def _x_endpoints():
-    from treg import catalog_store
+    from treg.domain.catalog import store as catalog_store
     return [e for e in catalog_store.load().by_id.values() if e.get("provider") == "x"]
 
 
@@ -1530,7 +1532,7 @@ async def test_the_rate_card_is_per_resource_type_not_one_read_and_one_write(cli
     """The regression that shipped and was caught in review: every write billed at the post-creation
     rate. X prices each action separately, and the catalog has to say so — creating a list is $0.010,
     managing one $0.005, and deleting an interaction $0.010, none of them $0.015."""
-    from treg import catalog_store
+    from treg.domain.catalog import store as catalog_store
     by_id = catalog_store.load().by_id
     assert by_id["x.x.create-lists"]["cost"]["value"] == 0.010, "List: Create is $0.010 per request"
     assert by_id["x.x.update-lists"]["cost"]["value"] == 0.005, "List: Manage is $0.005 per request"
@@ -1543,7 +1545,7 @@ def test_the_owned_read_discount_is_never_claimed():
     """$0.001 owned reads need the caller to own the developer app. On a registry connect the app is
     treg's, so no X entry may quote that rate as a per-CALL own-account price — the way `/2/users/me`
     did until 2026-08-18, under-billing the reads treg pays the most for."""
-    from treg import catalog_store
+    from treg.domain.catalog import store as catalog_store
     me = catalog_store.load().by_id["x.x.user.profile"]
     assert me["cost"]["value"] == 0.010 and me["cost"]["type"] == "per_result", (
         "/2/users/me is an ordinary User read for a registry connect")
@@ -1697,7 +1699,7 @@ async def test_concurrent_settles_never_lose_a_block_draw(clients: AsyncClient):
     parallel draws serialize; after N concurrent settles the block must equal the ledger."""
     import asyncio
     from treg.domain import money
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import CreditBlock
     from sqlalchemy import select
 

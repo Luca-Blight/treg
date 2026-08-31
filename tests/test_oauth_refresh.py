@@ -68,7 +68,7 @@ async def test_token_endpoint_io_holds_no_database_connection(
 ):
     """The provider may take seconds; the refresh transaction must release its pool slot first."""
     from treg.api import app
-    from treg.db import _engine
+    from treg.infra.db import _engine
 
     await _register_oauth_tool(clients, "pool-free-refresh", _oauth_blob("OLD", expires_at=0))
     checked_out: list[int] = []

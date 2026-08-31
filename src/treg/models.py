@@ -42,7 +42,7 @@ class Org(SQLModel, table=True):
     # Prepaid balance in micro-USD (1e-6 USD), MATERIALIZED as sum(CreditBlock.remaining) minus the
     # open Holds. It exists as a column, not a query, because it is the hot-path spend gate: one
     # conditional UPDATE against this integer is what stops concurrent agent calls racing past zero
-    # (see ledger.reserve). Only `ledger.py` may write it.
+    # (see ledger.reserve). Only `domain/money` may write it.
     balance_micro: int = Field(default=0)
 
     # ---- Stripe billing (see billing.py; NO card data ever lands here) ----------------------------
@@ -117,8 +117,8 @@ class Org(SQLModel, table=True):
     # out, a metered call may be served through a treg-owned aggregator account on the same endpoint.
     # Default allowed (disclosed via X-Treg-Served-Via); a team that must not have its requests
     # relayed through a third party sets this (`treg org overflow off`). Stored as the opt-out so the
-    # column default is the plain `false` the legacy helper adds — and LAST in the class, because
-    # alembic's add_column appends and the schema-parity test compares column order.
+    # column default is the plain `false` in Python — and LAST in the class, because alembic's
+    # add_column appends, keeping create_all test schemas aligned with the migrated shape.
     platform_overflow_disabled: bool = Field(default=False)
 
 
@@ -240,7 +240,7 @@ class CallRecord(SQLModel, table=True):
     # ---- marketplace telemetry (NULL on a plain tool call) -------------------------------------
     # What a direct catalog call actually did: which endpoint, whose credential paid for it, what we
     # expected it to cost vs what the provider said it cost, and how big/slow the answer was. The
-    # money itself is NOT here — it landed synchronously in the ledger (see ledger.py); this table is
+    # money itself is NOT here — it landed synchronously in the ledger (see domain/money); this table is
     # analytics and is allowed to lose rows.
     endpoint_id: str | None = Field(default=None, index=True)
     provider: str | None = Field(default=None, index=True)
@@ -295,7 +295,7 @@ class CallRecord(SQLModel, table=True):
     # True when the archive served this answer instead of the vendor (X-Treg-Cache: hit).
     # Money columns stay identical to a live call on purpose — pricing a hit is a deferred
     # founder decision (docs/context/architecture/archive.md). Declared LAST to match the
-    # migration's ALTER TABLE ADD COLUMN position (the baseline parity test compares order).
+    # migration's ALTER TABLE ADD COLUMN append position.
     cached: bool = Field(default=False)
     # Did the provider FIND something? Decided at settle from the response body by the endpoint's
     # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
@@ -450,7 +450,7 @@ class AdConversion(SQLModel, table=True):
     own dedicated session). It is NOT true for `paid`: `_credit` commits the credit immediately after
     `ledger.topup()` stages it, before queueing the conversion, so a crash between the two commits
     loses that conversion permanently. This
-    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `domain/money` —
     see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
     until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
     fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
@@ -655,7 +655,7 @@ class Hold(SQLModel, table=True):
 
 
 class TagSpend(SQLModel, table=True):
-    """What one call cost, attributed to ONE of its caller tags. Written by `ledger.py` only, inside
+    """What one call cost, attributed to ONE of its caller tags. Written by `domain/money` only, inside
     the same transaction as the money movement — never through `audit.py`, which drops rows.
 
     A builder reselling treg tags each call (`customer=cust_8123, workspace=ws_9`) and needs two
@@ -1199,7 +1199,7 @@ class ArchiveKey(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
     # The pre-injection request shape, stored so the refresh worker can re-ask the exact question.
     # Credentials cannot appear here: injection happens inside the relay, after this shape is
-    # fixed. Declared LAST to match the migration's ALTER TABLE append position (parity test).
+    # fixed. Declared LAST to match the migration's ALTER TABLE append position.
     req_method: str = Field(default="")
     req_url: str = Field(default="")
     req_body: bytes | None = Field(default=None)

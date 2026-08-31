@@ -316,7 +316,7 @@ async def test_widening_head_did_not_leak_into_the_public_schema(clients: AsyncC
 def test_no_shelf_is_published_that_the_app_grid_hides():
     """Adding a platform is a data-only change — drop the YAML in and it appears on both sides. The
     one way that breaks: `catalog_store` auto-registers a platform with no `platforms:` entry in
-    capabilities.yaml as `category: "Other"` (catalog_store.py, `platforms.setdefault`), and the
+    capabilities.yaml as `category: "Other"` (domain/catalog/store.py, `platforms.setdefault`), and the
     dashboard's `platCategories` skips `Other` outright (`if(c==='Other') continue`). The shelf page
     would still render and the sitemap would still publish it — but nothing in the app's own grid
     would link to it. Give the new platform a label and category in capabilities.yaml.

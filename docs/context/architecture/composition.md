@@ -19,6 +19,7 @@ sources:
   - src/treg/routers/referrals.py
   - src/treg/routers/web.py
   - scripts/dump_surface.py
+  - tests/test_app_roles.py
 related:
   - architecture/import-boundaries.md
   - interface/api.md
@@ -80,16 +81,15 @@ architecture test separately pins the dataplane/control startup split and backgr
 
 | Role | HTTP routes and mounts | Background tasks | Startup checks |
 |---|---|---|---|
-| `all` | The complete surface, including `/run`, static files, `/mcp`, and the flagged `/mcp/v2` | Ads conversion worker when enabled | DB init, HTTP client, enabled MCP lifespans |
-| `dataplane` | `/call/{rest:path}`, `/catalog/call/{rest:path}`, MCP mounts, and their resource metadata; no `/run`, static files, docs, or OpenAPI | None | DB init, HTTP client, enabled MCP lifespans |
-| `control` | Everything except the calling surfaces; includes OAuth issuance, `/run`, and static files | Ads conversion worker when enabled | DB init, HTTP client |
+| `all` | The complete surface, including `/run`, static files, `/mcp`, and the flagged `/mcp/v2` | Ads conversion worker when enabled | Read-only DB verify, HTTP client, enabled MCP lifespans |
+| `dataplane` | `/call/{rest:path}`, `/catalog/call/{rest:path}`, MCP mounts, and their resource metadata; no `/run`, static files, docs, or OpenAPI | None | Read-only DB verify, HTTP client, enabled MCP lifespans |
+| `control` | Everything except the calling surfaces; includes OAuth issuance, `/run`, and static files | Ads conversion worker when enabled | Read-only DB verify, HTTP client |
 
-No role lifespan performs a data backfill or provisions the local single user. The explicit
+No role lifespan writes schema, performs a data backfill, or provisions the local single user. The explicit
 `python -m treg upgrade` release phase owns content-driven backfills; the default `python -m treg`
 serve path adds single-user provisioning before Uvicorn starts. Raw ASGI operators must run the
-upgrade command separately on every release. `init_db()` remains in the lifespan temporarily until
-the next Stage 5 cleanup PR removes the redundant legacy startup path; schema execution already belongs
-to Alembic in the explicit release phase.
+upgrade command separately on every release. `verify_db()` only checks revision compatibility and the
+Fernet-key guard; the exact startup manifests are pinned to a read-only allowlist.
 
 MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
 dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the

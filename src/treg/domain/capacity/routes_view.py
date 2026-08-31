@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import select
 
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...models import OverflowRoute
 from .routes import route_for
 

@@ -98,8 +98,6 @@ jobs:
           tests/callmatrix
           tests/test_ledger.py
           tests/test_ledger_claim_review.py
-          tests/test_migration.py
-          tests/test_migration_ddl.py
           tests/test_alembic_baseline.py
           tests/test_archive.py
           tests/test_call_cancellation.py
