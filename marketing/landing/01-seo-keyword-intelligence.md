@@ -253,6 +253,21 @@ $1.00 of free credit.
 
 **Which agents does it work with?** — `S-OBJ-AGENTS`
 
+**Is there a Google Search Console MCP?**
+Yes. Connect your Google account once and your agent can pull clicks, impressions, top queries and
+URL inspection data through the treg.to MCP server. The same connection gives you Google Analytics
+and Google Ads. See `/llms.txt` for the setup line.
+
+**What about Semrush MCP, Ahrefs MCP, DataForSEO MCP?**
+treg.to's MCP server exposes DataForSEO, Serpstat, Moz and SE Ranking as tools your agent can call.
+Semrush and Ahrefs are available when you connect your own key (bring-your-own-key). One MCP
+connection, multiple SEO providers.
+
+**What does DataForSEO pricing look like through treg.to?**
+DataForSEO's keyword endpoint is $0.09 flat per call (batch up to 1,000 keywords in one call), organic
+SERP results are $0.002 per call. treg.to passes through the provider's rate with no markup. You only
+pay for calls you make, no monthly minimum.
+
 ---
 
 ## Next steps

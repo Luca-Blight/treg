@@ -1,9 +1,9 @@
 ---
 page_id: p3
 slug: /use-cases/social-trend-research-for-ai-agents/
-seo_title: "Social Trends: TikTok, Reddit, YouTube and X Data | treg.to"            # 55
-meta_description: "Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."  # 148
-h1: "Social Trends: TikTok, Reddit, YouTube and X Data"
+seo_title: "Social Data MCP: Reddit, Instagram, TikTok, YouTube | treg.to"            # 53
+meta_description: "Social data for AI agents via MCP: Reddit posts, Instagram creators, TikTok trends, YouTube transcripts. One connection, pay per call. $1.00 free."  # 147
+h1: "Social Data MCP: Reddit, Instagram, TikTok, YouTube"
 hub_title: "Social & creator trends"
 hub_blurb: "Posts, creators and comments across TikTok, Reddit, YouTube and X, no platform approval."
 price_old: "$200/mo"
@@ -36,7 +36,7 @@ status: proof populated from real runs 2026-08-17 ($0.00588) · 4 of 4 platforms
 
 ## Hero
 
-### Social Trends: TikTok, Reddit, YouTube and X Data
+### Social Data MCP: Reddit, Instagram, TikTok, YouTube
 
 Your agent can read real posts, creators, videos and comment threads across TikTok, Reddit, YouTube, X and
 Instagram through one key — no platform developer account, no app review, no invite.
@@ -231,6 +231,27 @@ exact price is shown before the call, and treg.to adds no markup. New teams star
 credit — around a thousand posts' worth of calls.
 
 **Which agents does it work with?** — `S-OBJ-AGENTS`
+
+**Is there a Reddit MCP?**
+Yes. The treg.to MCP server exposes Reddit search, subreddit posts, comments and trending topics
+through providers like ScrapeCreators and Bright Data. One MCP connection gives your agent access
+to Reddit data without a Reddit API approval.
+
+**Is there an Instagram MCP or TikTok MCP?**
+Yes. Instagram profiles, posts, hashtags and comments; TikTok profiles, videos, hashtags and trends.
+All through the same treg.to MCP connection, no platform approval required.
+
+**What about Twitter MCP?**
+The catalog has both the official X API (requires your own $200/mo key) and independent providers
+that answer the same queries at $0.001 per call. Connect via MCP and your agent sees both options.
+
+**Can I scrape Reddit or other platforms?**
+The catalog providers handle the scraping. Your agent calls a structured endpoint and gets structured
+data back. You are not running a scraper; you are calling an API that has one.
+
+**Is there a Grok MCP?**
+Grok is an AI model, not a data source. If you are using Grok and want it to call social data tools,
+paste the setup line from `/llms.txt` into Grok and it can use the treg.to catalog.
 
 ---
 

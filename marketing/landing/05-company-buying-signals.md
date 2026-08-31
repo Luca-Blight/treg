@@ -240,6 +240,25 @@ shown before the call, and treg.to adds no markup. New teams start with $1.00 of
 
 **Which agents does it work with?** — `S-OBJ-AGENTS`
 
+**Is this a ZoomInfo alternative?**
+If you need company data without a ZoomInfo contract, yes. The catalog has eleven company-search
+providers: Apollo, The Companies API, Hunter, LeadMagic, Akta, Diffbot, PDL, Lusha, Icypeas, RocketReach
+and Crunchbase. Coverage and price differ; test which one covers your market before you commit.
+
+**Is this a Crunchbase alternative?**
+Crunchbase is in the catalog as a bring-your-own-key provider. If you already have a Crunchbase licence,
+connect it and those calls cost nothing on treg.to. If you do not, Apollo and The Companies API answer
+similar queries at a fraction of the price.
+
+**Is this a BuiltWith alternative?**
+For technographics (what technology a company runs), the catalog has BuiltWith via The Companies API
+and Wappalyzer via Hunter. BuiltWith's own API is not in the catalog yet; file a request at `/tool-requests`
+if you need it directly.
+
+**Is there a ZoomInfo MCP?**
+ZoomInfo is not in the catalog. The closest MCP path is Apollo, LeadMagic and The Companies API, which
+answer similar company and people queries through the treg.to MCP server.
+
 ---
 
 ## Next steps

@@ -1,9 +1,9 @@
 ---
 page_id: p4
 slug: /use-cases/competitor-ad-research-for-ai-agents/
-seo_title: "Competitor Ads: Meta, Google, TikTok and LinkedIn | treg.to"        # 55
-meta_description: "Let your agent pull competitors' live ads from the Meta, Google, TikTok and LinkedIn ad libraries through one key. Calls from $0.00188. $1.00 free."  # 147
-h1: "Competitor Ads: Meta, Google, TikTok and LinkedIn"
+seo_title: "Ad Library API: Meta, Google, TikTok, LinkedIn Ads | treg.to"        # 52
+meta_description: "Ad library API for AI agents: pull competitors' live ads from Meta, Google, TikTok and LinkedIn through one key. Calls from $0.00188. $1.00 free."  # 145
+h1: "Ad Library API: Meta, Google, TikTok, LinkedIn Ads"
 hub_title: "Competitor ads"
 hub_blurb: "Competitors' live ads out of the Meta, Google, TikTok and LinkedIn ad libraries."
 price_old: "$447/mo"
@@ -36,7 +36,7 @@ status: proof populated from real runs 2026-08-17 ($0.00752) · 4 of 4 platforms
 
 ## Hero
 
-### Competitor Ads: Meta, Google, TikTok and LinkedIn
+### Ad Library API: Meta, Google, TikTok, LinkedIn Ads
 
 Name five competitors and your agent pulls their live ads out of the Meta, Google, TikTok and LinkedIn ad
 libraries, then groups them by offer, hook and format — for a fraction of a cent per call.
@@ -235,6 +235,20 @@ call, and treg.to adds no markup. New teams start with $1.00 of free credit — 
 library searches.
 
 **Which agents does it work with?** — `S-OBJ-AGENTS`
+
+**Is there a Meta Ad Library API?**
+The Meta Ad Library is a public website, not an API. The catalog has providers (ScrapeCreators,
+DataForSEO, Bright Data) that return structured data from it. Your agent calls a treg.to endpoint
+and gets the ads back as JSON.
+
+**Is there a Facebook Ads Library MCP?**
+Yes. The treg.to MCP server exposes Meta/Facebook ad library search through multiple providers.
+One MCP connection gives your agent access to competitor ad research across Meta, Google, TikTok
+and LinkedIn.
+
+**What about Google Ads Transparency?**
+Google's Ads Transparency Center is in the catalog via DataForSEO and SerpApi. Your agent can
+search by advertiser domain and get back creatives, spend estimates and targeting.
 
 ---
 

@@ -1,9 +1,9 @@
 ---
 page_id: p2
 slug: /use-cases/lead-enrichment-for-ai-agents/
-seo_title: "GTM Data: Find and Verify Work Emails | treg.to"      # 45
-meta_description: "Let your agent find companies, identify decision-makers and verify work emails through one key. Pay per lookup, not per seat. $1.00 free to start."  # 146
-h1: "GTM Data: Find and Verify Work Emails"
+seo_title: "Waterfall Enrichment: Find and Verify Work Emails | treg.to"      # 53
+meta_description: "Waterfall enrichment for AI agents: find companies, identify decision-makers and verify work emails through one key. Replace Clay workflows. $1.00 free."  # 149
+h1: "Waterfall Enrichment: Find and Verify Work Emails"
 hub_title: "Lead enrichment"
 hub_blurb: "Find companies, identify the decision-maker, verify the work email. Misses are free."
 price_old: "$142/mo"
@@ -36,7 +36,7 @@ status: proof populated from a real run 2026-08-17 ($0.0245) · ready for build 
 
 ## Hero
 
-### GTM Data: Find and Verify Work Emails
+### Waterfall Enrichment: Find and Verify Work Emails
 
 Describe the companies you want and who you need inside them; your agent finds them, enriches the
 profiles and verifies the work emails, paying per lookup instead of per seat.
@@ -214,6 +214,18 @@ treg.to adds no markup to what the provider charges. New teams start with $1.00 
 for roughly 40 verified email lookups before you spend anything.
 
 **Which agents does it work with?** — `S-OBJ-AGENTS`
+
+**How does this compare to Clay?**
+Clay is a visual table for GTM workflows. treg.to is a catalog of the same data providers Clay calls,
+exposed as tools your agent can use directly. If you already think in prompts rather than spreadsheet
+formulas, you skip the table and get the same waterfall enrichment in one paste. The providers are the
+same (Apollo, Hunter, Clearbit, etc.); the interface is your agent. Clay is not in the treg.to catalog
+because it is a workflow tool, not a data API.
+
+**Is there an Apollo MCP or Hunter MCP?**
+Yes. The treg.to MCP server gives your agent access to Apollo, Hunter and the other enrichment providers
+through one connection. Install once, and every provider in the catalog answers to it. See `/llms.txt`
+for the setup line.
 
 ---
 
