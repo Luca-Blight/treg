@@ -449,7 +449,7 @@ async def _platform_settle(
             await asyncio.sleep(0.5)
             charged = await _close()
     except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
-        logging.getLogger("treg.domain.money").error(
+        logging.getLogger("treg.ledger").error(
             "settle/release failed for call %s (%s, status %s): %s",
             call_id, mk.endpoint_id, status_code, exc, exc_info=True)
     return charged, observed
@@ -471,7 +471,7 @@ async def _finish_cancelled_call(
             try:
                 await response.close()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
-                logging.getLogger("treg.infra.upstream.relay").error(
+                logging.getLogger("treg.proxy").error(
                     "upstream close failed for cancelled call %s", call_ref, exc_info=True)
         if mk is not None and mk.metered:
             # `ledger.reserve` may have committed without returning, so `mk.call_id` is not an
@@ -493,7 +493,7 @@ async def _finish_cancelled_call(
                         )
                     await cleanup_db.commit()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
-                logging.getLogger("treg.domain.money").error(
+                logging.getLogger("treg.ledger").error(
                     "cancellation release failed for call %s", call_ref, exc_info=True)
         try:
             await _release_idempotent_claim(claim)

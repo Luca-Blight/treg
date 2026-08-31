@@ -24,7 +24,7 @@ This file orients an AI agent (Claude Code, Codex, Cursor, …) working in this 
 
 ## Do not touch (without reading the fragment first)
 
-- **The faithful-relay contract** (`src/treg/proxy.py`): the proxy alters only hop-by-hop headers, treg's
+- **The faithful-relay contract** (`src/treg/infra/upstream/relay.py`): the proxy alters only hop-by-hop headers, treg's
   own control headers, and the injected credential — never add upstream-specific modeling or buffering.
 - **Security guards that look redundant on purpose**: the `expose_dev_code` double-guard (dev OTP only on
   local sqlite), the call-time SSRF check, the fail-loud missing-Fernet-key startup check, and the

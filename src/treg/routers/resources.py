@@ -16,7 +16,6 @@ from sqlmodel import select
 
 from .. import convert as _convert
 from .. import crypto, health, sandbox as demo_sandbox
-from ..infra import db as _db
 from .. import providers as _providers
 from .. import skills as _skills
 from ..config import get_settings
@@ -46,7 +45,6 @@ crud_router = app
 sys.modules.setdefault("treg.routers.providers", _providers)
 sys.modules.setdefault("treg.routers.convert", _convert)
 sys.modules.setdefault("treg.routers.skills", _skills)
-sys.modules.setdefault("treg.routers.db", _db)
 
 
 def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
