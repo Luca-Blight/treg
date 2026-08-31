@@ -15,10 +15,11 @@ from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import select
 
-from treg import audit, crypto, oauth, session as sess
+from treg import audit, crypto, oauth
+from treg.domain.identity import session as sess
 from treg.api import app
 from treg.config import get_settings
-from treg.db import reset_db, session_maker
+from treg.infra.db import reset_db, session_maker
 from treg.models import Secret, User
 
 
@@ -199,7 +200,7 @@ async def test_security_headers_on_api(c):
 
 
 async def test_verify_db_refuses_ephemeral_key_on_real_db():
-    from treg import db as dbmod
+    from treg.infra import db as dbmod
     s = get_settings()
     prev = (s.secret_key, s.database_url)
     object.__setattr__(s, "secret_key", "")

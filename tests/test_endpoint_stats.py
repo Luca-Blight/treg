@@ -12,9 +12,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
-from treg import endpoint_stats
+from treg.domain.catalog import stats as endpoint_stats
 from treg.api import app
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.infra.catalog_observations import CachedEndpointObservationReader
 from treg.models import CallRecord
 
@@ -255,7 +255,7 @@ async def test_never_worked_is_read_off_DECIDED_samples_only(clients: AsyncClien
     """"Never worked" has to mean the provider failed the calls that were ITS to answer. Above the
     floor `ok_rate == 0` says exactly that — 4xx is already excluded from the rate — so ranking can
     demote a genuinely broken endpoint without a single caller error being able to trigger it."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     for _ in range(6):
         await _record(EP, 503)                       # the provider failing, decisively
     assert (await _observed([EP]))[EP]["ok_rate"] == 0.0
@@ -304,7 +304,7 @@ async def test_a_relayed_405_is_the_CATALOGS_failure_not_the_callers(clients: As
 
 async def test_a_405_endpoint_sinks_in_the_ranking(clients: AsyncClient):
     """The payoff for report #4: the row that cannot be called stops being offered first."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     for _ in range(7):
         await _record(EP, 405)
     stats = {EP: (await _observed([EP]))[EP],

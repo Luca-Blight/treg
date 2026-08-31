@@ -28,7 +28,7 @@ import httpx
 
 from ... import audit
 from ...config import get_settings
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.capacity.view import view as capacity_view
 from ...domain.catalog import stats as endpoint_stats
 from ...domain.catalog import store as catalog_store

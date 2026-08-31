@@ -266,7 +266,8 @@ async def _auth_headers(client) -> dict[str, str]:
     account is expressed per-destination as `loginAccount` in the request BODY instead (see
     `_payload_and_rows`). Do not resurrect either header here.
 
-    This does NOT go through proxy.relay/injectors.py — the uploader is not a caller-issued
+    This does NOT go through `infra/upstream/relay.py` or `infra/upstream/injectors.py` — the uploader
+    is not a caller-issued
     `/call/` request, it's treg spending its OWN platform connection, so there is no Tool/bindings
     row (and no per-tenant Secret) to resolve credentials from. It exchanges treg's OWN long-lived
     `settings.ads_conv_refresh_token` for an access token directly against Google's token endpoint,

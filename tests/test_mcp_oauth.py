@@ -16,7 +16,8 @@ import time
 
 import pytest
 
-from treg import mcp, mcp_oauth, session
+from treg import mcp
+from treg.domain.identity import mcp_oauth, session
 from treg.routers import auth as auth_routes
 from treg.config import Settings, get_settings
 
@@ -205,7 +206,7 @@ async def test_loopback_http_is_allowed_because_a_CLI_cannot_hold_a_certificate(
 async def test_redirect_matching_is_EXACT_not_prefix():
     """The classic defeat of this check. `https://good.test/cb.evil` starts with the registered URI,
     and an open redirect under a registered host turns one sloppy page into stolen codes."""
-    from treg.mcp_oauth import redirect_uri_allowed
+    from treg.domain.identity.mcp_oauth import redirect_uri_allowed
 
     class C:
         redirect_uris = ["https://good.test/cb"]
@@ -222,7 +223,7 @@ async def test_loopback_redirect_allows_ANY_port_but_not_other_drift():
     to vary — treg's pure exact-match rejected `http://localhost:3118/callback` against a registered
     `http://localhost/callback` and broke every native client. Port varies; scheme, host and path do
     NOT, and the loopback exception must not leak to public hosts."""
-    from treg.mcp_oauth import redirect_uri_allowed
+    from treg.domain.identity.mcp_oauth import redirect_uri_allowed
 
     class C:  # exactly what Claude Code's client-id metadata document registers
         redirect_uris = ["http://localhost/callback", "http://127.0.0.1/callback"]
@@ -253,7 +254,7 @@ async def test_loopback_redirect_allows_ANY_port_but_not_other_drift():
 async def test_cimd_refuses_unsafe_urls(url):
     """`client_id` is a URL our SERVER fetches, which makes it a request-forgery primitive unless
     fenced. Reuses the same guard the webhook and tool base_url paths already use."""
-    from treg.mcp_oauth import fetch_client_id_metadata
+    from treg.domain.identity.mcp_oauth import fetch_client_id_metadata
 
     assert await fetch_client_id_metadata(url) is None
 
@@ -263,7 +264,8 @@ async def test_cimd_document_must_claim_its_own_url(monkeypatch):
     the consent users granted them."""
     import httpx
 
-    from treg import health, mcp_oauth
+    from treg import health
+    from treg.domain.identity import mcp_oauth
 
     monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
     monkeypatch.setattr(health, "host_is_public", lambda h: True)
@@ -282,7 +284,8 @@ async def test_cimd_accepts_a_well_formed_document(monkeypatch):
     """Not vacuous: the refusals above only mean something if a good document DOES load."""
     import httpx
 
-    from treg import health, mcp_oauth
+    from treg import health
+    from treg.domain.identity import mcp_oauth
 
     monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
     monkeypatch.setattr(health, "host_is_public", lambda h: True)
@@ -335,8 +338,8 @@ async def _signed_in(clients, email="oauth-user@superdesign.dev"):
         clients.headers["X-Treg-Token"] = prev
     from sqlmodel import select
 
-    from treg import session as _sess
-    from treg.db import session_maker
+    from treg.domain.identity import session as _sess
+    from treg.infra.db import session_maker
     from treg.models import User
 
     async with session_maker() as db:
@@ -531,7 +534,7 @@ async def test_a_GET_never_grants_anything(clients):
     browser navigate — even with `org_id` supplied, as here."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthCode
 
     client_id = await _register(clients)
@@ -700,7 +703,7 @@ async def test_revoking_your_tokens_kills_an_existing_grant(clients):
 
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import User
     async with session_maker() as db:
         user = (await db.execute(
@@ -829,7 +832,7 @@ async def test_refresh_tokens_are_stored_HASHED(clients):
     worth stealing."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthRefresh
 
     body, _, _ = await _grant_full(clients, "hashed@superdesign.dev")
@@ -1021,7 +1024,7 @@ async def test_a_team_with_no_balance_is_labelled_not_hidden(clients):
     metered, so an empty team is a perfectly good choice for it."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     client_id = await _register(clients)
@@ -1045,8 +1048,8 @@ async def _as(email: str) -> dict:
     """Headers that act as a given user — an identity token, minted the way `treg login` does."""
     from sqlmodel import select
 
-    from treg import session as _sess
-    from treg.db import session_maker
+    from treg.domain.identity import session as _sess
+    from treg.infra.db import session_maker
     from treg.models import User
 
     async with session_maker() as db:
@@ -1093,7 +1096,7 @@ async def test_a_rolling_deploy_family_without_authority_can_be_listed_and_moved
     from sqlmodel import select
 
     from treg import crypto
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthGrant, OAuthRefresh
 
     email = "rolling-gap@superdesign.dev"
@@ -1152,7 +1155,7 @@ async def test_refresh_repairs_missing_authority_with_the_original_consent_time(
     from sqlmodel import select
 
     from treg import crypto
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthGrant, OAuthRefresh
 
     body, client_id, _ = await _grant_full(clients, "rolling-refresh@superdesign.dev")
@@ -1259,7 +1262,7 @@ async def test_a_grant_dies_with_the_membership_it_was_consented_under(clients):
     springing back to life, with no new consent, the day membership was restored."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Membership, User
 
     body, client_id, org_id = await _grant_full(clients, "departing@superdesign.dev")
@@ -1309,7 +1312,7 @@ async def test_a_rotation_started_before_a_move_cannot_drag_the_team_back(client
     # this fix) reverts the move permanently right here.
     from sqlmodel import select as _select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthRefresh as _RT
 
     async with session_maker() as db:
@@ -1369,7 +1372,7 @@ async def test_an_expired_grant_is_not_presented_as_authorized(clients):
     from sqlmodel import select
 
     from treg import crypto
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthRefresh
 
     body, client_id, _ = await _grant_full(clients, "expired-list@superdesign.dev")
@@ -1396,7 +1399,7 @@ async def test_an_expired_grant_cannot_be_moved(clients):
     from sqlmodel import select
 
     from treg import crypto
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthRefresh
 
     body, _, _ = await _grant_full(clients, "expired-move@superdesign.dev")
@@ -1422,7 +1425,7 @@ async def test_rotation_does_not_change_the_grant_date(clients):
     from datetime import timedelta
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import OAuthRefresh
 
     body, client_id, _ = await _grant_full(clients, "grant-date@superdesign.dev")

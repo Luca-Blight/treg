@@ -2,10 +2,8 @@
 title: Money — prepaid balance, the ledger, Stripe, and the reports that check it
 status: shipped
 sources:
-  - src/treg/ledger.py
   - src/treg/domain/money/__init__.py
   - src/treg/models.py
-  - src/treg/billing.py
   - src/treg/application/billing.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
@@ -17,7 +15,6 @@ sources:
   - src/treg/infra/__init__.py
   - src/treg/infra/stripe.py
   - src/treg/reconcile.py
-  - src/treg/referrals.py
   - src/treg/domain/referrals.py
   - src/treg/api.py
   - src/treg/application/signup.py
@@ -659,7 +656,7 @@ and it replaces editing one env var that would lift the blast-radius rail for ev
 ## Referrals — paying for growth out of the one margin we have
 
 `domain/referrals.py` decides; `domain/money` moves. The only crossing is `ledger.grant(...)`, exactly as
-`billing.py`'s only crossing is `ledger.topup(...)`.
+`application/billing.py`'s only crossing is `ledger.topup(...)`.
 
 **Why a flat bounty and not a percentage.** `platform_margin` is 0.0 and "we add no markup" is a
 public promise (terms §08, landing 04), so there is no gross margin on a catalog call to share. The

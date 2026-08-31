@@ -18,7 +18,7 @@ from treg import api as A
 from treg import crypto, oauth
 from treg.application.connect import _backfill_provider_extra_tools
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 from treg.models import Secret, Tool
 
 # The test upstream serves /token, standing in for Google's token endpoint.
@@ -622,7 +622,7 @@ async def test_slack_style_ok_false_is_reported_not_swallowed(clients: AsyncClie
     sid = r.json()["id"]
 
     # /auth.test returns ok:false unless the token contains "good"; swap in a bad one to trigger it
-    async with __import__("treg").db.session_maker() as db:
+    async with session_maker() as db:
         from sqlmodel import select as _select
 
         from treg import crypto as _crypto

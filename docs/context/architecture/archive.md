@@ -8,7 +8,6 @@ sources:
   - src/treg/alembic/versions/0004_archivekey_request_shape.py
   - src/treg/api.py
   - src/treg/bootstrap.py
-  - src/treg/catalog_store.py
   - src/treg/routers/admin.py
 related:
   - architecture/data-model.md

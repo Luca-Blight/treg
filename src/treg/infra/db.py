@@ -11,7 +11,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 
-from .config import get_settings
+from ..config import get_settings
 
 # `expire_on_commit=False` so objects stay usable after commit without a reload round-trip.
 # On a real (non-SQLite) DB, add production pool hygiene: pre-ping to drop dead connections
@@ -62,7 +62,7 @@ def _current_revision(sync_connection) -> str | None:
 
 async def verify_db() -> None:
     """Verify configuration and schema compatibility without writing to the database."""
-    from . import models  # noqa: F401 - populate SQLModel.metadata for app subsystems
+    from .. import models  # noqa: F401 - populate SQLModel.metadata for app subsystems
 
     # With no TREG_SECRET_KEY, crypto uses a per-process ephemeral Fernet key, so every stored
     # secret becomes undecryptable after restart. Local SQLite may use it; a real DB must not.
@@ -118,7 +118,7 @@ async def _stamp_test_schema(connection) -> None:
 
 async def reset_db() -> None:
     """Give each test a clean, head-stamped registry while preserving a Postgres schema."""
-    from . import models  # noqa: F401 - populate SQLModel.metadata
+    from .. import models  # noqa: F401 - populate SQLModel.metadata
 
     await _engine.dispose()
     async with _engine.begin() as connection:

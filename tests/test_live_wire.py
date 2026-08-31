@@ -11,7 +11,8 @@ from __future__ import annotations
 from httpx import AsyncClient
 
 import treg.api as api_mod
-from treg import pubfeed, sandbox
+from treg import sandbox
+from treg.application.onboard import pubfeed
 from treg.domain.governance import publicdemo as publicdemo_policy
 
 ENV_KEY = "rk_test_ENV_ONLY_KEY"

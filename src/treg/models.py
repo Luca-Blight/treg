@@ -42,7 +42,7 @@ class Org(SQLModel, table=True):
     # Prepaid balance in micro-USD (1e-6 USD), MATERIALIZED as sum(CreditBlock.remaining) minus the
     # open Holds. It exists as a column, not a query, because it is the hot-path spend gate: one
     # conditional UPDATE against this integer is what stops concurrent agent calls racing past zero
-    # (see ledger.reserve). Only `ledger.py` may write it.
+    # (see ledger.reserve). Only `domain/money` may write it.
     balance_micro: int = Field(default=0)
 
     # ---- Stripe billing (see billing.py; NO card data ever lands here) ----------------------------
@@ -240,7 +240,7 @@ class CallRecord(SQLModel, table=True):
     # ---- marketplace telemetry (NULL on a plain tool call) -------------------------------------
     # What a direct catalog call actually did: which endpoint, whose credential paid for it, what we
     # expected it to cost vs what the provider said it cost, and how big/slow the answer was. The
-    # money itself is NOT here — it landed synchronously in the ledger (see ledger.py); this table is
+    # money itself is NOT here — it landed synchronously in the ledger (see domain/money); this table is
     # analytics and is allowed to lose rows.
     endpoint_id: str | None = Field(default=None, index=True)
     provider: str | None = Field(default=None, index=True)
@@ -450,7 +450,7 @@ class AdConversion(SQLModel, table=True):
     own dedicated session). It is NOT true for `paid`: `_credit` commits the credit immediately after
     `ledger.topup()` stages it, before queueing the conversion, so a crash between the two commits
     loses that conversion permanently. This
-    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `domain/money` —
     see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
     until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
     fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
@@ -655,7 +655,7 @@ class Hold(SQLModel, table=True):
 
 
 class TagSpend(SQLModel, table=True):
-    """What one call cost, attributed to ONE of its caller tags. Written by `ledger.py` only, inside
+    """What one call cost, attributed to ONE of its caller tags. Written by `domain/money` only, inside
     the same transaction as the money movement — never through `audit.py`, which drops rows.
 
     A builder reselling treg tags each call (`customer=cust_8123, workspace=ws_9`) and needs two

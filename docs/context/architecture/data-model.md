@@ -17,8 +17,7 @@ sources:
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
-  - src/treg/db.py
-  - src/treg/referrals.py
+  - src/treg/infra/db.py
   - src/treg/domain/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
@@ -218,8 +217,7 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
   DERIVED `enabled`. Filled by `treg-worker overflow sync` only (Alembic `0006`); read-only for the call
   path. See `ops/capacity.md`.
-- `Org.platform_overflow_disabled` - the team's overflow opt-out (Alembic `0008`, legacy `_ensure_bool_col`;
-  the legacy-org backfill INSERT names it explicitly like every NOT NULL column). See `ops/capacity.md`.
+- `Org.platform_overflow_disabled` - the team's overflow opt-out (Alembic `0008`). See `ops/capacity.md`.
 - **`OverflowSpend`** — per aggregator per UTC day: calls, the aggregator's charge, the delta against
   treg's direct price. Written inside the overflow child's settle transaction (and by the shadow probe);
   the $20/day budget reads it. Alembic `0007`. Not a balance.
@@ -231,7 +229,7 @@ applies **all** of a tool's bindings (e.g. google-ads = an oauth bearer + a `dev
 The API builds a single-binding tool from flat fields via `_flat_binding()`; injection is in
 [auth-secrets](auth-secrets.md).
 
-## Async DB (`db.py`)
+## Async DB (`src/treg/infra/db.py`)
 One async SQLAlchemy engine (`_engine`, Postgres pool 5 + 10 overflow per instance, `pool_timeout=5`)
 + a public `session_maker` (the audit writer opens its own session here; so do the post-relay
 bookkeeping steps of `/call/` — the request session is committed before the relay so none of them
@@ -346,7 +344,7 @@ lives in [money](money.md); this is the shape.
 
 | Table | Row means | Written by |
 |---|---|---|
-| `TagSpend` | what one call cost, attributed to ONE of its tags | `ledger.py` only, in the money transaction |
+| `TagSpend` | what one call cost, attributed to ONE of its tags | `domain/money` only, in the money transaction |
 | `TagBudget` | one builder-set limit on one `(dim, val)`, and the registry entry that bounds cardinality | `api.py` (auto-created on first sighting) |
 
 `CallRecord` gains `call_ref` (the `X-Treg-Call-Id` echoed to the caller and used as the ledger's
@@ -365,7 +363,7 @@ records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `
 idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).
 `Membership` gains `pinned_tags`.
 
-Migrations `A30`-`A32` in `db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
+Migrations `A30`-`A32` in `src/treg/infra/db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
 tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
 `INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
 NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).

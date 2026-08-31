@@ -59,8 +59,6 @@ sources:
   - src/treg/domain/catalog/store.py
   - src/treg/domain/catalog/stats.py
   - src/treg/infra/catalog_observations.py
-  - src/treg/catalog_store.py
-  - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
 related:
   - architecture/money.md

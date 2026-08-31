@@ -25,7 +25,7 @@ from .bootstrap_http import (
     _SecurityHeadersMiddleware,
 )
 from .config import get_settings
-from .db import session_maker, verify_db
+from .infra.db import session_maker, verify_db
 from .infra.catalog_observations import (
     CachedEndpointObservationReader,
     PostgresEndpointObservationReader,
@@ -269,17 +269,17 @@ ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
 }
 ROLE_STARTUP_CHECKS: dict[AppRole, tuple[str, ...]] = {
     "all": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "dataplane": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
         "treg.mcp.mcp_lifespan",
     ),
     "control": (
-        "treg.db.verify_db",
+        "treg.infra.db.verify_db",
         "app.state.http",
     ),
 }

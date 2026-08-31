@@ -128,7 +128,7 @@ def test_content_hash_is_raw_identity():
 
 async def test_tables_round_trip(clients):  # clients fixture resets the schema on this engine
     from sqlmodel import select
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
 
     async with session_maker() as s:
         key = ArchiveKey(key_hash="k" * 64, endpoint_id="prov.search", provider="prov",
@@ -162,7 +162,7 @@ async def test_tables_round_trip(clients):  # clients fixture resets the schema 
 
 async def test_key_hash_is_unique(clients):
     from sqlalchemy.exc import IntegrityError
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
 
     async with session_maker() as s:
         s.add(ArchiveKey(key_hash="dup", endpoint_id="a"))
@@ -178,9 +178,9 @@ async def test_key_hash_is_unique(clients):
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from treg import catalog_store
+from treg.domain.catalog import store as catalog_store
 from treg.config import get_settings
-from treg.db import session_maker
+from treg.infra.db import session_maker
 
 EP = "tikhub.tiktok.video.comments"   # tier-4 eligible in the test allow-list, GET, $0.001/call
 

@@ -15,7 +15,7 @@ from sqlmodel import select
 
 from .. import reconcile
 from ..config import get_settings
-from ..db import get_session, session_maker
+from ..infra.db import get_session, session_maker
 from ..models import ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, Membership, Org, Referral, Secret, Tool, User
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive

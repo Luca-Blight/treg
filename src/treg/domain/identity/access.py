@@ -11,7 +11,7 @@ from sqlmodel import select
 
 from ... import crypto
 from ...config import get_settings
-from ...db import get_session
+from ...infra.db import get_session
 from ...models import ROLE_RANK, Membership, Org, User
 from . import session as sess
 

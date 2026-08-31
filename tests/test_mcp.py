@@ -157,7 +157,7 @@ async def test_search_says_so_when_nothing_matches(clients):
     from sqlmodel import select
 
     from treg import audit
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import SearchMiss
 
     await audit.drain()
@@ -172,7 +172,7 @@ async def test_catalog_request_files_the_gap_with_attribution(clients):
     and the stored row says who asked (the bearer), not just that someone did."""
     from sqlmodel import select
 
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import ToolRequest
 
     token = (await clients.post("/users", json={"email": "wisher@superdesign.dev"})).json()["token"]
@@ -847,7 +847,7 @@ async def test_a_402_THROUGH_THE_CALL_TOOL_carries_no_link(clients, monkeypatch)
     from sqlmodel import select
 
     from treg.config import get_settings
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
@@ -887,7 +887,7 @@ async def test_an_EXPIRED_access_token_gets_401_invalid_token(clients):
     refresh grant. Our first challenge only covered the missing-header case, so an expired token
     sailed through to the tool's friendly prose in a 200 — and Claude Code, told nothing, gave up
     with "requires re-authorization" instead of refreshing."""
-    from treg import mcp_oauth
+    from treg.domain.identity import mcp_oauth
     dead = mcp_oauth.make_access_token(user_id=7, org_id=3, audience=mcp_oauth.mcp_resource_url(),
                                        scope="treg:call", ttl=-60)  # born expired
     async with mcp_session(clients) as c:
@@ -905,7 +905,7 @@ async def test_an_EXPIRED_access_token_gets_401_invalid_token(clients):
 async def test_a_wrong_audience_access_token_gets_401_invalid_token(clients):
     """A grant consented to a DIFFERENT resource must not be honoured here — and the refusal should
     still be the machine-readable 401, not tool prose."""
-    from treg import mcp_oauth
+    from treg.domain.identity import mcp_oauth
     other = mcp_oauth.make_access_token(user_id=7, org_id=3,
                                         audience="https://evil.example/mcp/", scope="treg:call")
     async with mcp_session(clients) as c:
@@ -971,7 +971,7 @@ async def test_the_same_key_through_MCP_bills_once(clients, monkeypatch):
     from sqlmodel import select
 
     from treg.config import get_settings
-    from treg.db import session_maker
+    from treg.infra.db import session_maker
     from treg.models import Org
 
     monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
@@ -1172,7 +1172,7 @@ async def test_catalog_query_arrays_use_the_endpoints_declared_wire_encoding(mon
     team tool keeps the longstanding repeated-key default. This goes through `call`, not only
     `_query_values`: the first version stayed green if the MCP call site stopped using the helper.
     """
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     from treg import mcp as _mcp
 
     cat = cs.load()
@@ -1226,7 +1226,7 @@ async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients)
     endpoints matched 6 of its 7 words — the only miss was "linkedin" on rows shelved under
     `companies`, or "open" on the one shelved under `linkedin`. A query may now miss one word in
     three, and idf weighting keeps the order on the rare words rather than the filler."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     # the two logged SearchMiss queries, verbatim
     rows, total = cs.search("company job postings hiring open jobs linkedin", cat, 8)
@@ -1276,7 +1276,7 @@ async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):
     """Token scoring ties by the dozen — every "ad library" match scores 6 — so with a default limit
     of 8 the rows an agent saw were decided by file order: seven tikhub rows, one of them
     uncallable, and the cheapest endpoint with a perfect record cut off below the fold."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     ranked, _, truncated = cs.rank_band("ad library", cat, 8)
     assert not truncated, "24 matches sit well inside the band"
@@ -1316,7 +1316,7 @@ async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients, monkey
     band therefore keeps taking while the score stays equal — and when a query ties so broadly that
     even the ceiling can't hold the group, it SAYS so rather than presenting an unranked tail as a
     ranked answer."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     rows, total, truncated = cs.rank_band("ad library", cat, 8)
     scores = [s for _, s in rows]
@@ -1351,7 +1351,7 @@ async def test_a_near_miss_never_suggests_a_DIFFERENT_provider(clients):
     `hunter.people.email.find` — it is another vendor, another price and another credential, so on a
     path that spends money that is provider routing wearing a spellcheck's clothes. treg compares
     providers and the caller chooses."""
-    from treg import catalog_store as cs
+    from treg.domain.catalog import store as cs
     cat = cs.load()
     assert cs.near_ids("lusha.companies-signals", cat) == ["lusha.x.companies-signals"]
     for crossing in ("apollo.people.email.find", "fake.companies-signals", "hunter.tiktok.video.comments"):
@@ -1391,8 +1391,8 @@ async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clie
     """The helpers were tested; the wiring was not. `rerank()` could have been dropped from both
     call sites and every ranking test would still have passed, because they call the helper
     directly. This one goes through the MCP tool with real rows in the database."""
-    from treg import endpoint_stats
-    from treg.db import session_maker
+    from treg.domain.catalog import stats as endpoint_stats
+    from treg.infra.db import session_maker
     from treg.models import CallRecord
 
     broken = "apify.meta-ads.library.search"  # earlier in file order: rerank must move it

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...db import session_maker
+from ...infra.db import session_maker
 from ...domain.governance import budgets as budget_policy
 from ...domain.identity.access import Caller
 from ...caller_metadata import _META_KEY_RE

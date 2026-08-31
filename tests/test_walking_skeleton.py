@@ -120,7 +120,7 @@ def test_the_pool_cannot_outnumber_postgres_during_a_deploy():
     import re
     from pathlib import Path
 
-    import treg.db as db
+    from treg.infra import db
 
     src = Path(db.__file__).read_text()
     m = re.search(r"pool_size=(\d+), max_overflow=(\d+)", src)

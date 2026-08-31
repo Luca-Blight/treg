@@ -69,9 +69,9 @@ endpoints are unaffected (they use `require_superadmin`).
   platform out of `/admin/*`. The env token bypasses the floor (it can always recover).
 
 ## Model + migration
-`User` gains `is_superadmin` + `suspended`; `Org` gains `suspended` (booleans). The startup migration
-(`db._ensure_bool_col`) adds these columns to existing tables (`ALTER … ADD COLUMN … NOT NULL
-DEFAULT 0`), so a live DB upgrades on restart.
+`User` gains `is_superadmin` + `suspended`; `Org` gains `suspended` (booleans). The columns are part
+of the Alembic baseline schema; a live DB picks up schema changes through the explicit
+`python -m treg upgrade` release phase, never on restart.
 
 ## CLI (`interface/cli.md`)
 `treg admin login --token` (saves the env key), `admin stats|orgs|org <id>|users|tools|calls|health`,
