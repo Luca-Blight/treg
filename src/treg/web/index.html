@@ -506,6 +506,11 @@ addEventListener('load', function(){
     .mob-menu{display:grid;place-items:center;order:-1}
     /* Show close button in sidebar on mobile */
     .mob-close{display:block}}
+  /* Medium viewports: sidebar visible but content area is narrow — reduce padding so tabs fit.
+     Remove the fade mask here since it cuts into visible tab text; scrolling is still available. */
+  @media(min-width:761px) and (max-width:1200px){
+    main{padding:18px 14px}
+    .mk-tabs{-webkit-mask-image:none;mask-image:none}}
   /* ---- landing page (logged-out) ---- */
   .lp{max-width:1040px;margin:0 auto;padding:0 20px 60px}
   .lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:20}
@@ -4096,7 +4101,7 @@ createApp({
       // their own shelf; they are SEO now, unfeatured, so they surface inside its "see more" row
       // rather than as a category of six. The list is a lookup, not a schema — a category the
       // catalog invents tomorrow still gets a shelf, sorted to the end.
-      const order=['SEO/AEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps','Community'];
+      const order=['Enrichment','SEO/AEO','Social','Advertising','E-commerce','Reviews & Apps','Community'];
       const hints={
         'SEO/AEO':'rankings, keywords and backlinks — what search engines know, and what the answer engines say',
         'Social':'posts, profiles and comments, straight from the feeds',
@@ -4425,8 +4430,8 @@ createApp({
       {k:'soc',  cat:'Scrape linkedin',         logo:'linkedin',prompt:'Use treg to look up linkedin.com/in/jasonzhoudesign'},
     ]; },
     tryOauth(){ return [
-      {label:'Post on social',      items:[{s:'x',n:'X (Twitter)'},{s:'youtube',n:'YouTube'},{s:'tiktok',n:'TikTok'},{s:'linkedin',n:'LinkedIn'},{s:'facebook',n:'Facebook Pages'}],
-                                    soon:[{s:'instagram',n:'Instagram'}]},
+      {label:'Post on social',      items:[{s:'x',n:'X (Twitter)'},{s:'youtube',n:'YouTube'},{s:'tiktok',n:'TikTok'},{s:'linkedin',n:'LinkedIn'},{s:'facebook',n:'Facebook Pages'},{s:'instagram',n:'Instagram'}],
+                                    soon:[]},
       {label:'Manage ad campaigns', items:[{s:'google-ads',n:'Google Ads'},{s:'meta-ads',n:'Meta Ads'}], soon:[]},
       {label:'SEO on your own site',items:[{s:'google-analytics',n:'Google Analytics'},{s:'google-search-console',n:'Search Console'},{s:'google-business-profile',n:'Business Profile'}], soon:[]},
     ]; },
