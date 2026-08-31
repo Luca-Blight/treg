@@ -52,7 +52,7 @@ from ..models import CreditBlock, LedgerEntry, Membership, Org, User
 
 
 
-log = logging.getLogger("treg.application.billing")
+log = logging.getLogger("treg.billing")
 
 MICRO_PER_CENT = 10_000
 MICRO_PER_USD = 1_000_000

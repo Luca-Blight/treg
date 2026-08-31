@@ -159,8 +159,8 @@ that savepoint - the caller's other staged work survives - and its re-SELECT ret
 committed block, the same answer as the sequential path. The loser's flush blocks until the winner's
 transaction commits, which is why the caller must commit promptly after `topup` returns. The
 application-level SELECT is an optimisation, not the guarantee — two concurrent deliveries of one
-PaymentIntent both miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy
-block because that block returns early on a fresh database — precisely the one that needs it.)
+PaymentIntent both miss it. (Fixed in #45; the unique constraint is part of the Alembic baseline
+schema — the legacy startup migration that once added it is deleted.)
 
 ## Stripe (`application/billing.py` and `infra/stripe.py`)
 
