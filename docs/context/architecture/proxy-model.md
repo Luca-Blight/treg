@@ -127,7 +127,7 @@ Why this is load-bearing: secret loads auto-begin a transaction on the request s
 uses separate short read and CAS-write phases around connection-free token-endpoint I/O. SQLAlchemy keeps
 an open transaction's connection checked out until the next commit; carrying that transaction through the
 upstream round trip would make `_platform_settle` need a second connection. Two per in-flight call
-against the 15-slot pool (`db.py`: 5 + 10 overflow) deadlocked at 15 concurrent calls: every settle
+against the 15-slot pool (`infra/db.py`: 5 + 10 overflow) deadlocked at 15 concurrent calls: every settle
 waited on a slot that only another waiting call could free, until `pool_timeout` killed one (a bare
 500, or a settle that forfeited its charge and left the hold to the reaper) and the rest cascaded — so
 every call in a burst "took 30 s" while the provider had answered in under a second. Reproduced live
