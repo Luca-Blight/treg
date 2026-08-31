@@ -363,10 +363,8 @@ records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `
 idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).
 `Membership` gains `pinned_tags`.
 
-Migrations `A30`-`A32` in `src/treg/infra/db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
-tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
-`INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
-NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).
+The columns are part of the Alembic baseline schema (the legacy startup migrations that once added
+them are deleted); `TagSpend` and `TagBudget` are ordinary baseline tables.
 
 ## `Referral` — one invitation, and what it owes
 

@@ -34,7 +34,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-import sys
 from datetime import datetime, timezone
 from typing import Awaitable, Callable
 
@@ -52,8 +51,6 @@ from ..infra import stripe as stripe_adapter
 from ..models import CreditBlock, LedgerEntry, Membership, Org, User
 
 
-# _run_autotopup retains its relative local import; removing the alias breaks task-owned sessions.
-sys.modules.setdefault("treg.application.db", _db)
 
 log = logging.getLogger("treg.application.billing")
 
