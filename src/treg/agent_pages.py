@@ -4522,3 +4522,619 @@ WORKFLOWS["find-and-verify-a-lead-list"] = {
     "related": ("Find professional emails", "Verify an email before you send",
                 "Find people by role, company or location", "Build a company list by industry, size or tech"),
 }
+
+
+USE_CASE_PAGES["a-company-s-email-format"] = {
+    "label": "A company's email format",
+    "sentence": "Company email format finder: the pattern a domain uses, so a name becomes an address",
+    "title": "Company email format finder API, by domain | treg.to",
+    "lede": (
+        "Give your agent a company domain and get back the address pattern the company uses, "
+        "such as first.last or f.last, with how confident the provider is in it. Two providers "
+        "answer through one treg.to key at their own rate with $0.000 added: The Companies API "
+        "bills only when a pattern comes back, Tomba bills the call and makes a repeat of the "
+        "same domain free for the rest of the month. A pattern is a rule, not a mailbox: it "
+        "tells you how to write an address, and the verify page tells you whether that "
+        "address exists."),
+    "prompt": "Using treg, get the email format for these 40 company domains, show me the "
+              "price per domain for each provider first, then give me a table of domain, "
+              "pattern, confidence and which provider answered, and leave the pattern blank "
+              "where nothing came back rather than guessing first.last.",
+    "prompt_why": [
+        ("Give the domain, not the company name", "Both rows take a domain. A name has to be resolved to a domain first, and that is a separate call at the same rate."),
+        ("Ask for the confidence with the pattern", "A pattern seen on three addresses is a guess; one seen on three hundred is a rule. The number is the difference."),
+        ("Ask for the price per domain", "The two rows meter differently: one per pattern found, one per call. Forty domains has a worst case before anything runs."),
+        ("Do not let the agent default to first.last", "A model asked for a format will offer the commonest one. Say that an empty answer stays empty, then verify before sending."),
+    ],
+    "result_noun": "pattern",
+    "result_image": None,
+    "q_cheapest": "Which email format finder is cheapest?",
+    "q_reliable": "Which email format finder is the most reliable?",
+    "q_compare": "How do the two compare?",
+    "what_is_heading": "What is a company email format finder?",
+    "what_is": (
+        "It is a call that takes a domain and returns the shape of that company's addresses, "
+        "learned from addresses already seen on that domain: first.last@, first@, flast@, "
+        "first_last@ and so on, usually with a count or a confidence behind each. With the "
+        "pattern and a person's name, an agent can write a probable address for anyone at the "
+        "company without a per person lookup. It is the cheap first step in an outreach "
+        "pipeline, and only the first step: a probable address still bounces if the person "
+        "has left, uses a middle initial or is the one exception, which is why the pattern "
+        "call is normally followed by a verify call on the address it produced."),
+    "notes": [
+        "The two rows bill in different units, so the cheapest depends on your hit rate. The "
+        "Companies API is priced per pattern found, so a domain with no known addresses costs "
+        "nothing; Tomba is priced per call, and its logs showed the first call of the day at "
+        "one credit and two replays of the same domain at zero, so a repeat inside the month "
+        "is free. On a list of well known domains the per call row is the cheaper one; on a "
+        "list of small companies the per found row is. Both are the provider's own rate with "
+        "$0.000 added.",
+        "A pattern is only as good as the sample behind it. Both providers infer the format "
+        "from addresses they have seen on the domain, and a domain with three known addresses "
+        "yields a confident looking pattern that may be wrong for the fourth person. Read the "
+        "confidence or count the provider returns, and treat anything built on a handful of "
+        "samples as a hypothesis to verify, not a fact to send to.",
+        "Tomba's row has been called live through treg.to and carries a verified date; The "
+        "Companies API row is documented but not yet verified through treg.to, so run one "
+        "domain before an agent runs a thousand. The 1,300 a month who search for an email "
+        "format checker are mostly asking whether an address is valid, which is a different "
+        "call: that is the verify page, and the two calls are meant to run one after the other.",
+    ],
+    "faq": [
+        ("Does the pattern give me a working address?",
+         "No. It gives you the rule the company follows, and the address you build from it is "
+         "probable, not confirmed. Verify it before sending: a bounce from a guessed address "
+         "costs more in sender reputation than the verify call costs in cents."),
+        ("Which is cheaper, per pattern or per call?",
+         "It depends on how many of your domains have a known pattern. The Companies API charges "
+         "only when it finds one, Tomba charges the call and makes repeats free within the "
+         "month. Ask the agent to print both rates against your list before it runs."),
+        ("Can I get the pattern from a company name instead of a domain?",
+         "Not in one step. Resolve the name to a domain first, which Tomba's suggestions row "
+         "does for a credit, then ask for the pattern. An agent can chain the two."),
+        ("Is guessing addresses from a pattern allowed?",
+         "A pattern is public information about how a company names mailboxes, and building an "
+         "address from it is what every outreach tool does. What you then send, to whom and "
+         "under which rules is your responsibility, and nothing here changes that."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~180 Reddit and X posts read in "
+        "August 2026 about twenty were on the job, and nine vendor clusters, one in bold "
+        "Unicode from two accounts, were excluded. Nobody complains about the pattern step "
+        "itself; they complain about what happens after it."),
+    "voices": [
+        ("The pattern is easy, which cuts both ways",
+         "My work email follows a predictable format, so I surmise it's not hard to guess from my name.",
+         "r/recruitinghell, 2,112 points", "https://www.reddit.com/r/recruitinghell/comments/1r7fc9m/",
+         "That predictability is the whole reason a pattern call works, and it is why the "
+         "call is cheap: most companies follow one rule. The page will not pretend the hard "
+         "part is here; the hard part is knowing whether the person still has the mailbox."),
+        ("The price of the tools, or the price of your evening",
+         "You either pay thousands for tools like ZoomInfo/Apollo or you spend hours manually scraping LinkedIn and hoping a generic email format works.",
+         "r/smallbusiness", "https://www.reddit.com/r/smallbusiness/comments/1t11un9/",
+         "Neither, is the honest answer. A pattern lookup is a fraction of a cent per domain, "
+         "billed from a prepaid balance with no seat and no contract, and the agent can chain "
+         "it to a verify call so the guess is checked before it is sent."),
+        ("Everyone is guessing from the same data",
+         "Out of 100 people I actually wanted, maybe one address worth sending to.",
+         "X", "https://x.com/i/status/2092909603566837762",
+         "A pattern will not raise that number on its own. What it changes is the cost of "
+         "trying: a probable address for everyone on the list for cents, then verification to "
+         "keep the ones that exist. The list itself is still your job."),
+        ("Fatigue with the usual databases",
+         "I'm increasingly skeptical of relying only on Apollo, Hunter and the usual databases. Everyone is targeting the same people with the same data.",
+         "X, 6 likes", "https://x.com/i/status/2092548681425694929",
+         "A pattern call is not a database of people. It gives you the rule, and you bring the "
+         "names, which means the addresses you build are for the people you chose rather than "
+         "the ones every other list already carries."),
+        ("Finding the person is the bottleneck, not the address",
+         "Scraping Google Maps is easy. Finding the real owner behind each business is the bottleneck.",
+         "X, 3 likes", "https://x.com/i/status/2092205559961239719",
+         "Agreed, and this page does not solve it. Once you have a name and a domain, the "
+         "pattern makes the address a one line step; the people search and enrichment pages "
+         "are where the name comes from."),
+    ],
+    "related": ("Find professional emails", "Verify an email before you send",
+                "Enrich a company from its domain", "Find people by role, company or location"),
+}
+
+
+USE_CASE_PAGES["mine-the-comments"] = {
+    "label": "Mine the comments",
+    "sentence": "Social listening API: export the comments on Instagram, YouTube, Reddit and LinkedIn posts as data",
+    "title": "Instagram comment export and social listening API | treg.to",
+    "lede": (
+        "Give your agent a post URL on Instagram, a video on YouTube, a thread on Reddit or a "
+        "post on LinkedIn and get the comments back as rows: author, text, likes, time, "
+        "replies. {n} providers across the four platforms answer through one treg.to key, "
+        "each at its own rate with $0.000 added, from a fraction of a cent per call, and on "
+        "YouTube the official API is free on the Google account you already have. This is the "
+        "raw material of social listening, not the dashboard: the rows come back and your "
+        "agent does the reading."),
+    "prompt": "Using treg, get every comment on these three Instagram posts and this YouTube "
+              "video, show me the price per platform first, then group the comments into "
+              "questions, complaints and praise, quote the three most upvoted in each group "
+              "with a link, and tell me how many comments you actually fetched per post.",
+    "prompt_why": [
+        ("Give the post, not the account", "Every row here takes one post, video or thread and returns its comments. Comments by one user across many posts is a different job and no row here does it."),
+        ("Ask for the price per platform", "The four platforms are priced separately and the units differ: per call, per result, per found. Four posts is a worst case before anything runs."),
+        ("Ask for the groups, not the dump", "Three thousand comments is not an answer. The forty that matter are, and that is what the agent is for."),
+        ("Ask how many it fetched", "Comments paginate. A provider that returns the first page and stops is a partial read that looks complete unless the count is on the table."),
+    ],
+    "result_noun": "comment",
+    "result_image": None,
+    "q_cheapest": "What do comments cost, per platform?",
+    "q_reliable": "Which comment API is the most reliable?",
+    "q_compare": "How do the platforms compare?",
+    "what_is_heading": "What is a social listening API?",
+    "what_is": (
+        "Strictly, it is the fetch step of social listening: a call that takes a post and "
+        "returns the public comments under it as structured rows, so software can read them "
+        "instead of a person scrolling. The listening suites sell the whole loop, monitoring, "
+        "alerts, sentiment and a dashboard, by the seat. These rows sell the one part that is "
+        "hard to build, getting the comments off the platform, per call, and leave the "
+        "reading to your agent. On YouTube the official Data API does this for any public "
+        "video on your own key. On Instagram the official API only reaches comments on posts "
+        "you manage, which is why the paid rows exist: they fetch comments on anyone's public "
+        "post. Reddit and LinkedIn have paid rows only."),
+    "notes": [
+        "The four platforms are not the same job, and the prices say so. YouTube is the cheap "
+        "one: TikHub at a tenth of a cent per successful call, and the official API free on "
+        "your own Google account for any public video, ten thousand quota units a day at one "
+        "unit per call. Instagram runs from TikHub, ScrapeCreators and Bright Data at fractions "
+        "of a cent, with the official row free but limited to comments on your own posts. "
+        "Reddit is priced like YouTube. LinkedIn is the dear one, from Aviato at two cents per "
+        "found, and TikHub's LinkedIn row carries no published price yet, so the table prints "
+        "none for it. All of it is the provider's own rate with $0.000 added.",
+        "Units differ across the rows, so read the unit before the number. ScrapeCreators is "
+        "per call, which on a post with a thousand comments means paginating and paying per "
+        "page; Bright Data is per record delivered, so a thousand comments is a thousand "
+        "records; TikHub and JustOneAPI are per successful call. The row labelled treg is the "
+        "routed endpoint: the explicit opt in where you ask treg.to to choose among the "
+        "providers for that platform, your own keys first, and it names the provider that "
+        "served and bills that provider's rate. Every other row is a direct call and the "
+        "choice is yours.",
+        "What no row here does: comments by one user across many posts, which is the question "
+        "the OSINT forums keep asking; comments on a private account; and any promise about "
+        "your own LinkedIn or Instagram login, because none of these rows use one. A "
+        "scraped LinkedIn post is public data fetched by the provider, and LinkedIn's terms "
+        "are LinkedIn's. Several rows on the page have not been called live through treg.to "
+        "yet and say unverified in the table: Bright Data on all three platforms, "
+        "ScrapeCreators on Reddit, TikHub on LinkedIn. Run one post before an agent runs a "
+        "thousand.",
+    ],
+    "faq": [
+        ("Can I get all the comments a particular user has left?",
+         "No. Every row takes a post and returns its comments. There is no row that takes a "
+         "username and returns everything they have written, on any of the four platforms, "
+         "and this page will not pretend one exists."),
+        ("Does the official Instagram API do this for free?",
+         "Only on posts you manage. The Instagram row here is free on your own connected "
+         "account and returns comments on your own posts. Comments on a competitor's post "
+         "need one of the paid rows, which fetch any public post at a fraction of a cent."),
+        ("Is this a replacement for a social listening tool?",
+         "For the fetch, yes, and for cents rather than a seat. For the rest, no: there is no "
+         "alerting, no dashboard and no case management here. The rows return comments, "
+         "your agent reads them, and you decide what to build on top."),
+        ("Will my account get banned?",
+         "Nothing here uses your account except the two official rows, which use it the way "
+         "the platform intends. The paid rows run on the provider's own infrastructure and "
+         "return public data; treg.to holds the provider keys and you never log in anywhere."),
+    ],
+    "voices_intro": (
+        "Of the ~210 Reddit and X posts read in August 2026 about seventy were on the job, and "
+        "eleven vendor clusters were excluded, including one coordinated push across seven X "
+        "accounts and one post with a word joiner hidden inside its words. These five are "
+        "people trying to read comments, not sell a tool."),
+    "voices": [
+        ("The comments of one user, not one post",
+         "Is there a way/tool to find all instagram comments of a particular user?",
+         "r/OSINT, 17 points", "https://www.reddit.com/r/OSINT/comments/zp45ym/is_there_a_waytool_to_find_all_instagram_comments/",
+         "Not through any row on this page, and not through any provider in the catalog. The "
+         "rows go post to comments. Saying so plainly is worth more than a page that lets an "
+         "agent try and fail."),
+        ("Five hundred comments, without a subscription",
+         "Looking for a free open-source tool to scrape Instagram comments (approx. 500)",
+         "r/osinttools, 6 points", "https://www.reddit.com/r/osinttools/comments/1txogbf/looking_for_a_free_opensource_tool_to_scrape/",
+         "Not free, but close: five hundred Instagram comments is a handful of pages at a "
+         "fraction of a cent each, from a prepaid balance that starts with a dollar of credit "
+         "and no card. The open source route works until the platform changes; the paid row "
+         "is somebody else's job to keep working."),
+        ("The fear is the ban, not the fetch",
+         "How can I do a cron job that scrape likes and comments on Instagram without get banned",
+         "r/DataHoarder", "https://www.reddit.com/r/DataHoarder/comments/1qcdcg0/how_can_i_do_a_cron_job_that_scrape_likes_and/",
+         "By not using your account. The paid rows here fetch public posts on the provider's "
+         "side, so there is no session of yours to flag. What they cannot reach is a private "
+         "account, and no row should be expected to."),
+        ("Three thousand comments, forty that matter",
+         "a video with 3,000 comments might have 40 that are actually useful to me and the rest is noise",
+         "r/claude, 3 points", "https://www.reddit.com/r/claude/comments/1ragfjd/im_building_a_youtube_comment_filtering_tool_with/",
+         "That is the whole design of the prompt on this page: fetch cheaply, then have the "
+         "agent group and quote. The fetch is the commodity; the filtering is where the "
+         "reader's own judgement, and the model, earn their keep."),
+        ("People do not say what a dashboard can count",
+         "People won't say 'this product lacks value.' They'll say 'idk man feels overpriced for what it is'",
+         "r/AIAgentsStack, 24 points", "https://www.reddit.com/r/AIAgentsStack/comments/1q57jgj/anyone_else_realizing_social_listening_is_way/",
+         "Which is the case for raw comments over a sentiment score. A keyword dashboard "
+         "misses that sentence; an agent reading the rows does not. The rows are the cheap "
+         "part, and they are what this page sells."),
+    ],
+    "related": ("A video's comments", "Search posts by keyword",
+                "Find creators by keyword", "Posts under a hashtag"),
+}
+
+
+USE_CASE_PAGES["build-a-company-list-by-industry-size-or-tech"] = {
+    "label": "Build a company list by industry, size or tech",
+    "sentence": "Companies by industry: build a company list by industry, size, location or tech stack through one key",
+    "title": "Company list by industry, size or tech: {n} APIs | treg.to",
+    "lede": (
+        "Describe the companies you want, by industry, headcount, country, revenue, funding or "
+        "the technology they run, and get a list back as rows with a domain on each. {n} "
+        "providers answer through one treg.to key, from Apollo and Crunchbase to the smaller "
+        "databases nobody has heard of, each at its own rate with $0.000 added and most of "
+        "them priced per company returned, so the size of the page is the price. Three rows "
+        "are free, and a free row that returns ids is not the same as a free row that returns "
+        "companies; the notes say which is which."),
+    "prompt": "Using treg, build me a list of 200 B2B software companies in Germany with 50 to "
+              "500 employees, show me the price for 200 rows from each provider first, run the "
+              "two cheapest, dedupe on domain, and tell me how many rows each one returned and "
+              "how many overlapped.",
+    "prompt_why": [
+        ("Say the filters in plain words", "Every row here filters on industry, size and location, and most on tech or funding. The agent maps your words to each provider's field names."),
+        ("Ask for the price for N rows, not per row", "Most rows bill per company returned, Apollo bills per page, Tomba bills per fifty. The same 200 rows costs a different amount on every row."),
+        ("Run two and compare the overlap", "No provider has every company. Two cheap lists deduped on domain is the honest way to find out which one covers your market."),
+        ("Dedupe on domain, not name", "The same company arrives as three spellings of its name and one domain. The domain is the key for everything downstream."),
+    ],
+    "result_noun": "company",
+    "result_image": None,
+    "q_cheapest": "Which company search API is cheapest?",
+    "q_reliable": "Which company database is the most reliable?",
+    "q_compare": "How do the company databases compare?",
+    "what_is_heading": "What is a company list by industry?",
+    "what_is": (
+        "It is the output of a company search call: you send filters, industry, headcount "
+        "band, country, revenue, funding stage, technology in use, and the provider returns "
+        "the companies in its database that match, with a domain, a name and whatever "
+        "firmographics it holds. It is the first step of account based prospecting and of "
+        "most market sizing, and every provider on this page sells the same shape of answer "
+        "from a different database. The differences that matter are coverage, which is "
+        "where a company actually gets indexed, how stale the headcount and industry are, "
+        "and the billing unit, which decides what a two hundred row list costs before you "
+        "know whether it is any good."),
+    "notes": [
+        "The billing unit is the whole story, and it varies. Most rows bill per company "
+        "returned, so the page size is the price: Icypeas at a few hundredths of a cent, The "
+        "Companies API, Aviato, Lusha, Crustdata, CompanyEnrich and Fiber AI at fractions of "
+        "a cent, LeadMagic and Diffbot around three cents, PredictLeads four, and People Data "
+        "Labs at thirty eight cents a record, two hundred times the cheapest. Apollo bills "
+        "per page rather than per company, so a full page is cheaper than a small one, the "
+        "opposite of everyone else. Tomba bills one credit per fifty companies revealed. "
+        "Crunchbase, Ocean.io and Findymail publish no dollar rate, so the table prints none. "
+        "All of it is the provider's own rate with $0.000 added.",
+        "Three rows are free and they are not interchangeable. Hunter Discover returns "
+        "companies with their email counts and consumes no credits. Coresignal's search is "
+        "free because it returns ids only; the cost lands on the collect step that turns an "
+        "id into a company. Akta's row is a name or domain to id lookup, not a filtered "
+        "search. The Companies API has a `simplified=true` switch that makes the whole call "
+        "free at the price of fewer fields, which is the cheapest honest way to count a "
+        "market before paying for rows. The row labelled treg is the routed endpoint: the "
+        "explicit opt in where you ask treg.to to choose among these providers, your own "
+        "keys first, and it names the one that served and bills that provider's rate.",
+        "Nobody on this page publishes a number for how stale their data is, and the one "
+        "practitioner test in the research measured the drift at about a fifth of records "
+        "having changed title or employer while the email still resolved. Treat every "
+        "headcount and industry field as a claim from the month it was indexed. The rows "
+        "that were called live through treg.to carry a verified date in the table; Apollo, "
+        "Coresignal, Crunchbase, Fiber AI, Findymail and The Companies API are documented "
+        "but not yet verified through treg.to, so run one page before an agent "
+        "runs a thousand.",
+    ],
+    "faq": [
+        ("Which provider has the best company data?",
+         "The research behind this page found no independent benchmark, and every accuracy "
+         "figure in circulation was written by the vendor selling it. Run the same filter "
+         "through two or three cheap rows, dedupe on domain, and count. Two hundred rows from "
+         "three providers costs less than a dollar on most of them."),
+        ("Why does the same list cost so much more on one provider?",
+         "Because the billing units differ. Per company, per page and per fifty are not the "
+         "same thing, and one provider charges thirty eight cents a record where another "
+         "charges a few hundredths of a cent. Ask the agent to print the price for your list "
+         "size on every row before it runs."),
+        ("Can I count the matches before paying for the rows?",
+         "On some rows, yes. The Companies API's simplified mode is free, Coresignal's search "
+         "returns ids for nothing, and several providers have a count call on its own page. "
+         "A count first is the cheapest way to check that your filters mean what you think."),
+        ("Is this the Apollo API or the Crunchbase API?",
+         "Both are rows on this page, called through one treg.to key at their own rates. "
+         "Crunchbase is covered by its licence rather than priced per call, so the table "
+         "prints no dollar figure for it, and Apollo bills per page rather than per company."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~210 Reddit and X posts read in "
+        "August 2026 about ten were on the job, and a template farm of eight near identical "
+        "review posts across eight invented subreddits was excluded, along with a post that "
+        "hid word joiners inside its bracket tags. These five are practitioners, and they "
+        "are mostly talking about what goes wrong after the list arrives."),
+    "voices": [
+        ("Accuracy drifts once nobody is checking",
+         "even the best b2b data enrichment tools for crm accuracy drift once they go live and nobody double checks",
+         "r/SmallBusiness_US, 3 points", "https://www.reddit.com/r/SmallBusiness_US/comments/1vx3uub/even_the_best_b2b_data_enrichment_tools_for_crm/",
+         "No provider here publishes a freshness number, and this page will not invent one. "
+         "What per call pricing changes is the cost of checking: re-pull a sample of your "
+         "list every quarter for cents and measure the drift yourself."),
+        ("Four vendors, one ICP, bounce rates from 2% to 19%",
+         "Verified 4 B2B data vendors against the same ICP. Bounce rates ranged from 2% to 19%",
+         "r/Coldemailing", "https://www.reddit.com/r/Coldemailing/comments/1vezuay/verified_4_b2b_data_vendors_against_the_same_icp/",
+         "That test is the method this page recommends, and per call pricing is what makes it "
+         "affordable: the same filter through several rows, deduped on domain, then verified. "
+         "The spread that poster found is the reason not to trust any single row, this "
+         "page's cheapest included."),
+        ("Ninety five percent accurate, of what?",
+         "I got tired of vendor pages claiming '95%+ accuracy' with no definition of what accuracy means",
+         "r/Coldemailing", "https://www.reddit.com/r/Coldemailing/comments/1vezuay/verified_4_b2b_data_vendors_against_the_same_icp/",
+         "So there is no accuracy column here. The table carries the rate, the billing unit, "
+         "the fields each row accepts and whether it has been called live through treg.to. "
+         "Accuracy on your market is something you measure, not something a vendor states."),
+        ("Which of these is a database and which is a scraper",
+         "Tried searching online but getting overwhelmed with options and not sure which ones are legit vs just data scrapers",
+         "r/b2bmarketing", "https://www.reddit.com/r/b2bmarketing/comments/1r08jcy/need_recommendations_for_b2b_contact_data/",
+         "That is what a comparison with real rates is for. Every row here is a named "
+         "provider with a documented endpoint and a published or observed price, and the "
+         "difference between them is on the table rather than in a review somebody paid for."),
+        ("Crunchbase without the scraping workaround",
+         "Turns out Crunchbase has a bunch of restrictions, so I tried a couple methods to scrape leads efficiently",
+         "r/weezly", "https://www.reddit.com/r/weezly/comments/1n38bo0/how_i_scraped_thousands_of_crunchbase_leads_free/",
+         "Crunchbase's own search API is a row on this page, called through treg.to on a "
+         "licence rather than per call. It is not the cheapest route to a list, and a "
+         "different row will be for most filters, but it is the legitimate one."),
+    ],
+    "related": ("Enrich a company from its domain", "Find people by role, company or location",
+                "Count the matches before you pay for rows", "Find companies that use a given technology"),
+}
+
+
+USE_CASE_PAGES["job-postings-across-companies"] = {
+    "label": "Job postings across companies",
+    "sentence": "LinkedIn jobs API and job scraper: job postings across companies as rows your agent can read",
+    "title": "Jobs API: LinkedIn job postings and company openings | treg.to",
+    "lede": (
+        "Search job postings by title, keyword, company or location and get them back as "
+        "rows, for hiring signals, market research or a job board of your own. {n} providers "
+        "answer through one treg.to key on two shelves: LinkedIn job search from a tenth of a "
+        "cent per posting, and company level openings from the firmographic databases, each "
+        "at its own rate with $0.000 added. Two things this page will not pretend: there is "
+        "no Indeed row in the catalog, so the 720 people a month searching for an Indeed API "
+        "will not find one here, and no row here removes duplicates, ghost jobs or stale "
+        "dates. The postings arrive as the platform shows them."),
+    "prompt": "Using treg, find every posting for a data engineer in Berlin published in the "
+              "last week, show me the price per 100 postings from each provider first, cap "
+              "the run at 500 rows, then give me a table of company, title, date posted and "
+              "link, deduped on the posting URL, and say how many rows came back.",
+    "prompt_why": [
+        ("Give the title and the place", "The LinkedIn rows take a keyword and a location; the company rows take a company or a filter. Say which you have."),
+        ("Cap the run", "The Apify row bills per posting it returns and a broad search returns thousands. A maxItems cap is the difference between a cent and a dollar."),
+        ("Ask for the date and the link", "The date posted is the field nobody trusts and the link is the one that lets you check. Both belong on the table."),
+        ("Dedupe on the posting URL", "The same job is reposted, cross-posted and recycled. No row here dedupes for you; the agent has to."),
+    ],
+    "result_noun": "posting",
+    "result_image": None,
+    "q_cheapest": "What do job postings cost, per shelf?",
+    "q_reliable": "Which jobs API is the most reliable?",
+    "q_compare": "How do the two shelves compare?",
+    "what_is_heading": "What is a jobs API?",
+    "what_is": (
+        "It is a call that searches job postings and returns them as structured rows: title, "
+        "company, location, date, description, link. The boards themselves mostly do not "
+        "offer one to the public any more, which is why the searches for an Indeed API keep "
+        "landing on scrapers. The rows here come in two shapes. The LinkedIn shelf searches "
+        "LinkedIn's postings by keyword and location and returns the postings, priced per "
+        "posting or per call. The companies shelf comes from the firmographic databases, "
+        "which index job openings per company as a hiring signal, so the natural question "
+        "there is which companies are hiring for what, rather than which jobs match a title."),
+    "notes": [
+        "Two shelves, two prices. On LinkedIn, Apify's job search actor bills a tenth of a "
+        "cent per posting returned with no platform charge on top, and TikHub's LinkedIn row "
+        "bills a tenth of a cent per successful call, which on a big search is the cheaper of "
+        "the two. On the companies shelf Crustdata bills under a cent per result, LeadMagic "
+        "two and a half cents, and PredictLeads four cents a call for a company's openings "
+        "and a credit per record for a filtered search. All of it is the provider's own rate "
+        "with $0.000 added. The row labelled treg is the routed endpoint: the explicit opt "
+        "in where you ask treg.to to choose among the company rows, your own keys first, and "
+        "it names the provider that served and bills that provider's rate.",
+        "The cap is the budget. The Apify row is charged per dataset item it produces, so a "
+        "search that matches four thousand postings costs four dollars unless maxItems says "
+        "otherwise; set it on every call and read the run's usage afterwards. Per call rows "
+        "have the opposite shape: one page costs the same whatever it holds, so page size is "
+        "free and pagination is the cost.",
+        "What no row here does, said plainly: nothing dedupes across boards, nothing checks "
+        "whether a posting is still live or was ever real, nothing crawls a company's own "
+        "careers page, and there is no Indeed, Glassdoor or Naukri row. The date posted is "
+        "the platform's date, which the research says is the field people trust least. "
+        "TikHub's LinkedIn job search has not been called live through treg.to yet and is "
+        "marked unverified in the table; run one search before an agent runs a hundred.",
+    ],
+    "faq": [
+        ("Is there an Indeed API here?",
+         "No. Indeed closed its publisher API and the catalog carries no Indeed row, scraped "
+         "or official. The LinkedIn rows are the closest thing on this page, and the company "
+         "rows answer a different question: who is hiring, not which jobs match a title."),
+        ("Will I get duplicates and ghost jobs?",
+         "Yes, as many as the platform shows. No row here dedupes across reposts or checks "
+         "that a posting is real, and this page will not claim otherwise. Dedupe on the "
+         "posting URL in the agent, and treat the date posted as the platform's claim."),
+        ("How much does a big pull cost?",
+         "On the per posting row, the number of postings times a tenth of a cent, which is why "
+         "the prompt caps the run. On the per call rows, the number of pages. Ask the agent "
+         "to print the price for your cap on every row before it runs."),
+        ("Can I get a company's openings as a hiring signal?",
+         "That is what the companies shelf is for. PredictLeads, Crustdata and LeadMagic index "
+         "openings per company, so an agent can ask which of your two hundred target accounts "
+         "opened an engineering role this month, without searching a board at all."),
+    ],
+    "voices_intro": (
+        "Of the ~210 Reddit and X posts read in August 2026 roughly half were on the job, the "
+        "densest corpus behind any of these pages, and five vendor clusters were excluded, "
+        "including one launch story reposted to three subreddits with the AI tool's name "
+        "swapped each time. These five are people fighting the boards."),
+    "voices": [
+        ("The boards fight back",
+         "Since when did Indeed start injecting invisible fake job cards as a scraper honeypot?",
+         "X, 189 likes", "https://x.com/i/status/2057908987845300478",
+         "Which is why there is no Indeed row here and this page says so in its first "
+         "paragraph. The LinkedIn rows exist because a provider absorbs that fight on its "
+         "side; on Indeed nobody in the catalog does."),
+        ("The filters are the problem, not the data",
+         "I hate LinkedIn and Indeed. Filters don't work well, search experience is terrible, and the sites are contaminated with so many offshore agencies.",
+         "r/findapath, 745 points", "https://www.reddit.com/r/findapath/comments/1eqn8xm/i_decided_to_scrape_15_million_job_postings_using/",
+         "Rows fix the filter half: once the postings are data, your agent filters them by "
+         "whatever rule you like. The contamination half arrives with the data, and the "
+         "agent is the filter for that too."),
+        ("The date is the field nobody trusts",
+         "Not being able to trust the date posted of any job. Being shown too many irrelevant jobs.",
+         "r/leetcode, 401 points", "https://www.reddit.com/r/leetcode/comments/1itbh82/i_scraped_2500_software_engineering_jobs_from/",
+         "No row here fixes the date; it returns what the platform shows. What a daily pull "
+         "gives you is your own first seen date, which is the only one you can trust, and "
+         "that costs a tenth of a cent a posting."),
+        ("Half the postings are gone in a month",
+         "Half are gone by day 28, and almost all of that drop happens in a single week.",
+         "r/jobsearchhacks, 376 points", "https://www.reddit.com/r/jobsearchhacks/comments/1vujb75/i_tracked_165m_job_postings_daily_for_two_months/",
+         "That poster tracked over a million postings a day to learn it, and the method is "
+         "the point: a repeated pull is what turns postings into a signal. The rows here "
+         "make the pull cheap; the tracking is the agent's job."),
+        ("The old way was cheaper and about as good",
+         "Everyone in this community is bragging about AI-powered automations or seemingly simple workflows that call overpriced APIs to parse a page.",
+         "r/n8n, 307 points", "https://www.reddit.com/r/n8n/comments/1op8oho/scraping_linkedin_jobs_no_ai_no_paid_apis/",
+         "Fair, and a tenth of a cent per posting is the answer to overpriced rather than to "
+         "free. The self written scraper wins until LinkedIn changes something; the row wins "
+         "the day after."),
+    ],
+    "related": ("Hiring, headcount and news signals", "Employee reviews of a company",
+                "Get a company's LinkedIn page", "Build a company list by industry, size or tech"),
+}
+
+
+USE_CASE_PAGES["daily-price-history"] = {
+    "label": "Daily price history",
+    "sentence": "Historical stock data API: daily OHLCV price history by ticker, free to try, then your own Polygon, EODHD or Marketstack key",
+    "title": "Historical stock data API: EOD prices, free to try | treg.to",
+    "lede": (
+        "Give your agent a ticker and a date range and get the daily open, high, low, close "
+        "and volume back as rows, adjusted where the provider adjusts. {n} providers answer "
+        "through one treg.to key. Tiingo and Twelve Data are free for twenty calls a day per "
+        "team on treg.to's own key, enough to backfill a watchlist; past that, and for "
+        "Polygon, EODHD and Marketstack, you connect your own subscription key and the calls "
+        "are never metered. Two things this page will not pretend: there is no Yahoo Finance "
+        "row and no Alpha Vantage row, because neither is in the catalog, and nothing here "
+        "is unlimited and free."),
+    "prompt": "Using treg, get the daily price history for AAPL, MSFT and NVDA from January "
+              "2020 to today, show me which providers are free on treg.to's key and how many "
+              "calls I have left today, use one of those, then give me a table of ticker, "
+              "date, adjusted close and volume as CSV, and say if any day is missing.",
+    "prompt_why": [
+        ("Give the ticker and the range", "Every row takes a symbol and a start and end date. Thirty years is one call on most of them, so the range is free to widen."),
+        ("Ask which rows are free today", "Two providers are served on treg.to's own key with a daily allowance per team. The agent can see the allowance before it spends one."),
+        ("Say adjusted or unadjusted", "Splits and dividends change the series. Tiingo returns both; the others differ. Say which you want before the agent picks."),
+        ("Ask for the missing days", "A gap in a daily series is silent unless the agent counts. Ask for it and a holiday looks different from a hole."),
+    ],
+    "result_noun": "bar",
+    "result_image": None,
+    "q_cheapest": "What does daily price history cost?",
+    "q_reliable": "Which is the most reliable?",
+    "q_compare": "How do the providers compare?",
+    "what_is_heading": "What is a historical stock data API?",
+    "what_is": (
+        "It is a call that returns end of day bars for a ticker over a date range: the open, "
+        "high, low and close, the volume, and on most providers an adjusted close that folds "
+        "splits and dividends back into the series. It is the data behind every backtest, "
+        "every chart and every do it yourself portfolio tracker, and it is the data the free "
+        "scripts of the last decade leaned on Yahoo Finance for, which is why every time that "
+        "unofficial endpoint changes a forum fills with people asking for another. The rows "
+        "here are documented APIs with a published allowance or a subscription behind them, "
+        "which is the trade: nothing breaks on a Tuesday, and nothing is unlimited."),
+    "notes": [
+        "Two rows cost nothing to start, on treg.to's own key. Tiingo and Twelve Data are "
+        "served from treg.to's free tier keys with an allowance of twenty calls a day per "
+        "team; a call is one ticker over any range, so twenty calls is twenty tickers of full "
+        "history a day, and past the allowance the call is refused with a hint to connect your "
+        "own key. Polygon and EODHD serve on your own subscription key only, and treg.to "
+        "publishes no rate for them, so the table prints none: your plan's limits apply and "
+        "treg.to meters nothing. Marketstack's row prints a per call figure derived from its "
+        "plan's monthly request cap, which is the catalog's way of saying one request against "
+        "the cap whatever it returns, not a metered price.",
+        "Adjusted and unadjusted are different series and the rows treat them differently. "
+        "Tiingo returns both in the same row, with adjusted open, high, low, close and volume "
+        "beside the raw ones, across thirty plus years. Polygon's bars endpoint takes an "
+        "adjusted flag. Twelve Data, Marketstack and EODHD document their own conventions on "
+        "the linked pages. A backtest built on the wrong one will look right until a split "
+        "lands in the window, so say which you want in the prompt and check one known "
+        "split date.",
+        "Coverage is the provider's, not this page's. EODHD documents seventy plus exchanges, "
+        "Marketstack a similar spread, Polygon is US equities, and Tiingo and Twelve Data "
+        "cover US plus a range of international symbols; the research turned up real demand "
+        "for Indian and Sri Lankan exchange data and nothing here promises it. Nothing on "
+        "this page serves intraday history except Polygon's bars and Twelve Data's series, "
+        "and the crypto history page covers coins. The five provider rows were verified on "
+        "2026-08-15; the row labelled treg is the routed endpoint, the explicit opt in where "
+        "you ask treg.to to choose among them, your own keys first, and it is unverified.",
+    ],
+    "faq": [
+        ("Is there a free historical stock data API here?",
+         "Free to try: Tiingo and Twelve Data at twenty calls a day per team on treg.to's own "
+         "key, no card and no account with either provider. Past the allowance you connect "
+         "your own key, which on both providers has a free tier of its own. Nothing here is "
+         "unlimited and free, and this page will not say otherwise."),
+        ("Where is Yahoo Finance or Alpha Vantage?",
+         "Not in the catalog. Yahoo has no official API and the unofficial endpoints break on "
+         "their own schedule; Alpha Vantage is a documented API whose free tier is a handful "
+         "of calls a day, and it is not a row here today. The rows on this page are the "
+         "documented alternatives people move to when either fails."),
+        ("Do I get adjusted prices?",
+         "On Tiingo, both series in one row. On Polygon, with a flag. On the others, per "
+         "their documentation, linked from each row. Say which you want in the prompt, and "
+         "check one known split date before trusting a backtest."),
+        ("Can I use my own Polygon subscription?",
+         "Yes, and it is the only way Polygon serves here: connect the key once and every "
+         "call runs on your plan, never metered by treg.to. The same is true of EODHD and "
+         "Marketstack, and of Tiingo and Twelve Data once the daily allowance is used."),
+    ],
+    "voices_intro": (
+        "Of the ~200 Reddit and X posts read in August 2026 about thirty were on the job, and "
+        "six vendor clusters were excluded, including one open source launch posted to four "
+        "Indian trading subreddits at once and an eight free APIs list where every link "
+        "carried an affiliate tag. These five are people whose data source broke."),
+    "voices": [
+        ("The free endpoint everyone used",
+         "yfinance is so unreliable; any other free apis?",
+         "r/algotrading, 118 points", "https://www.reddit.com/r/algotrading/comments/1kdw27f/yfinance_is_so_unreliable_any_other_free_apis/",
+         "The honest answer is free to try rather than free: twenty calls a day on treg.to's "
+         "key across two documented providers, then your own key. What that buys is an "
+         "endpoint with a published contract, which is the thing yfinance never had."),
+        ("Public facts, private prices",
+         "How is it possible that you need to pay hundreds of dollars just to access historical data / facts that are publicly known?",
+         "r/webdev, 117 points", "https://www.reddit.com/r/webdev/comments/151zk8y/is_there_any_free_stock_market_api_that_allows/",
+         "Because the exchanges license the data and everyone downstream pays them. The rows "
+         "here do not change that; what they change is the entry price, which for a "
+         "watchlist of daily bars is zero on two providers and your own plan on the rest."),
+        ("Rate limits measured in minutes",
+         "even with multithreading i'm looking at 45 minutes to get all the data because of their rate limiting",
+         "r/algotrading", "https://www.reddit.com/r/algotrading/comments/76tqyt/alternatives_to_alpha_vantage/",
+         "A daily allowance is a rate limit too, and this page says so. The difference is the "
+         "shape: one call here is a ticker over its whole history, so twenty calls is twenty "
+         "full series, not twenty days of one."),
+        ("This data should not be hard to find",
+         "In all honesty, I don't feel like this data should be expensive or hard to find.",
+         "r/algotrading, 65 points", "https://www.reddit.com/r/algotrading/comments/1atlh3o/i_need_highquality_historical_fundamental_data/",
+         "Hard to find is the part a catalog fixes: six documented providers, their "
+         "allowances and their conventions on one page, callable through one key. Expensive "
+         "is the exchanges' decision, and no page undoes it."),
+        ("Fifty eight million answers",
+         "there are 58 million answers and the vast majority of them are sarcastic, rhetorical, or a simple 'try this platform'",
+         "r/algotrading, 79 points", "https://www.reddit.com/r/algotrading/comments/1nzqrl8/what_preferably_free_apis_are_preferred_for/",
+         "This page is one more, so here is what makes it checkable: every row names its "
+         "endpoint, its allowance or its key requirement, and its verified date, and the "
+         "prompt above asks the agent to show the allowance before spending it."),
+    ],
+    "related": ("Current quote for a ticker", "News for a ticker",
+                "Dividends and splits", "Company profile and fundamentals behind a ticker"),
+}

@@ -369,12 +369,7 @@ requires `voices` and `voices_intro` together rather than requiring either.
 say it anyway. Write position-neutral ("the comparison above", "the prices here") or the sentence
 is wrong for every reader who scrolls.
 
-**Written so far: 27 of the 66 jobs**, and from 2026-08-24 the remaining set is no longer "all of
-them". Every unwritten job was measured against Google Ads keyword volume that day; the ones
-clearing 50 US searches a month became a worklist ordered by volume, and the rest are parked as
-rows on the menu with no page. A page nobody searches for is the scaled-content shape the risk
-audit says to avoid, so the loop writes demand first and the remainder is a decision rather than a
-backlog.
+**Written so far: 42 of the 90 jobs, and the measured-demand worklist is complete** (2026-08-29). From 2026-08-24 the remaining set was no longer "all of them": every unwritten job was measured against Google Ads keyword volume that day; the 34 clearing 50 US searches a month became a worklist ordered by volume, written five a day, and the rest are parked as rows on the menu with no page. A page nobody searches for is the scaled-content shape the risk audit says to avoid, so the 48 parked jobs are a decision rather than a backlog.
 
 The YouTube & video cluster (transcript, video stats, channel stats, search, comments) landed
 2026-08-21 and is the first `compare`-form cluster where one row is
@@ -454,6 +449,33 @@ units-are-not-interchangeable caveat; only the interpolated lede lies. Both lede
 rate in prose instead. **Do not write "from {cheapest}" on a page whose providers meter in more
 than one unit**, and read the rendered lede against the rendered table before shipping. Found the
 same way as the two above.
+
+**A provider whose only row has no cost took the page down** (2026-08-29). `_uc_providers` built the
+trial allowance with `max()` over the rows that have a `cost_view`; TikHub's LinkedIn comments v2 row
+carries no cost at all, so on the comments job the generator was empty and the page 500ed past every
+green test (the tests render other jobs). `default=0` now; the cell prints "no dollar rate published".
+
+**Routed rows appear on the pages as a provider called treg** (2026-08-29). PR #242's first-party routed
+endpoints (`treg.<capability>`, `kind: routed`, `architecture/catalog.md` § Routing) are catalog rows
+on the capability, so `_uc_providers` lists them beside the children with the children's cheapest rate
+and "unverified". The template's "treg.to does not choose for you" line is now half true: the routed row
+is the explicit opt-in where it does choose, own keys first, naming the child that served. The five
+pages of 2026-08-29 say exactly that in a note; the earlier pages and the template line have not been
+revisited, which is a decision for whoever owns the routing copy.
+
+**The related-card test hard-coded the agent-page anchor** (2026-08-29). It asserted the email-finder
+page links to `/agents/chatgpt#`, which was only ever the fallback for a related label with no page;
+the day "A company's email format" got one, the assertion had nothing to match. It accepts a
+`/use-cases/` sibling now.
+
+**Demand outran the worklist term again, seventh time** (2026-08-29): `company email format` 140 and
+`email format checker` 1,300 (which is validity checking, the verify page) against `email pattern
+finder` 90; `social listening tool` 4,400 and `instagram comment export` 260 against `social listening
+api` 70; `companies by industry` 2,400, `apollo api` 1,000 and `crunchbase api` 390 against `company
+list by industry` 70; `indeed api` 720 and `jobs api` 590 against `job board api` 50, with no Indeed
+row in the catalog, which the page says in its first paragraph; `yahoo finance api` 2,900, `polygon
+api` and `alpha vantage api` 1,600 each against `historical stock data api` 50, with neither Yahoo
+nor Alpha Vantage in the catalog, said in the lede.
 
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a
