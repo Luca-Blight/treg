@@ -44,7 +44,7 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 | `/resources` + `/use-cases/<slug>` | The outcome pages and their hub. Their sitemap rows are spread from `_USE_CASES` rather than listed by hand, so routing a new page lists it — see below. |
 | `/catalog` | The dashboard SPA, in public mode — the marketplace's Catalog view on an indexable URL. |
 | `/catalog/<slug>` | The same SPA, on the platform view for one shelf. |
-| `/tools/<service>` | The catalog sliced by **vendor**, fully server-rendered (`_page`, no SPA): one public page per provider — logo, category, base URL and blurb from the oauth-provider registry, a connect block, every tool with its price grouped by platform, the other providers on the same capabilities, its v2 anatomy (hero flow with the llms.txt bar, setup details, worked calls, why-treg cards, the full grouped tool list, frameworks, alternatives, FAQPage/HowTo JSON-LD) and a metered-vs-own-account FAQ picked by whether the provider has any priced endpoint (the credential registry is the wrong test — nearly every provider is in it). There is deliberately NO provider index page: /providers earned no searches and made a second "browse everything" URL, so the provider links live in /catalog's crawlable prerender instead (and the index could never live at `/tools` anyway - that exact path is the authed team-tools API, and a public page there shadows it). `/tools/<service>` itself is safe (the API's GETs there are `/tools` and the two-segment `/tools/by-name/…`). A signed-out `GET /app/marketplace/<service>` 302s to `/tools/<service>` (an unknown service 404s there rather than redirecting into a 404); signed-in keeps the SPA view. `tests/test_provider_pages.py` pins the route shape. |
+| `/tools/<service>` | The catalog sliced by **vendor**, fully server-rendered (`_page`, no SPA): one public page per provider. **Title and H1 match** to describe the real listing: metered providers get `{Provider}: {n} tools from {price}` (title adds `API pricing:` prefix for SEO), own-account providers get `{Provider}: connect your own account`. The page shows logo, category, blurb from the oauth-provider registry, setup/MCP instructions, up to 8 tools per platform (with "See all N on the catalog" link for larger sets), why-treg cards, alternatives, and a metered-vs-own-account FAQ. JSON-LD: BreadcrumbList (with `treg.to` not bare `treg`), ItemList, FAQPage, HowTo. Tool counts and prices are live from `catalog_store`, never hardcoded. No em-dashes in page copy. There is no provider index page: /providers earned no searches and the provider links live in /catalog's prerender instead. `/tools/<service>` is safe from shadowing the API (the API's GETs are `/tools` and `/tools/by-name/…`). A signed-out `GET /app/marketplace/<service>` 302s to `/tools/<service>`. `tests/test_provider_pages.py` pins the route shape. |
 | `/docs` | Server-rendered API reference built from `app.openapi()`. |
 | `/docs/api` | FastAPI's Swagger UI, moved here and `Disallow`ed. ReDoc is off. |
 | `/media/og.png` | The 1200×630 social card, served by the pre-existing `/media` mount. |
@@ -581,16 +581,15 @@ workflow is cross-linked the moment it is routed, and nothing is listed by hand.
 ### Titles: the pricing intent
 
 The non-brand queries that reach the site are "{provider} api pricing" phrasings ("linkedin api
-pricing", "1688 api pricing" — the one non-brand click in 28 days), not "api for agents". So:
+pricing", "1688 api pricing"), not "api for agents". So:
 
 - `/tools/<provider>` titles lead with it: `{Provider} API pricing: from $0.00245/result, no signup | treg.to`
   (the price label carries its own billing unit, so the copy never says "per call" beside it;
   falls back to `{Provider} API pricing: from $X | treg.to` past 65 characters; own-account
-  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate
-  weighted by each endpoint's DECIDED calls (`decided` in `endpoint_stats`, 2xx + 5xx, never the
-  4xx-inclusive `samples`), median of the endpoint `p50_ms` medians — read through
-  `_observed_or_empty` like the job pages; it is the one fact a vendor's own pricing page cannot
-  print.
+  providers get `{Provider}: connect your own account | treg.to`). **Title and H1 now match**:
+  metered H1 is `{Provider}: {n} tools from {price}`, own-account H1 is `{Provider}: connect your own account`.
+  The kicker carries the measured line (calls observed, ok rate weighted by DECIDED calls, median p50)
+  read through `_observed_or_empty`.
 - compare-form job titles get `, from $X` appended when the hand-written title carries no price and
   the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
 
