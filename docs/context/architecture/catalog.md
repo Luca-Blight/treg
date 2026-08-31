@@ -1273,17 +1273,16 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   work, not from routing — which is also why a `git revert` of #242 would be the wrong instrument). It exists because "does the router answer well" and "should every agent be led to it by
   default" are separate questions: the bench answered the first (55.4 → 69.2 on recruiting, parity
   with a hand-written policy), and only traffic can answer the second.
-- **creators.search routed (2026-08-29)**: the capability that most needed it and never had it. Two
-  providers answer "find creators" and they are not comparable: influencersclub takes `location`,
-  `keywords_in_bio` and `number_of_followers {min,max}` as REAL filters and returns followers,
-  engagement and location inline; `exa.creators.search` takes a sentence and returns a URL and a
-  title. Unrouted, an agent picks one blind. On the bench it picked exa, then made **115
-  `instagram.user.profile` calls** checking follower counts by hand, discarded everyone it could not
-  confirm, and returned 1 row where the hand-written pipeline returned 15 qualified — influencer was
-  the ONLY category the agent lost (54.4 vs the pipeline's 60.2). With the contract, exa reports
-  `ignored_filters: [platform, followers_min, followers_max]` and ranks below a provider that can
-  express them. `followers_min`/`followers_max` are contract filters because an audience band is the
-  constraint a creator brief almost always carries, and the one a URL-only result cannot answer.
+- **creators.search: routed, then UNROUTED (2026-08-31)**: the contract was added because
+  influencersclub filters on `location` / `keywords_in_bio` / `number_of_followers` and returns that
+  data inline while `exa.creators.search` returns a URL and a title, so an agent picking blind chose
+  exa and then verified follower counts by hand. Measured, the contract made the bench category
+  WORSE: influencer 54.4 → 49.3, queries answered 29 → 27, and the profile-verification calls it was
+  meant to remove went UP (131 → 155). The cost fell 42% ($10.96 → $6.34), which is the only part
+  that held. Best explanation, same shape as the reverted `titles` filter: sending the follower band
+  and location as HARD filters over-constrains, and a metric that pads to K=15 pays for volume — five
+  exact matches score below fifteen loose ones. Reverted so production matches the submitted bench
+  data. If it returns, the filters should be opt-in rather than always-sent, and measured first.
 - **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
   and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
   apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the
