@@ -84,9 +84,9 @@ def test_every_use_case_capability_exists_in_the_catalog():
     assert not missing, missing
 
 
-async def test_chatgpt_page_install_block_names_the_plugins_directory(clients: AsyncClient):
+async def test_chatgpt_page_install_block_names_the_connectors_directory(clients: AsyncClient):
     html = (await clients.get("/agents/chatgpt")).text
-    assert "Plugins" in html and "Install" in html
+    assert "Connectors" in html and "Add" in html
     # never a CTA into the authenticated app: a logged-out /app visit bounces to the landing
     body = html.split("<body>", 1)[1].split("<footer>", 1)[0]
     assert 'href="/app"' not in body.replace('href="/agents/', "")

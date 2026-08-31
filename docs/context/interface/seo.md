@@ -287,7 +287,7 @@ one motion, and promoting them would have committed four URL segments to a disti
 exists in a practitioner's head. The section builder orders rows by group and prints a divider row
 before each; the `.md` mirror sorts by the same order.
 
-**Hosted only.** The copy describes treg.to's own listings — the ChatGPT Plugins entry, the $1.00
+**Hosted only.** The copy describes treg.to's own listings — the ChatGPT Connectors entry, the $1.00
 grant — none of which is true of a self-hosted registry. `_hosted()` checks `public_url` against
 `PUBLIC_HOST_ALIASES`; elsewhere the route 404s and the sitemap omits the rows, rather than lie.
 

@@ -10,7 +10,7 @@ Two rules the tests enforce:
   - every capability id named in USE_CASES must exist in the catalog — a job the catalog cannot do
     must not be advertised ("do not document what is not built"), and a renamed capability must
     fail the build rather than silently drop a row;
-  - the install copy describes the HOSTED treg.to (the ChatGPT Plugins listing, the $1.00 grant),
+  - the install copy describes the HOSTED treg.to (the ChatGPT Connectors listing, the $1.00 grant),
     so `api.py` serves these pages only on the reference hosts (`PUBLIC_HOST_ALIASES`).
 """
 
@@ -334,31 +334,32 @@ SETUP_LINE = "set up treg — {base}/llms.txt"
 AGENTS: dict[str, dict] = {
     "chatgpt": {
         "name": "ChatGPT",
-        "title": "ChatGPT plugin: call {n} APIs without keys | treg.to",
+        "title": "ChatGPT Connector: call {n} APIs without keys | treg.to",
         "description": (
-            "treg.to is a ChatGPT plugin that lets ChatGPT call {n} APIs across {p} platforms: "
+            "treg.to is a ChatGPT Connector that lets ChatGPT call {n} APIs across {p} platforms: "
             "find work emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor "
             "ads. Priced per call at the provider's own rate, with no markup and no provider signup."),
         # The one quotable sentence an answer engine should lift. Server-rendered first, under the H1.
         "definition": (
-            "treg.to is a ChatGPT plugin (and MCP server) that gives ChatGPT {n} ready-to-call APIs "
-            "across {p} platforms: SEO data, LinkedIn and people enrichment, Reddit, YouTube, "
+            "treg.to is a ChatGPT Connector (and MCP server) that gives ChatGPT {n} ready-to-call "
+            "APIs across {p} platforms: SEO data, LinkedIn and people enrichment, Reddit, YouTube, "
             "ads and e-commerce. Calls run on treg.to's own keys and are metered from a prepaid "
             "balance at the provider's rate with $0.000 markup. Every new team starts with $1.00 "
             "free, and there are no provider accounts to open."),
         # Steps shown as numbered HTML list items. Plain text; escaped by the route.
+        # {n} is interpolated from the catalog count at render time.
         "install_steps": [
-            "In ChatGPT, open <b>Plugins</b> in the left sidebar.",
-            "Search for <b>treg</b> and click <b>Install</b>. It is listed publicly as "
-            "“treg: Call 2,600 APIs without keys”.",
+            "In ChatGPT, open <b>Connectors</b> in the left sidebar.",
+            "Search for <b>treg</b> and click <b>Add</b>. The connector gives ChatGPT access to "
+            "{n} APIs without keys.",
             "Sign in when ChatGPT asks; your first team starts with $1.00 of free calls.",
             "Ask for what you want done. ChatGPT searches the catalog, tells you the price, and "
             "calls the endpoint. You never hold a provider key.",
         ],
-        "install_image": "/media/install/chatgpt-plugins.png",
-        "install_image_alt": "ChatGPT's Plugins directory with “treg” searched and its Install button",
-        "install_image_bar": "chatgpt.com  ·  Plugins",
-        "install_image_caption": "Steps 1 and 2: Plugins in the sidebar, search treg, Install.",
+        "install_image": "/media/install/chatgpt-connectors.png",
+        "install_image_alt": "ChatGPT's Connectors directory with treg searched and its Add button",
+        "install_image_bar": "chatgpt.com  ·  Connectors",
+        "install_image_caption": "Steps 1 and 2: Connectors in the sidebar, search treg, Add.",
         "faq": [
             ("Is treg.to free to use in ChatGPT?",
              "Installing is free and every new team starts with $1.00 of calls. After that, each call "
@@ -2662,33 +2663,34 @@ USE_CASE_PAGES["current-quote-for-a-ticker"] = {
 
 AGENTS["grok-bot"] = {
     "name": "Grok Bot",
-    "title": "Grok Bot plugin: call {n} APIs without keys | treg.to",
+    "title": "Grok MCP server: {n} tools without keys | treg.to",
     "description": (
-        "treg.to is a Grok Bot plugin that lets Grok call {n} APIs across {p} platforms: find work "
+        "treg.to is an MCP server that gives Grok Bot {n} tools across {p} platforms: find work "
         "emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor ads. Priced "
         "per call at the provider's own rate, with no markup and no provider signup."),
     "definition": (
-        "treg.to is a Grok Bot plugin (and MCP server) that gives Grok {n} ready-to-call APIs "
-        "across {p} platforms: SEO data, LinkedIn and people enrichment, Reddit, YouTube, ads and "
-        "e-commerce. Calls run on treg.to's own keys and are metered from a prepaid balance at the "
-        "provider's rate with $0.000 markup. Every new team starts with $1.00 free, and there are "
-        "no provider accounts to open."),
+        "treg.to is an MCP server for Grok Bot that gives it {n} ready-to-call tools across {p} "
+        "platforms: SEO data, LinkedIn and people enrichment, Reddit, YouTube, ads and e-commerce. "
+        "Calls run on treg.to's own keys and are metered from a prepaid balance at the provider's "
+        "rate with $0.000 markup. Every new team starts with $1.00 free, and there are no provider "
+        "accounts to open."),
+    # {n} is interpolated from the catalog count at render time.
     "install_steps": [
-        "In Grok Bot, click <b>Plugins</b> at the bottom of the left sidebar.",
-        "Search for <b>treg</b> and click <b>Add</b>. It is listed as “Treg: give your agent "
-        "2,600+ external API endpoints”, under the <b>MCP</b> category.",
+        "In Grok Bot, open <b>Tool Settings</b> (the gear icon next to Tools).",
+        "Under <b>MCP Connectors</b>, click <b>Add Remote</b> and paste "
+        "<b>https://treg.to/mcp</b>.",
         "Sign in when it asks; your first team starts with $1.00 of free calls.",
-        "Ask for what you want done in any chat. Grok searches the catalog, tells you the price, "
+        "Ask for what you want done. Grok searches the catalog ({n} tools), tells you the price, "
         "and calls the endpoint. You never hold a provider key.",
     ],
-    "install_image": "/media/install/grok-bot-plugins.png",
-    "install_image_alt": "Grok Bot's Plugins dialog with “treg” searched and the Treg plugin added",
-    "install_image_bar": "Grok Bot  ·  Plugins",
-    "install_image_caption": "Steps 1 and 2: Plugins in the sidebar, search treg, Add.",
+    "install_image": "/media/install/grok-bot-mcp.png",
+    "install_image_alt": "Grok Bot's Tool Settings with treg.to/mcp added as a remote MCP connector",
+    "install_image_bar": "Grok Bot  ·  Tool Settings",
+    "install_image_caption": "Steps 1 and 2: Tool Settings, Add Remote MCP connector, paste the URL.",
     "faq": [
         ("Can Grok Bot do lead generation with this?",
          "Yes, and it is the sequence most people ask for first. A research bot or a sales bot in "
-         "Grok Bot can browse, but browsing is not data. With the plugin it can build a company "
+         "Grok Bot can browse, but browsing is not data. With treg.to it can build a company "
          "list by industry, size or funding, find the decision maker at each one, find and verify a "
          "work email, and pull a recent news event for the opener. The whole sequence is on the "
          "workflows page above with the receipt from a real run. Each step is priced before the bot "
@@ -2713,10 +2715,10 @@ AGENTS["grok-bot"] = {
          "No. treg.to makes the upstream request on its own key and relays the answer, so Grok never "
          "holds a provider credential. If your team already pays for a provider, register that key "
          "and those calls are never metered."),
-        ("Is this an MCP server or a plugin?",
-         "Both, and they are the same thing here. Grok Bot installs it from its plugin directory; "
-         "underneath it is the same MCP server that Claude, ChatGPT, Cursor and the rest connect "
-         "to, answering the same token and the same catalog."),
+        ("Is this an MCP server?",
+         "Yes. treg.to is an MCP server that Grok Bot connects to as a remote MCP connector. It is "
+         "the same MCP server that Claude, ChatGPT, Cursor and the rest connect to, answering the "
+         "same token and the same catalog."),
         ("Does treg.to pick the provider for me?",
          "No. Where several providers do the same job they are shown side by side with prices and "
          "measured reliability, and Grok (or you) chooses. treg.to does not route or fail over "

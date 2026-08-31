@@ -467,7 +467,7 @@ async def catalog_page(slug: str):
 
 def _hosted() -> bool:
     """True on the reference deployment only. The agent pages describe treg.to's own listings (the
-    ChatGPT plugin, the OAuth connector, the free grant), none of which is true of a self-hosted
+    ChatGPT Connector, the OAuth connector, the free grant), none of which is true of a self-hosted
     registry, so off these hosts the pages do not exist rather than lie."""
     host = (urlsplit(get_settings().public_url).hostname or "").lower()
     return host in PUBLIC_HOST_ALIASES
@@ -623,7 +623,7 @@ _MD_ALT = '<link rel="alternate" type="text/markdown" href="{href}"/>'
 @app.get("/agents/{agent}.md", include_in_schema=False)
 @app.get("/agents/{agent}", include_in_schema=False)
 async def agent_page(request: Request, agent: str):
-    """One client: "I use ChatGPT, what can it do now?" A rotating "The ChatGPT plugin for <role>"
+    """One client: "I use ChatGPT, what can it do now?" A rotating "The ChatGPT Connector for <role>"
     hero, the install steps for that client, then the use-case menu: plain-words jobs under buyer
     categories, each priced from the catalog. The menu is `agent_pages.USE_CASES`, the same
     taxonomy the use-case pages hang from, so the agent page is the map of the whole site.
@@ -651,7 +651,7 @@ async def agent_page(request: Request, agent: str):
     definition = spec["definition"].format(n=n, p=p)
     menu = [(category, agent_pages.CATEGORY_PROMPTS.get(category, ""), _menu_rows(cat, category, jobs))
             for category, jobs in agent_pages.USE_CASES]
-    steps_text = [re.sub(r"<[^>]+>", "", st) for st in spec["install_steps"]]
+    steps_text = [re.sub(r"<[^>]+>", "", st).format(n=n) for st in spec["install_steps"]]
 
     if as_md:
         md = [f"# {title}", "", definition, "", f"## Install in {name}", ""]
@@ -684,12 +684,12 @@ async def agent_page(request: Request, agent: str):
         return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
                                  headers={"Cache-Control": "public, max-age=600"})
 
-    # Only the FIRST role is in the H1 markup: a crawler reads "…plugin for SEO experts", not nine
+    # Only the FIRST role is in the H1 markup: a crawler reads "…Connector for SEO experts", not nine
     # roles run together. The rest ride in a JSON block and the script appends them.
     roles = f'<span class="ri on">{_esc_html(agent_pages.ROLES[0])}</span>'
     more_roles = json.dumps(list(agent_pages.ROLES[1:])).replace("<", "\\u003c")
     steps = "".join(
-        f'<div class="steplabel"><span class="n">{i}</span><b>{st}</b></div>'
+        f'<div class="steplabel"><span class="n">{i}</span><b>{st.format(n=n)}</b></div>'
         for i, st in enumerate(spec["install_steps"], 1))
     shot = (f'<div class="sample"><div class="sbar">{_esc_html(spec.get("install_image_bar") or name)}</div>'
             f'<img src="{_esc_html(spec["install_image"])}" alt="{_esc_html(spec["install_image_alt"])}" '
