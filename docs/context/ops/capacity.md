@@ -32,6 +32,7 @@ sources:
   - scripts/provider_balances.py
   - src/treg/alembic/versions/0005_capacity_policy_snapshot.py
   - tests/test_capacity_know.py
+  - tests/test_capacity_collectors.py
 related:
   - architecture/data-model.md
   - architecture/money.md
@@ -53,10 +54,11 @@ consulted or affected by anything here.
 
 ## Pieces (`src/treg/domain/capacity/`)
 
-- **`collectors.py`** — the 27 providers' *free* balance/quota calls (`coroutine(client, key) →
-  {value, unit, note}`), moved byte-identically from `scripts/provider_balances.py`. Only DataForSEO
-  and TikHub speak dollars; everyone else meters credits, rows, searches. `NO_BALANCE_API` names the
-  providers that publish no meter (dashboard-only) so they read as "no API", never as a broken key.
+- **`collectors.py`** — the 31 providers' *free* balance/quota calls (`coroutine(client, key) →
+  {value, unit, note}`), moved byte-identically from `scripts/provider_balances.py`. Only DataForSEO,
+  TikHub, and Brightdata speak dollars; everyone else meters credits, rows, searches. `NO_BALANCE_API`
+  names the 7 providers that publish no meter (dashboard-only) so they read as "no API", never as a
+  broken key.
   `provider_balance()` never raises — a failure is a row. It reads the *setting*, not
   `platform_key_for`: the tier-4 allow-list is a serving kill switch, and a provider just switched
   off is exactly one whose last balance we still want.
