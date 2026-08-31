@@ -266,6 +266,26 @@ def test_shape_fingerprint_ignores_values_but_not_structure():
     assert V.shapes_match(a, b) is True and V.shapes_match(a, c) is False and V.shapes_match(a, b"nope") is None
 
 
+def test_shape_empty_vs_nonempty_list_differs_but_both_empty_match():
+    """Regression for leadsforge.people.enrich.job.list shape verification failure.
+
+    The endpoint lists account-specific jobs. Direct (treg's Leadsforge account) vs relay
+    (Orthogonal's Leadsforge account) returned different job histories: one had jobs, the
+    other empty. `shape()` distinguishes `[]` from `[{...}]`, so verify failed.
+
+    Fix: set `test_request.queryParams.from` to a far-future date, guaranteeing both
+    accounts return empty lists → same shape → verify passes.
+    """
+    with_jobs = b'{"jobs": [{"jobID": "abc", "status": "completed"}], "offset": 0, "limit": 5, "total": 1}'
+    no_jobs = b'{"jobs": [], "offset": 0, "limit": 5, "total": 0}'
+    both_empty = b'{"jobs": [], "offset": 0, "limit": 5, "total": 0}'
+
+    assert V.shapes_match(with_jobs, no_jobs) is False, "non-empty vs empty list shapes must differ"
+    assert V.shapes_match(no_jobs, both_empty) is True, "both-empty lists must have same shape"
+    assert V.shape({"jobs": []}) == {"jobs": []}
+    assert V.shape({"jobs": [{"id": "x"}]}) == {"jobs": [{"id": "leaf"}]}
+
+
 async def test_verify_route_marks_same_shape_and_polls_async_runs():
     import httpx
     r = _route(aggregator="monid", agg_slug="hunterio", agg_path="/email-finder", agg_unit="result",
