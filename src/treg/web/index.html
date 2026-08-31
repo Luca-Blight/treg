@@ -4096,7 +4096,7 @@ createApp({
       // their own shelf; they are SEO now, unfeatured, so they surface inside its "see more" row
       // rather than as a category of six. The list is a lookup, not a schema — a category the
       // catalog invents tomorrow still gets a shelf, sorted to the end.
-      const order=['SEO/AEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps','Community'];
+      const order=['Enrichment','SEO/AEO','Social','Advertising','E-commerce','Reviews & Apps','Community'];
       const hints={
         'SEO/AEO':'rankings, keywords and backlinks — what search engines know, and what the answer engines say',
         'Social':'posts, profiles and comments, straight from the feeds',
@@ -4425,8 +4425,8 @@ createApp({
       {k:'soc',  cat:'Scrape linkedin',         logo:'linkedin',prompt:'Use treg to look up linkedin.com/in/jasonzhoudesign'},
     ]; },
     tryOauth(){ return [
-      {label:'Post on social',      items:[{s:'x',n:'X (Twitter)'},{s:'youtube',n:'YouTube'},{s:'tiktok',n:'TikTok'},{s:'linkedin',n:'LinkedIn'},{s:'facebook',n:'Facebook Pages'}],
-                                    soon:[{s:'instagram',n:'Instagram'}]},
+      {label:'Post on social',      items:[{s:'x',n:'X (Twitter)'},{s:'youtube',n:'YouTube'},{s:'tiktok',n:'TikTok'},{s:'linkedin',n:'LinkedIn'},{s:'facebook',n:'Facebook Pages'},{s:'instagram',n:'Instagram'}],
+                                    soon:[]},
       {label:'Manage ad campaigns', items:[{s:'google-ads',n:'Google Ads'},{s:'meta-ads',n:'Meta Ads'}], soon:[]},
       {label:'SEO on your own site',items:[{s:'google-analytics',n:'Google Analytics'},{s:'google-search-console',n:'Search Console'},{s:'google-business-profile',n:'Business Profile'}], soon:[]},
     ]; },
