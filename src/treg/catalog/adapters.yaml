@@ -428,31 +428,6 @@ adapters:
     out: {results: results, count: "len(results)"}
     miss: "results == []"
 
-  # ---- creators.search ---------------------------------------------------------------------
-  # The capability that most needs routing, and the one that never had it. influencersclub takes
-  # location / keywords_in_bio / number_of_followers as REAL filters and returns followers,
-  # engagement and location inline; exa takes a sentence and returns a URL and a title. Both answer
-  # "find creators", so an agent picks one blind — and on the bench it picked exa, then spent 115
-  # instagram.user.profile calls checking follower counts by hand and discarded people it could not
-  # confirm. With a contract, exa reports `ignored_filters` and ranks below a provider that filters.
-  influencersclub.creators.search:
-    accepts: [[q]]
-    in:  {}
-    in_expr: {body.platform: "coalesce(platform, 'instagram')", body.nlp_search: q,
-              body.paging.limit: limit, body.paging.page: "0",
-              body.filters.location: "list(location)", body.filters.keywords_in_bio: "list(keywords)",
-              body.filters.number_of_followers.min: followers_min,
-              body.filters.number_of_followers.max: followers_max}
-    test_identity: {q: specialty coffee baristas}
-    out: {creators: accounts, count: "len(accounts)"}
-    miss: "accounts == []"
-  exa.creators.search:
-    accepts: [[q]]
-    in:  {q: body.query}
-    in_expr: {body.query: "join(q, csv(keywords), location)", body.numResults: limit}
-    out: {creators: results, count: "len(results)"}
-    miss: "results == []"
-
   # ---- people.search ------------------------------------------------------------------------
   exa.people.search:
     accepts: [[q]]
