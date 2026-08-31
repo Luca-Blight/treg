@@ -44,7 +44,7 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 | `/resources` + `/use-cases/<slug>` | The outcome pages and their hub. Their sitemap rows are spread from `_USE_CASES` rather than listed by hand, so routing a new page lists it — see below. |
 | `/catalog` | The dashboard SPA, in public mode — the marketplace's Catalog view on an indexable URL. |
 | `/catalog/<slug>` | The same SPA, on the platform view for one shelf. |
-| `/tools/<service>` | The catalog sliced by **vendor**, fully server-rendered (`_page`, no SPA): one public page per provider — logo, category, base URL and blurb from the oauth-provider registry, a connect block, every tool with its price grouped by platform, the other providers on the same capabilities, its v2 anatomy (hero flow with the llms.txt bar, setup details, worked calls, why-treg cards, the full grouped tool list, frameworks, alternatives, FAQPage/HowTo JSON-LD) and a metered-vs-own-account FAQ picked by whether the provider has any priced endpoint (the credential registry is the wrong test — nearly every provider is in it). There is deliberately NO provider index page: /providers earned no searches and made a second "browse everything" URL, so the provider links live in /catalog's crawlable prerender instead (and the index could never live at `/tools` anyway - that exact path is the authed team-tools API, and a public page there shadows it). `/tools/<service>` itself is safe (the API's GETs there are `/tools` and the two-segment `/tools/by-name/…`). A signed-out `GET /app/marketplace/<service>` 302s to `/tools/<service>` (an unknown service 404s there rather than redirecting into a 404); signed-in keeps the SPA view. `tests/test_provider_pages.py` pins the route shape. |
+| `/tools/<service>` | The catalog sliced by **vendor**, fully server-rendered (`_page`, no SPA): one public page per provider. **Title and H1 match** to describe the real listing: metered providers get `{Provider}: {n} tools from {price}` (title adds `API pricing:` prefix for SEO), own-account providers get `{Provider}: connect your own account`. The page shows logo, category, blurb from the oauth-provider registry, setup/MCP instructions, up to 8 tools per platform (with "See all N on the catalog" link for larger sets), why-treg cards, alternatives, and a metered-vs-own-account FAQ. JSON-LD: BreadcrumbList (with `treg.to` not bare `treg`), ItemList, FAQPage, HowTo. Tool counts and prices are live from `catalog_store`, never hardcoded. No em-dashes in page copy. There is no provider index page: /providers earned no searches and the provider links live in /catalog's prerender instead. `/tools/<service>` is safe from shadowing the API (the API's GETs are `/tools` and `/tools/by-name/…`). A signed-out `GET /app/marketplace/<service>` 302s to `/tools/<service>`. `tests/test_provider_pages.py` pins the route shape. |
 | `/docs` | Server-rendered API reference built from `app.openapi()`. |
 | `/docs/api` | FastAPI's Swagger UI, moved here and `Disallow`ed. ReDoc is off. |
 | `/media/og.png` | The 1200×630 social card, served by the pre-existing `/media` mount. |
@@ -234,13 +234,21 @@ favicon only resolves at 16px and falls back to a generic globe at 64.
 Per-platform cards (`/media/og/<slug>.png`) are a deliberate follow-up. Until then every catalog page
 points at the shared one.
 
-## The agent pages — `/agents/<agent>`
+## The agent pages — `/agents/<agent>`, and the hub at `/agents`
 
 "I use ChatGPT — what can it do now?" answered on one server-rendered URL per client. The first is
 `/agents/chatgpt`; the set is the keys of `agent_pages.AGENTS`, and nothing else (an unknown agent
 404s). They came out of the programmatic-SEO plan in `marketing/pseo-build-spec.md`: the measured
 demand is for the *agent* ("chatgpt connectors") and the *platform* ("linkedin api pricing"), never
 for "how to <job> in chatgpt", so the job list lives on the agent page as rows, not as URLs.
+
+**The hub at `/agents`** (2026-08-31) is one card per client off `AGENTS` — name, the `definition`
+sentence with the counts formatted in, a link. It exists because the discovery pass gave every
+surface an "Agents" nav link with nowhere to point it: the link went to `/agents/claude-code` (one
+client's page standing in for all of them) while the bare `/agents` URL 404ed. The nav now points
+at the hub, the agent pages' breadcrumb carries it as the parent (treg.to / Agents / <name>), and
+the sitemap lists it at 0.8 beside the other two hubs. Hosted-only and adtrack'd like everything
+else off `_page()`; no `.md` mirror, matching `/use-cases` and `/workflows`.
 
 **One skin for both page types.** The agent and use-case pages render with `usecase.css`, the
 landing-page skin the five outcome pages already use, passed to `_page(css=...)`: centered hero with
@@ -259,8 +267,10 @@ calls), because an invented subscription number is worse than no anchor.
 
 **Two halves, one rule each.** The hand-written half lives in `src/treg/agent_pages.py` — a module
 with no heavy imports so it costs the light CLI nothing and can be reviewed without reading routing
-code. It holds `ROLES` (the rotating "ChatGPT for *SEO experts / social media managers / SDRs*…"
-hero; the first role is server-rendered in the H1 so a crawler reads a full sentence), the install
+code. It holds `ROLES` (the rotating "for *SEO experts / social media managers / SDRs*…" line; the
+H1 itself is the keyword and the promise — "The ChatGPT Connector: call {n} APIs without keys" —
+because a persona in the H1 read as the page's audience, and the first role is server-rendered on
+the roleline so a crawler still gets a full phrase), the install
 steps and screenshot, one example prompt per category, the FAQ, and `USE_CASES`: the buyer's menu —
 plain-words jobs ("Find professional emails", "Find creators by keyword") under fourteen buyer
 categories, each mapped to the capability ids that do it. That taxonomy is the map of the whole
@@ -287,7 +297,7 @@ one motion, and promoting them would have committed four URL segments to a disti
 exists in a practitioner's head. The section builder orders rows by group and prints a divider row
 before each; the `.md` mirror sorts by the same order.
 
-**Hosted only.** The copy describes treg.to's own listings — the ChatGPT Plugins entry, the $1.00
+**Hosted only.** The copy describes treg.to's own listings — the ChatGPT Connectors entry, the $1.00
 grant — none of which is true of a self-hosted registry. `_hosted()` checks `public_url` against
 `PUBLIC_HOST_ALIASES`; elsewhere the route 404s and the sitemap omits the rows, rather than lie.
 
@@ -455,13 +465,37 @@ trial allowance with `max()` over the rows that have a `cost_view`; TikHub's Lin
 carries no cost at all, so on the comments job the generator was empty and the page 500ed past every
 green test (the tests render other jobs). `default=0` now; the cell prints "no dollar rate published".
 
-**Routed rows appear on the pages as a provider called treg** (2026-08-29). PR #242's first-party routed
-endpoints (`treg.<capability>`, `kind: routed`, `architecture/catalog.md` § Routing) are catalog rows
-on the capability, so `_uc_providers` lists them beside the children with the children's cheapest rate
-and "unverified". The template's "treg.to does not choose for you" line is now half true: the routed row
-is the explicit opt-in where it does choose, own keys first, naming the child that served. The five
-pages of 2026-08-29 say exactly that in a note; the earlier pages and the template line have not been
-revisited, which is a decision for whoever owns the routing copy.
+**Routed rows are off every public surface, not just comparison tables** (2026-08-31). PR #242's
+first-party routed endpoints (`treg.<capability>`, `kind: routed`) were leaking into `_uc_providers`
+as a fake "treg" provider row — and, found while fixing that, into every other public projection of
+the catalog: the agent-page menu counted "treg" as an extra provider on every routed job, the
+use-case hub's card metas did the same, `_provider_rows` published a self-referential `/tools/treg`
+page into the sitemap, and `_catalog_census` counted the 76 meta-rows on top of the children they
+delegate to. `_pub()` in `routers.web` is now the one filter every public page reads (hidden kinds
+plus routed), `/tools/treg` 404s (the all-rows-hidden fallback in `tools_provider` no longer
+resurrects routed rows), and the advertised tool count dropped accordingly (2,745 → 2,669). The
+public name is treg.to; a bare "treg" vendor row must never appear on any page —
+`test_routed_rows_never_surface_a_provider_named_treg` pins it.
+
+**Pages with a free own-account row use a filtered WHY_TREG** (2026-08-31). `WHY_TREG` contains
+cards like "One key, not 9 accounts" and "Already pay Hunter? Register it..." that are false
+wherever the reader's own connected account does the job. That is the short own-account pages (GA4,
+Search Console) — and also the YouTube comparison pages whose official Data API row is a $0.00
+own-account row, so the condition is `any(p["free"] for p in provs)`, not "short form only" (the
+first cut missed the YouTube pages). Those pages render `WHY_TREG_OWN_KEY` instead, keeping only the
+cards that stay true ("No code to write", "Nothing to integrate").
+
+**Possessive slugs 301 to clean slugs** (2026-08-31). Five use-case pages shipped with possessive slugs
+containing `-s-` (e.g. `get-a-video-s-transcript`, `a-company-s-email-format`). Before GSC indexed them,
+the keys in `USE_CASE_PAGES` were renamed to clean slugs (`youtube-transcript-api`, `company-email-format`,
+etc.) and `USE_CASE_REDIRECTS` maps old to new. The flat route checks `USE_CASE_REDIRECTS` first and 301s, and the nested legacy route resolves
+through the same map before its own lookup (it used to reject a renamed slug first, turning the
+promised 301 into a 404 on the nested shape);
+the old slugs are not in the sitemap (only `USE_CASE_PAGES` keys appear) and the canonical is on the
+new slug. Redirects: `get-a-video-s-transcript` -> `youtube-transcript-api`,
+`a-channel-s-profile-and-lifetime-stats` -> `youtube-channel-stats`, `a-video-s-comments` ->
+`youtube-video-comments`, `a-business-s-reviews` -> `business-reviews`, `a-company-s-email-format` ->
+`company-email-format`.
 
 **The related-card test hard-coded the agent-page anchor** (2026-08-29). It asserted the email-finder
 page links to `/agents/chatgpt#`, which was only ever the fallback for a related label with no page;
@@ -480,7 +514,58 @@ nor Alpha Vantage in the catalog, said in the lede.
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a
 rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
-was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
+was one row on one agent page. All hosted-only and sitemapped; the RENDERED job pages are `.md`-mirrored like the agent pages, but the five flat ad pages are not — their route serves no `.md`, which is why the build stopped advertising alternates for them.
+
+### The five campaign hub pages (2026-08-31 rewrite)
+
+The five Google Ads landing pages (`/use-cases/seo-data-for-ai-agents`, `/use-cases/lead-enrichment-for-ai-agents`,
+`/use-cases/social-trend-research-for-ai-agents`, `/use-cases/competitor-ad-research-for-ai-agents`,
+`/use-cases/company-research-for-ai-agents`) are built from markdown sources in `marketing/landing/` via
+`build.py` and `build_html.py`, served as static HTML with `{BASE}` templating applied at request time.
+
+**Title matches H1, and both carry the measured buyer term.** The shipped H1s: "SEO Data: Google
+Results, Keywords and Backlinks", "Waterfall Enrichment: Find and Verify Work Emails", "Social Data
+MCP: Reddit, Instagram, TikTok, YouTube", "Ad Library API: Meta, Google, TikTok, LinkedIn Ads",
+"Company Research: Funding, Headcount and Leadership". Per-vendor MCP keywords still belong on
+`/tools/<provider>`; a category-level term ("social data mcp", "ad library api") may lead a hub when
+it is the measured phrase.
+
+**CTAs are "Start Free" and "Paste llms.txt".** The primary CTA links `/app?ref=<page_id>`, the
+secondary links `/llms.txt` directly. The copy-paste prompt in each page's workflow section is the
+action the page exists to produce.
+
+**JSON-LD: BreadcrumbList and FAQPage.** Every page carries both schemas. The breadcrumb names
+"treg.to" (never bare "treg") as the root. FAQ pairs are extracted from the "Before you sign up"
+section during build.
+
+**What the 2026-08-31 review fixed in the build** (each shipped past green tests and was caught by
+reading the rendered pages): the hero's fenced prompt rendered as `<code>text\n…` — `render_hero`
+now strips the fence with `code_text` and gives it the copy affordance, and the bold price line
+under it (previously dropped) renders as the subline. The FAQ parser only knew full-line bold
+questions, so the rewritten `**Q?**: answer` one-liners folded several visible FAQs into one
+JSON-LD acceptedAnswer; it now splits the one-line form first. The kicker was hand-typed
+("2,600+ tools · 40+ providers") — it is now read from the catalog at build time and floored to a
+bound (F-01's convention: a static page states a rounded-down claim that stays true as the catalog
+grows). `sitetrack.js` had been dropped in the rewrite (the attribution test caught it) and is
+restored before `adtrack.js` on all six files. The advertised `.md` alternates are gone — the
+legacy-hub route serves no `.md`, so every one 404ed. The brand anchor reads `treg.to`. And the
+lead-enrichment "Proof from one real run" block no longer shows the 1-email $0.0245 demo: it
+carries the receipt of the 50-company workflow run (2026-08-26, $3.62, $0.13 per deliverable
+lead) and points at `/workflows/find-and-verify-a-lead-list`, so the hub sells the workflow
+instead of competing with it.
+
+**Links to job pages, not competing with them.** The "Next steps" section links real job pages and
+workflows: lead-enrichment links `/workflows/find-and-verify-a-lead-list` ($3.62 from a real run) and
+`/use-cases/find-professional-emails`; SEO links keyword and SERP job pages; social links creator and
+trending job pages. The hubs sell the job pages, not cannibalize them.
+
+**No hardcoded numbers.** Every figure on the page comes from `catalog_store` or a real run receipt.
+The workflow receipts (e.g. $3.62 for lead generation) are hand-recorded from actual runs, not
+rate-card estimates.
+
+**`{BASE}` templating.** The canonical URL and `og:url` use `{BASE}` in the HTML, substituted at
+request time by `routers/web.py` reading and replacing before returning `HTMLResponse`. This is the
+same pattern as `landing.html` and the legal pages.
 
 ## The workflow pages — `/workflows/<slug>`, and the hub at `/workflows`
 
@@ -549,16 +634,20 @@ workflow is cross-linked the moment it is routed, and nothing is listed by hand.
 ### Titles: the pricing intent
 
 The non-brand queries that reach the site are "{provider} api pricing" phrasings ("linkedin api
-pricing", "1688 api pricing" — the one non-brand click in 28 days), not "api for agents". So:
+pricing", "1688 api pricing"), not "api for agents". So:
 
 - `/tools/<provider>` titles lead with it: `{Provider} API pricing: from $0.00245/result, no signup | treg.to`
   (the price label carries its own billing unit, so the copy never says "per call" beside it;
   falls back to `{Provider} API pricing: from $X | treg.to` past 65 characters; own-account
-  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate
-  weighted by each endpoint's DECIDED calls (`decided` in `endpoint_stats`, 2xx + 5xx, never the
-  4xx-inclusive `samples`), median of the endpoint `p50_ms` medians — read through
-  `_observed_or_empty` like the job pages; it is the one fact a vendor's own pricing page cannot
-  print.
+  providers get `{Provider}: connect your own account | treg.to`). **Title and H1 now match**:
+  metered H1 is `{Provider}: {n} tools from {price}`, own-account H1 is `{Provider}: connect your own account`.
+  The kicker carries the measured line (calls observed, ok rate weighted by DECIDED calls, median p50)
+  read through `_observed_or_empty`. Descriptions go through `_serp_desc` (sentence-fit under
+  Google's cut), and the HowTo's steps mirror the visible setup section in order — the one-line
+  install first, direct MCP second — because schema describing a different flow than the page
+  shows is the mismatch Google treats as a violation. The setup line on these pages is the
+  canonical `set up treg — {base}/llms.txt` (the em-dash is the documented exception, and a
+  colon variant that shipped briefly forked the product's one paste-line).
 - compare-form job titles get `, from $X` appended when the hand-written title carries no price and
   the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
 
