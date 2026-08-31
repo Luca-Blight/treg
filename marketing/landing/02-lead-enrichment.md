@@ -1,9 +1,9 @@
 ---
 page_id: p2
 slug: /use-cases/lead-enrichment-for-ai-agents/
-seo_title: "Find and Verify Work Emails from One Agent Prompt | treg.to"      # 59
+seo_title: "GTM Data: Find and Verify Work Emails | treg.to"      # 45
 meta_description: "Let your agent find companies, identify decision-makers and verify work emails through one key. Pay per lookup, not per seat. $1.00 free to start."  # 146
-h1: "Find and Verify Decision-Makers from One Agent Prompt"
+h1: "GTM Data: Find and Verify Work Emails"
 hub_title: "Lead enrichment"
 hub_blurb: "Find companies, identify the decision-maker, verify the work email. Misses are free."
 price_old: "$142/mo"
@@ -36,12 +36,12 @@ status: proof populated from a real run 2026-08-17 ($0.0245) · ready for build 
 
 ## Hero
 
-### Find and Verify Decision-Makers from One Agent Prompt
+### GTM Data: Find and Verify Work Emails
 
 Describe the companies you want and who you need inside them; your agent finds them, enriches the
 profiles and verifies the work emails, paying per lookup instead of per seat.
 
-**[ Run This Workflow Free ]**   **[ See the Example ]**
+**[ Start Free ]**   **[ Paste llms.txt ]**
 
 `S-TRUST-HERO`
 
@@ -217,11 +217,27 @@ for roughly 40 verified email lookups before you spend anything.
 
 ---
 
+## Next steps
+
+### The full workflow: 50 companies, verified emails, $3.62
+
+Run the complete lead generation workflow that produced the numbers on this page:
+
+- [Build a Verified Lead List](/workflows/find-and-verify-a-lead-list) ($3.62 for 50 companies, from a real run)
+
+### Individual jobs this workflow calls
+
+- [Find Professional Emails](/use-cases/find-professional-emails)
+- [Verify an Email Before You Send](/use-cases/verify-an-email-before-you-send)
+- [Build a Company List](/use-cases/build-a-company-list-by-industry-size-or-tech)
+
+---
+
 ## Final section
 
 ### Your next list can be built, enriched and verified in one prompt
 
-**[ Run This Workflow Free ]**
+**[ Start Free ]**
 
 `S-FINAL-CTA-TRUST`
 

@@ -1,9 +1,9 @@
 ---
 page_id: p5
 slug: /use-cases/company-research-for-ai-agents/
-seo_title: "Company Data and Funding for AI Agents | treg.to"           # 54
+seo_title: "Company Research: Funding, Headcount and Leadership | treg.to"           # 57
 meta_description: "Let your agent search companies and pull funding, headcount and leadership through one key. Eleven providers, from free to $0.38 a record."  # 145
-h1: "Research Any Company List Without Buying a Database"
+h1: "Company Research: Funding, Headcount and Leadership"
 hub_title: "Company data & funding"
 hub_blurb: "Search companies, then pull funding, headcount and leadership. Eleven providers, free to $0.38 a record."
 price_old: "$398/mo"
@@ -36,12 +36,12 @@ status: proof populated from real runs 2026-08-17 ($0.10188) · funding proven, 
 
 ## Hero
 
-### Research Any Company List Without Buying a Database
+### Company Research: Funding, Headcount and Leadership
 
 Your agent can find companies by size, industry, tech or funding, then pull funding history, headcount
 and leadership across eleven providers — paying per record instead of buying a database.
 
-**[ Run This Workflow Free ]**   **[ See the Example ]**
+**[ Start Free ]**   **[ Paste llms.txt ]**
 
 `S-TRUST-HERO`
 
@@ -242,11 +242,22 @@ shown before the call, and treg.to adds no markup. New teams start with $1.00 of
 
 ---
 
+## Next steps
+
+### Individual jobs you can run now
+
+- [Build a Company List by Industry, Size or Tech](/use-cases/build-a-company-list-by-industry-size-or-tech)
+- [Enrich a Company From Its Domain](/use-cases/enrich-a-company-from-its-domain)
+- [A Company's Funding Rounds](/use-cases/a-companys-funding-rounds)
+- [What Technology a Company Runs](/use-cases/what-technology-a-company-runs)
+
+---
+
 ## Final section
 
 ### Research a market this afternoon, without buying a database
 
-**[ Run This Workflow Free ]**
+**[ Start Free ]**
 
 `S-FINAL-CTA-TRUST`
 

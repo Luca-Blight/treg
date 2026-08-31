@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Social and Creator Trend Data for AI Agents | treg.to</title>
+<title>Social Trends: TikTok, Reddit, YouTube and X Data | treg.to</title>
 <meta name="description" content="Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."/>
-<link rel="canonical" href="https://treg.to/use-cases/social-trend-research-for-ai-agents"/>
-<meta property="og:title" content="Social and Creator Trend Data for AI Agents | treg.to"/>
+<link rel="canonical" href="{BASE}/use-cases/social-trend-research-for-ai-agents"/>
+<link rel="alternate" type="text/markdown" href="{BASE}/use-cases/social-trend-research-for-ai-agents.md"/>
+<meta property="og:title" content="Social Trends: TikTok, Reddit, YouTube and X Data | treg.to"/>
 <meta property="og:description" content="Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."/>
-<meta property="og:url" content="https://treg.to/use-cases/social-trend-research-for-ai-agents"/>
+<meta property="og:url" content="{BASE}/use-cases/social-trend-research-for-ai-agents"/>
 <meta property="og:type" content="website"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
@@ -16,7 +17,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/usecase.css"/>
-<script src="/adtrack.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"treg.to","item":"{BASE}/"},{"@type":"ListItem","position":2,"name":"Social Trends","item":"{BASE}/use-cases"},{"@type":"ListItem","position":3,"name":"Social Trends: TikTok, Reddit, YouTube and X Data","item":"{BASE}/use-cases/social-trend-research-for-ai-agents"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why not just call the providers directly?","acceptedAnswer":{"@type":"Answer","text":"On this vertical, usually because you cannot. TikTok's API is invite-only, Instagram's needs app review,\nLinkedIn's is partner-only, YouTube's is quota-capped, and X's is $200/mo. Getting approved on four\nplatforms to answer one research question is weeks of work, and some of those doors do not open for a\nsmall team at all.\nThere is also a result here we did not expect. treg.to carries both X's official API and an\nindependent route, and has measured both: the official search endpoint returns a usable answer on\n62% of calls, while the independent route has returned one on 100% of 3,311 calls. Paying $200 a\nmonth is not buying you the more reliable option. We would not have known that either without measuring\nit, and it is the reason the catalog shows a record rather than a logo.\ntreg.to is closer to OpenRouter for agent tools than to a data vendor: one base URL, one token, many\nproviders behind it."}},{"@type":"Question","name":"How are credentials handled?","acceptedAnswer":{"@type":"Answer","text":"The credential is injected on the server. Your agent makes the real upstream request through treg.to's\n/call/ endpoint; treg.to adds the key and relays the provider's answer back verbatim. No provider key\nis ever written to your machine, your repo or your agent's context. Every call is recorded and attributed\nto the token that made it."}},{"@type":"Question","name":"Can I choose a specific provider?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every endpoint has an id, and calling it by id calls that provider. If you want the choice made once\nfor the whole team, treg org pin &lt;capability&gt; --provider &lt;provider&gt; refuses calls to any other provider\nof that capability.\n(Providers differ more on field coverage than on price here \u2014 one returns comments,\nanother does not. Read the endpoint before you pin one.)"}},{"@type":"Question","name":"Can I use my existing provider key?","acceptedAnswer":{"@type":"Answer","text":"Yes, and it takes precedence. Register the key once and every call to that provider routes through it \u2014\nthose calls are never metered against your treg.to balance. Your key always wins over treg.to's."}},{"@type":"Question","name":"What happens if a provider fails?","acceptedAnswer":{"@type":"Answer","text":"treg.to does not silently reroute you. That is deliberate: only you know which inputs you actually hold,\nso treg.to relays your request rather than rewriting it. What your agent gets instead is the information\nto recover \u2014 it already knows the alternatives and their parameters, so on a 429, a 5xx or a timeout it\ncan try the next provider and tell you which one it switched to. Failed calls are not billed. If a call\nsucceeded upstream but the answer was lost coming back, an Idempotency-Key returns the stored result\nwithout paying twice.\n(Social endpoints are the most likely place you will see this, because they sit on top of platforms that\nchange. The catalog's last OK column tells you which ones have answered recently.)"}},{"@type":"Question","name":"How much does a call cost?","acceptedAnswer":{"@type":"Answer","text":"Most social endpoints are $0.001 a call. Reddit search runs $0.001 to $0.01476 depending on provider. The\nexact price is shown before the call, and treg.to adds no markup. New teams start with $1.00 of free\ncredit \u2014 around a thousand posts' worth of calls."}},{"@type":"Question","name":"Which agents does it work with?","acceptedAnswer":{"@type":"Answer","text":"The installer registers treg.to's MCP server into Claude Code, Cursor and opencode automatically. Any MCP\nclient that supports the authorization spec can connect with OAuth. Anything that can run a shell command \u2014\nCodex included \u2014 can use the treg CLI or plain HTTP."}}]}</script>
 </head>
 <body data-page="p3">
 
@@ -31,10 +33,10 @@
 
 <header class="hero"><div class="wrap">
   <div class="kicker">2,600+ tools · 40+ providers · one key</div>
-  <h1>Research Today&#x27;s Social Trends from One Prompt</h1>
+  <h1>Social Trends: TikTok, Reddit, YouTube and X Data</h1>
   <div class="lede"><p>Your agent can read real posts, creators, videos and comment threads across TikTok, Reddit, YouTube, X and
 Instagram through one key — no platform developer account, no app review, no invite.</p></div>
-  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Run This Workflow Free</a><a class="ghostbtn" href="#workflow" data-ev="lp_cta_secondary" data-page="p3">See the Example</a></div>
+  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Start Free</a><a class="ghostbtn" href="/llms.txt" data-ev="lp_cta_secondary" data-page="p3">Paste llms.txt</a></div>
   <div class="trust">$1.00 of free credit on every new team. No provider signup, no credit card.</div>
   <div class="subline"><p>X post search is the most-called tool on treg.to — <strong>3,311 calls at a 100% success rate</strong>,
 2.6 s median. TikTok, Instagram, Reddit and YouTube answer the same token, most of them at $0.001 a call.</p></div>
@@ -190,9 +192,10 @@ credit — around a thousand posts' worth of calls.</p></div></details><details 
 client that supports the authorization spec can connect with OAuth. Anything that can run a shell command —
 Codex included — can use the <code>treg</code> CLI or plain HTTP.</p>
 <hr /></div></details></div></section>
+<section class="related"><div class="wrap"><div class="seclab">Next steps</div><h2>Next steps</h2><ul class="related-list"><li><a href="/use-cases/find-creators-by-keyword">Find Creators by Keyword</a></li><li><a href="/use-cases/a-creators-profile-and-stats">A Creator&#x27;s Profile and Stats</a></li><li><a href="/use-cases/whats-trending-right-now">What&#x27;s Trending Right Now</a></li><li><a href="/use-cases/search-posts-by-keyword">Search Posts by Keyword</a></li><li><a href="/use-cases/mine-the-comments">Mine the Comments</a></li></ul></div></section>
 <section class="final"><div class="wrap">
   <h2>Ask what the internet is saying today, and get real posts back</h2>
-  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Run This Workflow Free</a></div>
+  <div class="ctas"><a class="candy" href="/app?ref=p3" data-ev="lp_cta_primary" data-page="p3">Start Free</a></div>
   <div class="trust"><p>$1.00 of free credit on every new team. No credit card, no provider signup. treg.to is open source
 (AGPL).</p></div>
 </div></section>
@@ -200,7 +203,7 @@ Codex included — can use the <code>treg</code> CLI or plain HTTP.</p>
 <footer>
   <div class="foot-in">
     <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
-    <span class="note">&mdash; 100% open source</span>
+    <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
     <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github &#8599;</a>
@@ -266,6 +269,6 @@ Codex included — can use the <code>treg</code> CLI or plain HTTP.</p>
   }
 })();
 </script>
-<script src="/sitetrack.js"></script>
+<script src="/adtrack.js"></script>
 </body>
 </html>

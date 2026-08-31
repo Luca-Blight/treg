@@ -109,6 +109,9 @@ def cta_html(b, page_id, prompt_sel="#prompt"):
         if "Copy Prompt" in lb:
             parts.append(f'<button class="candy" data-copy="{prompt_sel}" '
                          f'data-ev="lp_copy_prompt" data-page="{page_id}">{html.escape(lb)}</button>')
+        elif "Paste llms.txt" in lb:
+            parts.append(f'<a class="ghostbtn" href="/llms.txt" data-ev="lp_cta_secondary" '
+                         f'data-page="{page_id}">{html.escape(lb)}</a>')
         elif "See the Example" in lb:
             parts.append(f'<a class="ghostbtn" href="#workflow" data-ev="lp_cta_secondary" '
                          f'data-page="{page_id}">{html.escape(lb)}</a>')
@@ -365,8 +368,28 @@ def render_who(title, body, label=None):
             f'<div class="who">{"".join(items)}</div></div></section>')
 
 
+FAQ_PAIRS = []  # module-level accumulator for JSON-LD
+
+
+def render_related(title, body, label=None):
+    """Render a list of related links as a 'next steps' section."""
+    lines = [ln.strip() for ln in body.strip().splitlines() if ln.strip().startswith("-")]
+    items = []
+    for ln in lines:
+        m = re.match(r'-\s*\[([^\]]+)\]\(([^)]+)\)', ln)
+        if m:
+            text, href = m.groups()
+            items.append(f'<li><a href="{html.escape(href)}">{html.escape(text)}</a></li>')
+    if not items:
+        return ""
+    inner = f'<ul class="related-list">{"".join(items)}</ul>'
+    lab = f'<div class="seclab">{label}</div>' if label else ""
+    return f'<section class="related"><div class="wrap">{lab}<h2>{html.escape(title)}</h2>{inner}</div></section>'
+
+
 def render_faq(title, body, label=None):
     """'**Question?**\\nanswer' pairs → <details>. First one open, so the section reads as content."""
+    global FAQ_PAIRS
     # A question is a line that is ENTIRELY a bold question — nothing before it, nothing after it
     # on that line. The previous pattern let the capture start at any bold run, so an answer that
     # merely opened with bold (p3's "**62%** of calls…") swallowed the following question and
@@ -379,12 +402,49 @@ def render_faq(title, body, label=None):
         end = starts[n + 1] if n + 1 < len(starts) else len(lines)
         q = lines[i].strip()[2:-2]
         qs.append((q, "\n".join(lines[i + 1:end]).strip()))
+    # Capture for JSON-LD (strip HTML from answers for schema)
+    FAQ_PAIRS = [(q, re.sub(r'<[^>]+>', '', inline(a)).strip()) for q, a in qs]
     inner = "".join(
         f'<details{" open" if i == 0 else ""} data-ev="lp_objection_open" data-q="{html.escape(q)}">'
         f'<summary>{html.escape(q)}</summary><div class="body">{inline(a)}</div></details>'
         for i, (q, a) in enumerate(qs))
     lab = f'<div class="seclab">{label}</div>' if label else ""
     return (f'<section><div class="wrap">{lab}<h2>{html.escape(title)}</h2>{inner}</div></section>')
+
+
+import json as json_mod
+
+
+def generate_jsonld(slug, h1, category):
+    """Generate JSON-LD for BreadcrumbList and FAQPage."""
+    global FAQ_PAIRS
+    ld = []
+    # BreadcrumbList - note: breadcrumb uses "treg.to" not bare "treg"
+    ld.append({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": "{BASE}/"},
+            {"@type": "ListItem", "position": 2, "name": category, "item": "{BASE}/use-cases"},
+            {"@type": "ListItem", "position": 3, "name": h1, "item": "{BASE}/use-cases/" + slug},
+        ]
+    })
+    # FAQPage
+    if FAQ_PAIRS:
+        ld.append({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {"@type": "Question", "name": q,
+                 "acceptedAnswer": {"@type": "Answer", "text": a}}
+                for q, a in FAQ_PAIRS
+            ]
+        })
+    return "\n".join(
+        '<script type="application/ld+json">'
+        + json_mod.dumps(b, separators=(",", ":")).replace("<", "\\u003c")
+        + "</script>"
+        for b in ld)
 
 
 def render_final(body, page_id):
@@ -413,10 +473,11 @@ TEMPLATE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>{title}</title>
 <meta name="description" content="{desc}"/>
-<link rel="canonical" href="https://treg.to/use-cases/{slug}"/>
+<link rel="canonical" href="{{BASE}}/use-cases/{slug}"/>
+<link rel="alternate" type="text/markdown" href="{{BASE}}/use-cases/{slug}.md"/>
 <meta property="og:title" content="{title}"/>
 <meta property="og:description" content="{desc}"/>
-<meta property="og:url" content="https://treg.to/use-cases/{slug}"/>
+<meta property="og:url" content="{{BASE}}/use-cases/{slug}"/>
 <meta property="og:type" content="website"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
@@ -424,6 +485,7 @@ TEMPLATE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/usecase.css"/>
+{jsonld}
 </head>
 <body data-page="{page_id}">
 
@@ -441,7 +503,7 @@ TEMPLATE = """<!doctype html>
 <footer>
   <div class="foot-in">
     <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
-    <span class="note">&mdash; 100% open source</span>
+    <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
     <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github &#8599;</a>
@@ -513,7 +575,19 @@ TEMPLATE = """<!doctype html>
 """
 
 
+# Category labels for the BreadcrumbList JSON-LD
+PAGE_CATEGORIES = {
+    "p1": "SEO Data",
+    "p2": "Lead Enrichment",
+    "p3": "Social Trends",
+    "p4": "Competitor Ads",
+    "p5": "Company Research",
+}
+
+
 def build_page(path):
+    global FAQ_PAIRS
+    FAQ_PAIRS = []  # reset for each page
     text = path.read_text()
     if CUT_AT in text:
         text = text.split(CUT_AT)[0]
@@ -530,6 +604,7 @@ def build_page(path):
     chunks = [(parts[i].strip(), parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
 
     out = []
+    h1 = fm.get("h1", "")  # capture the H1 for JSON-LD
     for title, sec in chunks:
         t = title.lower()
         if t == "hero":
@@ -554,6 +629,8 @@ def build_page(path):
             out.append(render_who(title, sec, label="Fit"))
         elif t.startswith("before you sign up"):
             out.append(render_faq(title, sec, label="Questions"))
+        elif t.startswith("next steps") or t.startswith("related pages"):
+            out.append(render_related(title, sec, label="Next steps"))
         elif t.startswith("final section"):
             out.append(render_final(sec, page_id))
         # any other h2 (e.g. "Numbers used on this page") is internal and dropped by design
@@ -572,10 +649,14 @@ def build_page(path):
         strip = ""
     body_html = body_html.replace('<div class="provstrip" id="provstrip"></div>', strip)
 
+    # Generate JSON-LD
+    category = PAGE_CATEGORIES.get(page_id, "Use Cases")
+    jsonld = generate_jsonld(slug, h1, category)
+
     page = TEMPLATE.format(
         title=html.escape(fm["seo_title"]),
         desc=html.escape(fm["meta_description"]),
-        slug=slug, page_id=page_id, content=body_html,
+        slug=slug, page_id=page_id, content=body_html, jsonld=jsonld,
     )
     assert_no_leaks(f"usecase-{key}.html", page)
     dest = WEB / f"usecase-{key}.html"
@@ -588,9 +669,9 @@ HUB = """<!doctype html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Resources — what your agent can do with treg.to</title>
+<title>Resources: what your agent can do with treg.to</title>
 <meta name="description" content="Worked workflows for treg.to: SEO and search results, lead enrichment, social research, competitor ads and company data. Each one is a prompt you can copy and run."/>
-<link rel="canonical" href="https://treg.to/resources"/>
+<link rel="canonical" href="{BASE}/resources"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -625,7 +706,7 @@ HUB = """<!doctype html>
 <section><div class="wrap">
   <div class="seclab">Start anywhere</div>
   <h2>Every one of them runs on the same key</h2>
-  <p>One token, one prepaid balance, no provider signup. New teams get $1.00 of free credit &mdash; enough
+  <p>One token, one prepaid balance, no provider signup. New teams get $1.00 of free credit, enough
   to finish most of the workflows above and still have change.</p>
   <div class="ctas" style="justify-content:flex-start">
     <a class="candy" href="/app?ref=hub">Start free</a>
@@ -636,7 +717,7 @@ HUB = """<!doctype html>
 <footer>
   <div class="foot-in">
     <a class="brand" href="/"><span class="glyph">&#9626;</span> treg</a>
-    <span class="note">&mdash; 100% open source</span>
+    <span class="note">100% open source</span>
     <span class="sp"></span>
     <a href="/resources">resources</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a>
     <a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">github &#8599;</a>

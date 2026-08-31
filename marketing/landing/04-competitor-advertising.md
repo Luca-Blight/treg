@@ -1,9 +1,9 @@
 ---
 page_id: p4
 slug: /use-cases/competitor-ad-research-for-ai-agents/
-seo_title: "Competitor Ad Research for AI Agents — Per Call | treg.to"        # 57
+seo_title: "Competitor Ads: Meta, Google, TikTok and LinkedIn | treg.to"        # 55
 meta_description: "Let your agent pull competitors' live ads from the Meta, Google, TikTok and LinkedIn ad libraries through one key. Calls from $0.00188. $1.00 free."  # 147
-h1: "See What Your Competitors Are Advertising"
+h1: "Competitor Ads: Meta, Google, TikTok and LinkedIn"
 hub_title: "Competitor ads"
 hub_blurb: "Competitors' live ads out of the Meta, Google, TikTok and LinkedIn ad libraries."
 price_old: "$447/mo"
@@ -36,12 +36,12 @@ status: proof populated from real runs 2026-08-17 ($0.00752) · 4 of 4 platforms
 
 ## Hero
 
-### See What Your Competitors Are Advertising
+### Competitor Ads: Meta, Google, TikTok and LinkedIn
 
 Name five competitors and your agent pulls their live ads out of the Meta, Google, TikTok and LinkedIn ad
 libraries, then groups them by offer, hook and format — for a fraction of a cent per call.
 
-**[ Run This Workflow Free ]**   **[ See the Example ]**
+**[ Start Free ]**   **[ Paste llms.txt ]**
 
 `S-TRUST-HERO`
 
@@ -238,11 +238,20 @@ library searches.
 
 ---
 
+## Next steps
+
+### Individual jobs you can run now
+
+- [Ads a Competitor Is Running Now](/use-cases/ads-a-competitor-is-running-now)
+- [Keywords a Domain Bids On](/use-cases/keywords-a-domain-bids-on)
+
+---
+
 ## Final section
 
 ### Find out what the category is running, before your next launch
 
-**[ Run This Workflow Free ]**
+**[ Start Free ]**
 
 `S-FINAL-CTA-TRUST`
 

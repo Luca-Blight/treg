@@ -974,8 +974,12 @@ async def use_case_job_page(request: Request, job: str,
         page = _WEB_DIR / legacy
         if not page.exists():
             raise HTTPException(status_code=404, detail=f"{legacy} not bundled")
+        # Read-and-substitute rather than a bare FileResponse: {BASE} is templated for the
+        # canonical/og:url so each page names the serving host, not hardcoded treg.to.
+        base = get_settings().public_url.rstrip("/")
+        content = page.read_text(encoding="utf-8").replace("{BASE}", base)
         # no-cache: these are edited against live campaign data and must never serve stale.
-        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+        return HTMLResponse(content, headers={"Cache-Control": "no-cache"})
     # Same rule as `agent_page`: the slug reaches the canonical and the JSON-LD, so it comes from
     # the table's own key, and a differently-cased URL is redirected rather than duplicated.
     key = next((k for k in agent_pages.USE_CASE_PAGES if k == raw.lower()), None)
@@ -2928,7 +2932,10 @@ async def resources_page():
     page = _WEB_DIR / "resources.html"
     if not page.exists():
         raise HTTPException(status_code=404, detail="resources.html not bundled")
-    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    # Read-and-substitute for {BASE} templating like the use-case pages.
+    base = get_settings().public_url.rstrip("/")
+    content = page.read_text(encoding="utf-8").replace("{BASE}", base)
+    return HTMLResponse(content, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/usecase.css", include_in_schema=False)

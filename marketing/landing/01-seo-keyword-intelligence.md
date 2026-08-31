@@ -1,11 +1,11 @@
 ---
 page_id: p1
 slug: /use-cases/seo-data-for-ai-agents/
-seo_title: "Real SEO Data for AI Agents — One Key, Per Call | treg.to"        # 57 chars
+seo_title: "SEO Data: Google Results, Keywords and Backlinks | treg.to"        # 54 chars
 meta_description: "Give your agent live Google results, keyword volume and backlink data through one key. Pay per call, not per seat. $1.00 free to start."  # 137
-h1: "Give Your Agent Real SEO Data — Without a Semrush Subscription"
+h1: "SEO Data: Google Results, Keywords and Backlinks"
 hub_title: "SEO & search results"
-hub_blurb: "Live Google results, keyword volume, difficulty and backlinks — priced per call."
+hub_blurb: "Live Google results, keyword volume, difficulty and backlinks, priced per call."
 price_old: "$214/mo"
 price_old_label: "Semrush + SerpApi, at list"
 price_new: "$0.012"
@@ -37,12 +37,12 @@ status: proof populated from a real run 2026-08-17 ($0.012) · ready for build �
 
 ## Hero
 
-### Give Your Agent Real SEO Data — Without a Semrush Subscription
+### SEO Data: Google Results, Keywords and Backlinks
 
 Your coding agent can pull live Google results, keyword volume, difficulty and backlink data through one
 key, and you pay for the calls it makes instead of a seat you use twice a month.
 
-**[ Run This Workflow Free ]**   **[ See the Example ]**
+**[ Start Free ]**   **[ Paste llms.txt ]**
 
 `S-TRUST-HERO`
 
@@ -255,11 +255,23 @@ $1.00 of free credit.
 
 ---
 
+## Next steps
+
+### Individual jobs you can run now
+
+- [Keyword Volume, CPC and Competition](/use-cases/keyword-volume-cpc-and-competition)
+- [Google Results for a Keyword](/use-cases/google-results-for-a-keyword)
+- [Keywords a Domain Ranks For](/use-cases/keywords-a-domain-ranks-for)
+- [Is This Page Indexed, and Why Not](/use-cases/is-this-page-indexed-and-why-not)
+- [Backlink Profile of a Domain](/use-cases/backlink-profile-of-a-domain)
+
+---
+
 ## Final section
 
 ### Your next keyword plan can be built by the agent that is already open
 
-**[ Run This Workflow Free ]**
+**[ Start Free ]**
 
 `S-FINAL-CTA-TRUST`
 

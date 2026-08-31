@@ -1,11 +1,11 @@
 ---
 page_id: p3
 slug: /use-cases/social-trend-research-for-ai-agents/
-seo_title: "Social and Creator Trend Data for AI Agents | treg.to"            # 53
+seo_title: "Social Trends: TikTok, Reddit, YouTube and X Data | treg.to"            # 55
 meta_description: "Let your agent research posts, creators and conversations across TikTok, Reddit, YouTube, X and Instagram through one key. Pay per call. $1.00 free."  # 148
-h1: "Research Today's Social Trends from One Prompt"
+h1: "Social Trends: TikTok, Reddit, YouTube and X Data"
 hub_title: "Social & creator trends"
-hub_blurb: "Posts, creators and comments across TikTok, Reddit, YouTube and X — no platform approval."
+hub_blurb: "Posts, creators and comments across TikTok, Reddit, YouTube and X, no platform approval."
 price_old: "$200/mo"
 price_old_label: "the X API alone"
 price_new: "$0.0059"
@@ -36,12 +36,12 @@ status: proof populated from real runs 2026-08-17 ($0.00588) · 4 of 4 platforms
 
 ## Hero
 
-### Research Today's Social Trends from One Prompt
+### Social Trends: TikTok, Reddit, YouTube and X Data
 
 Your agent can read real posts, creators, videos and comment threads across TikTok, Reddit, YouTube, X and
 Instagram through one key — no platform developer account, no app review, no invite.
 
-**[ Run This Workflow Free ]**   **[ See the Example ]**
+**[ Start Free ]**   **[ Paste llms.txt ]**
 
 `S-TRUST-HERO`
 
@@ -234,11 +234,23 @@ credit — around a thousand posts' worth of calls.
 
 ---
 
+## Next steps
+
+### Individual jobs you can run now
+
+- [Find Creators by Keyword](/use-cases/find-creators-by-keyword)
+- [A Creator's Profile and Stats](/use-cases/a-creators-profile-and-stats)
+- [What's Trending Right Now](/use-cases/whats-trending-right-now)
+- [Search Posts by Keyword](/use-cases/search-posts-by-keyword)
+- [Mine the Comments](/use-cases/mine-the-comments)
+
+---
+
 ## Final section
 
 ### Ask what the internet is saying today, and get real posts back
 
-**[ Run This Workflow Free ]**
+**[ Start Free ]**
 
 `S-FINAL-CTA-TRUST`
 

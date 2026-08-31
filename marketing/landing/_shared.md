@@ -6,10 +6,10 @@ answer, it overrides the block and says so inline.
 ---
 
 ## `S-CTA-PRIMARY`
-**Run This Workflow Free**
+**Start Free**
 
 ## `S-CTA-SECONDARY`
-**See the Example**
+**Paste llms.txt**
 
 ## `S-TRUST-HERO`
 $1.00 of free credit on every new team. No provider signup, no credit card. `F-02` `F-08`
