@@ -54,7 +54,7 @@ consulted or affected by anything here.
 
 ## Pieces (`src/treg/domain/capacity/`)
 
-- **`collectors.py`** — the 30 providers' *free* balance/quota calls (`coroutine(client, key) →
+- **`collectors.py`** — the 31 providers' *free* balance/quota calls (`coroutine(client, key) →
   {value, unit, note}`), moved byte-identically from `scripts/provider_balances.py`. Only DataForSEO,
   TikHub, and Brightdata speak dollars; everyone else meters credits, rows, searches. `NO_BALANCE_API`
   names the 7 providers that publish no meter (dashboard-only) so they read as "no API", never as a
