@@ -368,6 +368,45 @@ async def test_resource_provider_io_runs_without_an_open_database_session(
     assert r.status_code == 200, r.text
 
 
+async def test_resource_selection_rejects_a_concurrent_reconnect(
+    clients: AsyncClient, treg_meta_app, monkeypatch,
+):
+    """Do not combine a Page token from an old grant with a reconnected root token."""
+    _meta_test_provider(monkeypatch, "instagram")
+    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    sid = st["secret_id"]
+    real_resolve = connect_use_cases._resolve_resource_call_token
+
+    async def reconnect_during_resolve(*args, **kwargs):
+        setup_fields = await real_resolve(*args, **kwargs)
+        async with session_maker() as db:
+            secret = await db.get(Secret, sid)
+            blob = json.loads(crypto.decrypt(secret.value))
+            blob["access_token"] = "RECONNECTED-META-TOKEN"
+            secret.value = crypto.encrypt(json.dumps(blob))
+            await db.commit()
+        return setup_fields
+
+    monkeypatch.setattr(
+        connect_use_cases, "_resolve_resource_call_token", reconnect_during_resolve,
+    )
+    r = await clients.post(f"/connections/{sid}/resource", json={
+        "resource_ref": "IG-DIRECT", "resource_name": "direct_ig",
+    })
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"] == (
+        "the connection changed during resource setup; select the resource again"
+    )
+
+    async with session_maker() as db:
+        secret = await db.get(Secret, sid)
+        blob = json.loads(crypto.decrypt(secret.value))
+        assert blob["access_token"] == "RECONNECTED-META-TOKEN"
+        assert "page_access_token" not in blob
+        assert "page_id" not in blob
+        assert secret.resource_ref == ""
+
+
 async def test_instagram_selection_rejects_an_unlinked_account_atomically(
     clients: AsyncClient, treg_meta_app, monkeypatch,
 ):
