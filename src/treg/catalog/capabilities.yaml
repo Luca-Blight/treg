@@ -157,6 +157,8 @@ capabilities:
   instagram.user.profile: "Get a user's public profile"
   instagram.user.posts: "List a user's recent posts"
   instagram.post.comments: "List a post's comments"
+  instagram.messages.list: "List customer-started Instagram Direct conversations"
+  instagram.message.send: "Reply to a customer in Instagram Direct"
   youtube.video.detail: "Get a video's metadata & stats"
   youtube.video.comments: "List a video's comments"
   youtube.channel.videos: "List a channel's videos"

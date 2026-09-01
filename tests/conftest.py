@@ -94,16 +94,17 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         return {"access_token": "META-TOKEN", "token_type": "bearer", "expires_in": 5183944}
 
     @up.get("/me/accounts")
-    async def meta_pages() -> dict:
+    async def meta_pages(request: Request) -> dict:
         # Meta's primary Page listing: what the user manages through a PERSONAL Page role. One row
         # carries both the facebook shape (id/name) and the instagram shape (nested professional
         # account), so both Meta providers can discover against the same stand-in.
-        return {
-            "data": [
-                {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
-                 "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
-            ]
+        page = {
+            "id": "PAGE-DIRECT", "name": "Directly Managed Page",
+            "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"},
         }
+        if "access_token" in request.query_params.get("fields", ""):
+            page["access_token"] = "PAGE-TOKEN-DIRECT"
+        return {"data": [page]}
 
     @up.get("/me/businesses")
     async def meta_businesses(request: Request):
@@ -116,19 +117,62 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         if "noscope" in request.headers.get("authorization", ""):
             return JSONResponse(
                 {"error": {"message": "(#100) Missing Permission", "code": 100}}, status_code=400)
+        direct = {
+            "id": "PAGE-DIRECT", "name": "Directly Managed Page",
+            "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"},
+        }
+        client = {
+            "id": "PAGE-CLIENT", "name": "Agency Client Page",
+            "instagram_business_account": {"id": "IG-CLIENT", "username": "client_ig"},
+        }
+        if "access_token" in request.query_params.get("fields", ""):
+            direct["access_token"] = "PAGE-TOKEN-DIRECT"
+            client["access_token"] = "PAGE-TOKEN-CLIENT"
         return {
             "data": [
                 {"id": "BIZ-1", "owned_pages": {"data": [
-                    {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
-                     "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
+                    direct,
                     {"id": "PAGE-NO-IG", "name": "Business Page Without Instagram"},
                 ]}},
                 {"id": "BIZ-2", "client_pages": {"data": [
-                    {"id": "PAGE-CLIENT", "name": "Agency Client Page",
-                     "instagram_business_account": {"id": "IG-CLIENT", "username": "client_ig"}},
+                    client,
                 ]}},
             ]
         }
+
+    @up.get("/v25.0/{page_id}/conversations")
+    async def instagram_conversations(page_id: str, request: Request):
+        # Messaging is the regression this Meta token split fixes: the user token is valid OAuth,
+        # but this edge accepts only the token of the Page linked to the selected Instagram account.
+        if request.headers.get("authorization") != "Bearer PAGE-TOKEN-DIRECT":
+            return JSONResponse(
+                {"error": {"message": "must be called with a Page access token", "code": 190}},
+                status_code=403,
+            )
+        return {"data": [{"id": "IG-CONVERSATION-1", "page_id": page_id}]}
+
+    @up.post("/v25.0/{page_id}/subscribed_apps")
+    async def instagram_subscribe(page_id: str, request: Request):
+        expected_token = {
+            "PAGE-DIRECT": "PAGE-TOKEN-DIRECT",
+            "PAGE-CLIENT": "PAGE-TOKEN-CLIENT",
+        }.get(page_id)
+        if request.headers.get("authorization") != f"Bearer {expected_token}":
+            return JSONResponse(
+                {"error": {"message": "must be called with a Page access token", "code": 190}},
+                status_code=403,
+            )
+        subscribed_fields = request.query_params.get("subscribed_fields", "")
+        if subscribed_fields != "messages,messaging_postbacks":
+            return JSONResponse(
+                {"error": {"message": "invalid subscribed_fields", "code": 100}}, status_code=400,
+            )
+        if hook_hits is not None:
+            hook_hits.append({
+                "meta_page_subscription": page_id,
+                "subscribed_fields": subscribed_fields,
+            })
+        return {"success": True}
 
     @up.get("/auth.test")
     async def slack_auth_test(request: Request):

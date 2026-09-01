@@ -1,8 +1,8 @@
 # Live-verified 2026-07-28 through the treg /call proxy (connection: instagram). Every READ
 # endpoint passes; the publishing routes below are marked separately and were not called.
 #
-# Instagram Graph API, served from the Meta host (graph.facebook.com/v25.0) with the connected
-# person's user token. It reaches only a PROFESSIONAL (Business or Creator) Instagram account that
+# Instagram Graph API, served from the Meta host (graph.facebook.com/v25.0) with the access token
+# of the Facebook Page linked to the selected account. It reaches only a PROFESSIONAL (Business or Creator) Instagram account that
 # is linked to a Facebook Page the member administers — a personal Instagram account is invisible
 # to this API entirely.
 #
@@ -10,9 +10,9 @@
 # any_account; the difference is that these return the account's own private metrics (reach,
 # saves, profile views) that no scraper can see.
 #
-# Scopes granted: instagram_basic, instagram_manage_insights, pages_show_list,
-# pages_read_engagement (+ instagram_content_publish on `post`). Absent for that reason: replying
-# to or deleting comments (instagram_manage_comments) and DMs (instagram_manage_messages).
+# Scopes requested by the broadest `manage` connection: instagram_basic,
+# instagram_manage_insights, pages_show_list, pages_read_engagement, business_management,
+# instagram_content_publish, instagram_manage_comments and instagram_manage_messages.
 #
 # The IG user id is NOT the @handle and not the Page id: read it from
 # /me/accounts?fields=instagram_business_account{id,username} — the same call treg's connection
@@ -144,6 +144,48 @@ endpoints:
     example_response: examples/instagram.instagram.media.insights.json
     docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
 
+  # --- direct messages (the `manage` capability, scope instagram_manage_messages) -------------
+  - id: instagram.x.user-messages
+    capability: instagram.messages.list
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{page_id}/conversations
+    name: "Your Instagram Direct message threads"
+    summary: "List Instagram Direct conversations that customers started with your account"
+    input:
+      pathParams:
+        page_id: {type: string, required: true, note: "numeric Facebook Page id linked to the Instagram professional account — not the Instagram account id or @handle; get it from /me/accounts alongside instagram_business_account", example: "123456789012345"}
+      queryParams:
+        platform: {type: string, required: true, note: "must be instagram for Instagram Direct conversations", example: "instagram"}
+        fields: {type: string, required: false, note: "request participants and messages together when preparing a reply", example: "id,updated_time,participants,messages{id,from,to,message,created_time}"}
+        limit: {type: integer, required: false, example: 25}
+      note: "needs instagram_manage_messages and must target the linked Facebook Page id with that Page's access token, which Treg derives server-side when the Instagram account is selected. Targeting the Instagram account id returns Meta error (#3) even with the right token. Conversation ids are Graph API ids; an instagram.com/direct/t/... browser thread id is not interchangeable"
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
+    unverified: "requires an account with a real customer-initiated Instagram conversation; verify deliberately in the App Review demo"
+    docs_url: https://developers.facebook.com/docs/messenger-platform/instagram/features/conversation
+
+  - id: instagram.instagram.message.send
+    kind: action
+    capability: instagram.message.send
+    platform: instagram
+    scope: own_account
+    method: POST
+    path: /{page_id}/messages
+    name: "Reply in an Instagram Direct conversation"
+    summary: "Send an Instagram Direct reply to a customer who has messaged your account"
+    input:
+      pathParams:
+        page_id: {type: string, required: true, note: "numeric Facebook Page id linked to the Instagram professional account — the same Page id used by instagram.x.user-messages", example: "123456789012345"}
+      body:
+        recipient: {type: object, required: true, note: "the recipient's Instagram-scoped id (IGSID) obtained from a conversation participant or webhook — not a username, browser thread id, or your own account id", example: {id: "987654321012345"}}
+        message: {type: object, required: true, note: "message payload; this text form is the simplest App Review demonstration", example: {text: "Thanks for your message — this reply was sent through treg."}}
+      bodyType: json
+      note: "needs instagram_manage_messages and must target the linked Facebook Page id with Treg's derived Page token. This is a reply surface, not cold outreach: the recipient must have initiated contact and Meta's messaging-window/policy rules apply. Demonstrate the incoming message, this Try call, and the delivered reply in Instagram"
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
+    unverified: "write action — sends a real DM; requires a deliberate manual App Review test, never an automated verify run"
+    docs_url: https://developers.facebook.com/docs/messenger-platform/instagram/features/send-message
+
   # --- publishing (the `post` capability, scope instagram_content_publish) --------------------
   #
   # Instagram has NO single "publish" call. Every post is at least two steps, and a carousel is
@@ -224,4 +266,3 @@ endpoints:
     cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; counts against the 50-per-24h publishing quota rather than a per-call price}
     unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.facebook.com/docs/instagram-platform/content-publishing
-
