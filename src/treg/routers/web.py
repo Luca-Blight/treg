@@ -2725,6 +2725,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/support", "support.html", "0.4"),
     ("/connectors/claude", "claude-connector.html", "0.6"),
     ("/people-search", "people-search.html", "0.8"),
+    ("/grokbot", "grokbot.html", "0.8"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -3028,9 +3029,9 @@ async def sitetrack_js():
 
 @app.get("/grokbot", include_in_schema=False)
 async def grokbot_page():
-    """Concept landing page: the treg plugin inside Grok Bot ("Grok Bot for sales"). Unlisted on
-    purpose — noindex, not in the sitemap — it exists as a shareable storyline/animatic for the
-    people-search launch, not as an indexed destination."""
+    """Landing page for the treg plugin inside Grok Bot ("Grok Bot for Outreach") — a scroll
+    animatic of the Bot working a lead list through treg. Indexed like /people-search: canonical,
+    OG meta, listed in the sitemap."""
     page = _WEB_DIR / "grokbot.html"
     if not page.exists():
         raise HTTPException(status_code=404, detail="grokbot.html not bundled")
