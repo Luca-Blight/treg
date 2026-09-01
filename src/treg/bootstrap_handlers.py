@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from . import analytics
+
 
 # create_app supplies the call-specific compensation callback before registering these adapters.
 _stamp_call_exit: Any
@@ -22,6 +24,7 @@ async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONRespon
     `500 Internal Server Error` after a 30 s wait, which an agent cannot tell from a provider bug.
     `treg_saturated` is the key a retrying client should branch on; `Retry-After` is how long to wait
     before doing so."""
+    analytics.capture_fault(exc, component="db_pool")
     resp = JSONResponse(
         {"detail": "treg's database pool is saturated — retry in a moment", "treg_saturated": True},
         status_code=503, headers={"Retry-After": "2"})

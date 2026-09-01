@@ -52,7 +52,9 @@ shared Task before database and HTTP resources disappear.
 
 `bootstrap_handlers.py` owns the app-wide pool-saturation and HTTP-exception adapters. The composition
 root supplies the call-specific `_stamp_call_exit` callback from `routers/call.py` before registration;
-the callback owns call ids, refusal classification, audit fallback, and idempotency-label release.
+the callback owns call ids, refusal classification, audit fallback, and idempotency-label release. The
+pool adapter also sends its infrastructure exception to `analytics.capture_fault` before returning the
+typed 503; normal HTTP refusals remain responses, not server faults.
 
 `bootstrap_http.py` owns the app-wide middleware implementations. The middleware stack is
 `_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->
@@ -90,6 +92,11 @@ No role lifespan writes schema, performs a data backfill, or provisions the loca
 serve path adds single-user provisioning before Uvicorn starts. Raw ASGI operators must run the
 upgrade command separately on every release. `verify_db()` only checks revision compatibility and the
 Fernet-key guard; the exact startup manifests are pinned to a read-only allowlist.
+
+Every role lifespan calls `analytics.install_fault_handler` after the read-only DB verification. With no
+PostHog key it is a no-op; otherwise ERROR+ root logs and Uvicorn ASGI exception records feed the bounded
+analytics queue until the lifespan removes the handler in its outer `finally`. This is logging-only
+observability: it adds no middleware, background task, or database access.
 
 MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
 dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the
