@@ -2724,6 +2724,8 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
     ("/connectors/claude", "claude-connector.html", "0.6"),
+    ("/people-search", "people-search.html", "0.8"),
+    ("/grokbot", "grokbot.html", "0.8"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -3023,6 +3025,29 @@ async def sitetrack_js():
     # no-cache, same reasoning as adtrack.js: a bare `<script src>` with no version query.
     return Response(content=js, media_type="application/javascript",
                     headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/grokbot", include_in_schema=False)
+async def grokbot_page():
+    """Landing page for the treg plugin inside Grok Bot ("Grok Bot for Outreach") — a scroll
+    animatic of the Bot working a lead list through treg. Indexed like /people-search: canonical,
+    OG meta, listed in the sitemap."""
+    page = _WEB_DIR / "grokbot.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="grokbot.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/people-search", include_in_schema=False)
+async def people_search_page():
+    """Landing page for the people-search launch ("Claude for people search") — the destination the
+    launch film points viewers at. A first-class page: canonical, in the sitemap, indexed. Its asset
+    paths are RELATIVE (media/…, logos/…) so the same file previews from file:// — which only works
+    while this route stays slashless; a /people-search/ variant would re-root them."""
+    page = _WEB_DIR / "people-search.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="people-search.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/resources", include_in_schema=False)
