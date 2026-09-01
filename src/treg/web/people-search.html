@@ -334,8 +334,8 @@
   .d-lab i { font-style: normal; color: var(--muted); font-weight: 500; }
   .d-cat { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); opacity: 0; }
   .bgroups {
-    position: absolute; inset: 0; display: flex; justify-content: center; gap: 44px; align-items: center;
-    flex-wrap: wrap; opacity: 0;
+    position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, max-content);
+    justify-content: center; align-content: center; gap: 44px; opacity: 0;
   }
   .bgroup { display: flex; flex-direction: column; align-items: center; }
   .bcols { display: flex; gap: 10px; align-items: flex-end; height: 245px; }
@@ -353,11 +353,16 @@
   .bcol em.win { color: var(--green); font-weight: 500; }
   .bico { position: absolute; left: 50%; transform: translateX(-50%); bottom: -34px; width: 26px; height: 26px; border-radius: 7px; object-fit: contain; background: #FBFAF7; border: 1px solid rgba(0,0,0,.07); }
   .bglab { margin-top: 46px; font-weight: 600; font-size: 15px; }
-  /* compact bench: 2×2 chart grid, smaller bars, taller stage — nothing may escape the sticky stage */
+  /* below one-row width the chart is an explicit 2×2 — never 3+1 */
+  @media (max-width: 1120px) {
+    .bgroups { grid-template-columns: repeat(2, max-content); gap: 44px 48px; }
+    .bstage-wrap { height: 780px; }
+  }
+  /* compact bench: smaller bars, tighter 2×2 — nothing may escape the sticky stage */
   @media (max-width: 960px) {
     .bench-stage { padding: 56px 14px 14px; }
     .bstage-wrap { height: 600px; }
-    .bgroups { gap: 26px 22px; align-content: center; }
+    .bgroups { gap: 26px 22px; }
     .bcols { height: 150px; gap: 7px; }
     .bcol { width: 30px; }
     .bbar { height: calc(var(--h) * 1.8px); border-radius: 6px 6px 2px 2px; }
