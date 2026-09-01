@@ -1338,8 +1338,7 @@ a:hover{text-decoration-color:var(--muted)}
     <div class="layout" :class="{solo:publicCatalog}">
       <nav class="side" :class="{'mob-open':mobileNav}" v-if="!publicCatalog">
         <!-- Mobile close button (hidden on desktop) -->
-        <div style="display:flex;align-items:center;margin-bottom:8px">
-          <span class="brand" style="font-size:14px">▚ treg</span>
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px">
           <button class="mob-close" @click="mobileNav=false" aria-label="Close navigation">✕</button>
         </div>
         <!-- ORG (top): name → settings · ▾ → switch -->
