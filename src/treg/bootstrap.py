@@ -435,6 +435,7 @@ def _lifespan(role: AppRole):
         mcp_reader_bound = role != "control" and _mcp is not None
         if mcp_reader_bound:
             _mcp.configure_endpoint_observation_reader(endpoint_observations)
+        fault_handler = analytics.install_fault_handler()
         try:
             if role == "control" or _mcp is None:
                 yield
@@ -445,18 +446,21 @@ def _lifespan(role: AppRole):
                 async with _mcp.mcp_lifespan():
                     yield
         finally:
-            if ads_task is not None:
-                ads_task.cancel()
-            if archive_task is not None:
-                archive_task.cancel()
-            if mcp_reader_bound:
-                _mcp.clear_endpoint_observation_reader(endpoint_observations)
-            routed_call.clear_endpoint_observation_reader(endpoint_observations)
-            await endpoint_observations.aclose()
-            await audit.drain()
-            await analytics.drain()
-            await archive.drain()
-            await app.state.http.aclose()
+            try:
+                if ads_task is not None:
+                    ads_task.cancel()
+                if archive_task is not None:
+                    archive_task.cancel()
+                if mcp_reader_bound:
+                    _mcp.clear_endpoint_observation_reader(endpoint_observations)
+                routed_call.clear_endpoint_observation_reader(endpoint_observations)
+                await endpoint_observations.aclose()
+                await audit.drain()
+                await analytics.drain()
+                await archive.drain()
+                await app.state.http.aclose()
+            finally:
+                analytics.remove_fault_handler(fault_handler)
 
     return lifespan
 

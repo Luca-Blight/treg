@@ -638,7 +638,9 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
   connection** → `relay()` → `audit.record_call`. A pool that has no slot within 5 s answers
   `503 {"treg_saturated": true}` + `Retry-After: 2` (`_pool_saturated`, the handler for
-  `sqlalchemy.exc.TimeoutError`) rather than a 30 s wait and an anonymous 500. A **platform binding** carries no `secret_id`
+  `sqlalchemy.exc.TimeoutError`) rather than a 30 s wait and an anonymous 500. The adapter also calls
+  `analytics.capture_fault(component="db_pool")`: saturation is a handled, typed response for the caller
+  but remains an infrastructure fault for PostHog alerting. A **platform binding** carries no `secret_id`
   (its value comes from settings at relay time), so secret-loading now skips `secret_id is None`. Detail
   in [proxy-model](../architecture/proxy-model.md).
   `call_catalog_endpoint` (`* /catalog/call/{rest:path}`, hidden from public OpenAPI) is the narrower

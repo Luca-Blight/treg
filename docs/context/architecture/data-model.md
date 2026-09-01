@@ -300,6 +300,20 @@ with the catalog `provider` as vendor or the upstream host for own tools), `bill
 hygiene (`pool_pre_ping`/`pool_recycle`/sizing) for non-SQLite URLs, and `verify_db` refuses to start with
 no `TREG_SECRET_KEY` on a real DB (an ephemeral key would lose every stored secret on restart).
 
+Infrastructure faults use the same DB-independent queue through `capture_fault`: PostHog `$exception`
+events have the fixed `treg-server` identity and carry only the exception class, at most 500 characters
+of its string, an unhandled mechanism, and component/logger labels. URL query strings in the exception
+value are replaced with `?[redacted]` **before truncation**, so query-injected credentials cannot leak;
+frames, locals, request bodies, and user identity are never included. `FaultCaptureHandler` mirrors ERROR+
+records while analytics is enabled; it ignores the
+`treg.analytics` logger tree, marks records to prevent duplicate root/Uvicorn delivery, and uses a
+thread-local re-entry guard plus a never-raise `emit`. `_allow_fault` applies token buckets of 10/minute
+per `(fault type, logger/site)` and 60/minute process-wide; throttled events are dropped before the shared
+queue and the next allowed event for that key carries `throttled_dropped`. The lifespan installs the
+handler on root and directly on `uvicorn.error` (Uvicorn's default parent does not propagate to root),
+then removes it after shutdown drain. `bootstrap_handlers._pool_saturated` calls `capture_fault` directly
+because its typed 503 is handled before Uvicorn would log it.
+
 > **Tenancy:** every resource noun carries `org_id`; access is scoped to the caller's org. Details:
 > [multi-tenancy](multi-tenancy.md).
 
