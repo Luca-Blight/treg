@@ -2726,6 +2726,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/connectors/claude", "claude-connector.html", "0.6"),
     ("/people-search", "people-search.html", "0.8"),
     ("/grokbot", "grokbot.html", "0.8"),
+    ("/fable", "fable-gtm.html", "0.8"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -3035,6 +3036,17 @@ async def grokbot_page():
     page = _WEB_DIR / "grokbot.html"
     if not page.exists():
         raise HTTPException(status_code=404, detail="grokbot.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/fable", include_in_schema=False)
+async def fable_page():
+    """Landing page for the Claude Fable 5.1 + treg launch ("Run your GTM from the terminal"):
+    one prompt, the market read, four agents, four results, then the catalog and the bill.
+    Indexed like /grokbot: canonical, in the sitemap, no-cache so edits land on refresh."""
+    page = _WEB_DIR / "fable-gtm.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="fable-gtm.html not bundled")
     return FileResponse(page, headers={"Cache-Control": "no-cache"})
 
 

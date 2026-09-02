@@ -110,6 +110,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/adtrack.js', ('GET',), 'adtrack_js'),
     ('/resources', ('GET',), 'resources_page'),
     ('/grokbot', ('GET',), 'grokbot_page'),
+    ('/fable', ('GET',), 'fable_page'),
     ('/people-search', ('GET',), 'people_search_page'),
     ('/usecase.css', ('GET',), 'usecase_css'),
     ('/oauth/register', ('POST',), 'oauth_register'),
