@@ -81,14 +81,21 @@ def _retry_after(headers, now: datetime) -> int | None:
     return None
 
 
-def _edge_block(status: int, headers) -> bool:
-    """Headers only, never the User-Agent: Cloudflare's `cf-mitigated` marker, or its HTML block page
-    where the vendor's app would have answered JSON."""
+_CF_1XXX = re.compile(r"cloudflare-1xxx-errors|error 10\d\d: access denied")
+
+
+def _edge_block(status: int, headers, text_l: str) -> bool:
+    """Never the User-Agent: Cloudflare's `cf-mitigated` marker, its HTML block page where the
+    vendor's app would have answered JSON, or its 1xxx problem-JSON (error 1010 is the browser
+    signature block)."""
     if status in (403, 503) and _header(headers, "cf-mitigated") is not None:
         return True
-    return (status == 403
-            and "cloudflare" in (_header(headers, "server") or "").lower()
-            and "text/html" in (_header(headers, "content-type") or "").lower())
+    if status != 403:
+        return False
+    if ("cloudflare" in (_header(headers, "server") or "").lower()
+            and "text/html" in (_header(headers, "content-type") or "").lower()):
+        return True
+    return _CF_1XXX.search(text_l) is not None
 
 
 def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
@@ -98,7 +105,7 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
     text = body.decode("utf-8", "replace") if isinstance(body, bytes) else (body or "")
     text_l = text.lower()
     provider = (provider or "").lower()
-    if _edge_block(status, headers):  # before the table: a block page carries no vendor body to match
+    if _edge_block(status, headers, text_l):  # before the table: a block page carries no vendor body to match
         return Signal("edge_block", None, None, detail=text[:120])
     for prov, st, pattern, kind in _TABLE:
         if st != status or prov not in ("*", provider):
