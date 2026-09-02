@@ -429,6 +429,7 @@ addEventListener('load', function(){
   .soon-note:hover::after{opacity:1}
   .chip.demo{border-color:var(--accent);color:var(--accent)}
   .modal .hd{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .tabs .act-toggle{margin-left:auto;align-self:center;margin-bottom:6px;padding:4px 11px;font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px} .tabs .act-toggle:hover{border-color:var(--accent);color:var(--accent)}
   tr.act-row{cursor:pointer} tr.act-row:hover td{background:var(--panel2)} .act-view{font-size:11px;color:var(--accent);margin-left:6px;white-space:nowrap}
   .drawer{position:fixed;top:0;right:0;height:100vh;width:min(520px,96vw);background:var(--panel);border-left:1px solid var(--line);z-index:50;box-shadow:-12px 0 44px rgba(20,16,10,.34);display:flex;flex-direction:column}
   pre{margin:0;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:50vh}
@@ -2747,13 +2748,11 @@ a:hover{text-decoration-color:var(--muted)}
           <div class="tabs" style="margin:10px 0 4px">
             <button :class="{active:actTab==='feed'}" @click="actTab='feed'">Activity</button>
             <button v-if="canAdmin" :class="{active:actTab==='usage'}" @click="actTab='usage'; loadUsage()">Usage</button>
+            <button v-if="actTab==='feed' && activityRows.length" class="act-toggle" @click="actOkOnly=!actOkOnly" :title="actOkOnly?'Include failed and refused calls':'Hide failed and refused calls'">{{actOkOnly?'Show all ('+activityRows.length+')':'Successes only'}}</button>
           </div>
 
           <template v-if="actTab==='feed'">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <p class="sub" style="margin:0;flex:1">{{actOkOnly?'Successful calls and runs in this org.':'Every proxy call and server CLI run in this org.'}}</p>
-            <button v-if="activityRows.length" class="btn sm" @click="actOkOnly=!actOkOnly" :title="actOkOnly?'Include failed and refused calls':'Hide failed and refused calls'">{{actOkOnly?'Show all ('+activityRows.length+')':'Successes only'}}</button>
-          </div>
+          <p class="sub">{{actOkOnly?'Successful calls and runs in this org.':'Every proxy call and server CLI run in this org.'}}</p>
           <table><tr><th>When</th><th>Who</th><th v-if="anyTagged">Tagged</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
             <tr v-for="a in activityShown" :key="a.kind+'-'+a.id" :class="{'act-row':a.kind==='call'}" @click="a.kind==='call'&&openCall(a)" :title="a.kind==='call'?(a.has_result?'Show request and response':'Show call details'):''"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span><span v-if="a.has_result" class="act-view">result ›</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
           <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
