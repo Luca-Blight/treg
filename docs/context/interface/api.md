@@ -110,7 +110,9 @@ balance/quota signal, or the capacity sweep) is refused **before any hold** with
 `{"detail": {"error": "provider_capacity_unavailable", "provider", "endpoint_id", "resets_at" | null,
 "alternatives": [...], "message"}}`, `X-Treg-Error: 1`, no `X-Treg-Cost-Micro`, `refused_by="capacity"`
 on the audit row. The caller's own key for the provider is never affected (tiers 1/2 win first), and
-treg does not call an alternative on the caller's behalf — it names them. Not the pool-saturation 503
+treg does not call an alternative on the caller's behalf — it names them. A lock set by the call
+path lets one call a minute through as a probe and lifts on its 2xx, so the `message` says a retry
+in a minute may succeed; a lock from the sweep lasts until `resets_at`. Not the pool-saturation 503
 (`treg_saturated`), which is a different exit. See `architecture/proxy-model.md` § Platform capacity.
 
 ## `X-Treg-Served-Via` — this answer came through an overflow relay

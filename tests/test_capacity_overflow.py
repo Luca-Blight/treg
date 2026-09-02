@@ -19,6 +19,7 @@ from treg.config import get_settings
 from treg.infra.db import session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.routes_view import view as routes_view
+from treg.domain.capacity.marks import LOCK_NS, Lock
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view
 from treg.models import Hold, LedgerEntry, OverflowRoute, OverflowSpend
@@ -184,10 +185,10 @@ async def test_aggregator_402_releases_the_child_marks_it_unhealthy_and_answers_
     assert await _balance(clients) == before and await _holds() == []
     assert len(seen) == 1, "one hop: the second aggregator is never contacted"
     async with session_maker() as db:
-        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "overflow:orthogonal"))
-    assert state.is_exhausted()
-    # …and the next call skips the unhealthy aggregator and uses Monid
-    capacity_view.invalidate()
+        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal"))
+    assert lock.is_active()
+    # …and the next call skips the unhealthy aggregator and uses Monid (no manual reload: the
+    # strike invalidated this process's view)
     monid_ok = {"runId": "r", "status": "COMPLETED", "output": VENDOR_BODY, "providerResponse": {"httpStatus": 200},
                 "billing": {"reportedCost": {"value": 2000, "unit": "MICRO_DOLLAR"}}}
     monkeypatch.setattr(O, "_send", _orthogonal([(200, monid_ok)], seen))
@@ -485,8 +486,8 @@ async def test_apollo_out_of_credits_422_on_tier4_overflows_through_orthogonal(c
     mine = [x for x in (await clients.get("/calls")).json() if x["tool_name"] == APOLLO_EP]
     assert {x.get("credential_tier") for x in mine} == {"platform", "platform-overflow"}
     async with session_maker() as db:
-        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "apollo"))
-    assert state.health == "exhausted", "the 422 was read as OUR account running dry, not the caller's mistake"
+        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "apollo"))
+    assert lock.strikes == 1 and not lock.is_active(), "the 422 was read as OUR account running dry: a strike, not the caller's mistake"
 
 
 async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):

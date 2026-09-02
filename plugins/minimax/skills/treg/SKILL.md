@@ -103,6 +103,7 @@ Notes:
 - HTTP **503** `provider_capacity_unavailable` = treg's own account for that provider is out
   (not your balance; nothing charged). Body has `resets_at` and `alternatives` (same capability,
   other providers) — choose one, or use your own key. treg never switches providers for you.
+  treg re-checks the provider about once a minute, so a retry after a minute can succeed.
 - An org tool or secret for the provider always wins over treg's key, automatically — the catalog
   is the fallback, not a replacement for keys the team already has.
 - **Choosing between providers of one capability — the procedure.** `treg catalog get <id>` lists

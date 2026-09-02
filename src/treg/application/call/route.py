@@ -261,7 +261,7 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         price = 0 if tier != "platform" else cost_at(cv, identity)
         c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=st.get("hit_rate"),
                       ok_rate=st.get("ok_rate"), p50_ms=st.get("p50_ms"), last_ok_days=st.get("last_ok_days"),
-                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"])),
+                      exhausted=(tier == "platform" and capacity_view.is_exhausted(e["provider"], e["id"])),
                       ignored=ignored_filters(ad, contract, identity))
         if tier == "platform" and not cat.platform_eligible(e):
             dropped.append({"endpoint_id": e["id"], "why": "not platform-eligible and no own key"})

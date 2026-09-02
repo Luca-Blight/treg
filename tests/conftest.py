@@ -316,7 +316,9 @@ def _reset_call_path_caches():
     def _clear() -> None:
         try:
             from treg.domain.capacity.view import view as capacity_view
-            capacity_view.invalidate(); capacity_view._states = {}
+            capacity_view.invalidate(); capacity_view._states = {}; capacity_view._locks = {}
+            from treg.domain.capacity import marks as capacity_marks
+            capacity_marks._last_probe.clear()
         except ImportError:
             pass
         try:

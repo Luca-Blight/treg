@@ -1,21 +1,24 @@
 """Step D of docs/PROVIDER-CAPACITY-PLAN.md — Protect: refuse-before-reserve on an exhausted
-platform account, the typed `provider_capacity` 503, and the call-path capacity mark.
+platform account, the typed `provider_capacity` 503, and the call-path breaker (strike, lock,
+probe, clear).
 
 Tiers 1/2 (an org's own tool or key) never consult any of this."""
 
 from __future__ import annotations
 
-import json
 from datetime import timedelta
 
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit, ratestore
+from treg import archive, audit, ratestore
+from treg.config import get_settings
 from treg.application.call import service as call_service
 from treg.application.call import settle as call_settle
-from treg.application.call.types import CallFailure
+from treg.application.call.types import CallFailure, UpstreamResponse
 from treg.infra.db import session_maker
+from treg.domain.capacity import marks as capacity_marks
+from treg.domain.capacity.marks import DEFAULT_LOCK, LOCK_NS, MAX_LOCK, Lock
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view
@@ -23,6 +26,8 @@ from treg.models import Hold, LedgerEntry
 from treg.timeutil import utcnow_naive
 
 from test_marketplace_call import EP, EP_MICRO, PLATFORM_KEYS, _balance, _fake_relay, platform_on  # noqa: F401
+
+OUT = b'{"detail":"Insufficient balance"}'  # matches the bare-402 balance signature
 
 
 async def _publish(provider: str, *, exhausted: bool, hours: float = 1.0, health: str | None = None):
@@ -36,9 +41,35 @@ async def _publish(provider: str, *, exhausted: bool, hours: float = 1.0, health
     capacity_view.invalidate()
 
 
+async def _lock(key: str) -> Lock | None:
+    async with session_maker() as db:
+        raw = await ratestore.kv_get(db, LOCK_NS, key)
+    return Lock.from_json(raw) if raw else None
+
+
 async def _rows(model):
     async with session_maker() as db:
         return (await db.execute(select(model))).scalars().all()
+
+
+def _relay(status: int, body: bytes, headers=()):
+    async def relay(request, upstream_url, tool, secrets, client, drop_params=None, force_identity=False):
+        async def _s():
+            yield body
+        async def _c():
+            return None
+        return UpstreamResponse(status, tuple(headers), _s(), _c)
+    return relay
+
+
+async def _lock_by_two_signals(clients: AsyncClient, monkeypatch, relay=None) -> Lock:
+    monkeypatch.setattr(call_service, "relay", relay or _fake_relay(402, OUT))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code in (402, 429)
+    assert not (await _lock("tikhub") or await _lock(EP)).is_active(), "one strike never locks"
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code in (402, 429)
+    lock = await _lock("tikhub") or await _lock(EP)
+    assert lock.is_active()
+    return lock
 
 
 async def test_exhausted_platform_account_is_refused_before_any_hold(clients: AsyncClient, platform_on):
@@ -81,65 +112,143 @@ async def test_a_stale_or_ok_view_never_refuses(clients: AsyncClient, platform_o
     assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
 
 
-async def test_a_balance_signature_on_the_platform_key_marks_the_provider_for_the_next_call(
-    clients: AsyncClient, platform_on, monkeypatch,
-):
-    await _publish("tikhub", exhausted=False)
-    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"Insufficient balance"}'))
+async def test_one_signature_is_a_strike_that_a_2xx_erases(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, OUT))
     before = await _balance(clients)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
-    assert r.status_code == 402, "this call still relays the vendor's answer unchanged"
+    assert r.status_code == 402, "the vendor's answer relays unchanged"
     assert "X-Treg-Error" not in r.headers
     assert r.headers["X-Treg-Cost-Micro"] == "0" and await _balance(clients) == before
-    async with session_maker() as db:  # the mark landed in ratestore, on its own session
-        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "tikhub"))
-    assert state.health == "exhausted" and state.is_exhausted() and "balance signature" in state.note
-    # …and the NEXT platform call is refused before any hold, even though the view is cached
-    capacity_view.invalidate()
+    lock = await _lock("tikhub")
+    assert lock.strikes == 1 and not lock.is_active()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200, "never refused"
+    assert await _lock("tikhub") is None, "a success between two signals resets the count"
+
+
+async def test_two_signatures_lock_and_the_next_call_is_refused(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    assert "balance signature" in lock.note
     monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"never":"reached"}'))
-    r2 = await clients.get(f"/call/{EP}?aweme_id=7")
-    assert r2.status_code == 503 and r2.json()["detail"]["error"] == "provider_capacity_unavailable"
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 503 and r.json()["detail"]["error"] == "provider_capacity_unavailable"
+    assert "once a minute" in r.json()["detail"]["message"]
     assert await _rows(Hold) == []
 
 
-async def test_burst_429_and_caller_400_never_mark(clients: AsyncClient, platform_on, monkeypatch):
-    await _publish("tikhub", exhausted=False)
-    for status, body in ((429, b'{"detail":"slow down"}'), (400, b'{"detail":"bad aweme_id"}')):
+async def test_a_probe_a_minute_goes_through_and_its_2xx_clears_the_lock(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 503, "the first probe waits"
+    capacity_marks._last_probe.clear()  # a minute passes
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200, "the probe is a real call: the caller gets the answer"
+    assert await _lock(lock.key) is None
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200, "open again for everyone"
+
+
+async def test_a_probe_that_fails_again_keeps_the_lock(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    capacity_marks._last_probe.clear()
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 402, "the probe relays"
+    assert (await _lock(lock.key)).lock_id == lock.lock_id
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 503
+
+
+async def test_a_vendor_500_or_caller_400_neither_strikes_nor_clears(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, OUT))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 402
+    for status, body in ((500, b"down"), (400, b'{"detail":"bad aweme_id"}'), (429, b'{"detail":"slow down"}')):
         monkeypatch.setattr(call_service, "relay", _fake_relay(status, body))
-        r = await clients.get(f"/call/{EP}?aweme_id=7")
-        assert r.status_code == status
-        async with session_maker() as db:
-            state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "tikhub"))
-        assert state.health == "ok" and not state.is_exhausted()
+        assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == status
+        assert (await _lock("tikhub")).strikes == 1, "only a 2xx is evidence of capacity"
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, OUT))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 402
+    assert (await _lock("tikhub")).is_active(), "402, 500, 402 is still two strikes in a row"
 
 
-async def test_quota_429_marks_until_the_reset(clients: AsyncClient, platform_on, monkeypatch):
-    await _publish("tikhub", exhausted=False)
-    monkeypatch.setattr(call_service, "relay", _fake_relay(429, b'{"detail":"limit reached"}'))
-
-    async def relay_with_retry_after(request, upstream_url, tool, secrets, client, drop_params=None, force_identity=False):
-        from treg.application.call.types import UpstreamResponse
-        async def _s():
-            yield b'{"detail":"quota"}'
-        async def _c():
-            return None
-        return UpstreamResponse(429, ((b"retry-after", b"7200"),), _s(), _c)
-    monkeypatch.setattr(call_service, "relay", relay_with_retry_after)
-    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 429
-    async with session_maker() as db:
-        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "tikhub"))
-    assert state.health == "exhausted"
-    assert timedelta(hours=1, minutes=55) < (state.exhausted_until - utcnow_naive()) <= timedelta(hours=2)
+async def test_quota_429_locks_the_endpoint_only_until_the_reset(clients: AsyncClient, platform_on, monkeypatch):
+    relay = _relay(429, b'{"detail":"quota"}', [(b"retry-after", b"7200")])
+    lock = await _lock_by_two_signals(clients, monkeypatch, relay)
+    assert lock.key == EP and await _lock("tikhub") is None, "an allowance is per operation"
+    assert timedelta(hours=1, minutes=55) < (lock.until - utcnow_naive()) <= timedelta(hours=2)
+    await capacity_view.load()
+    assert capacity_view.is_exhausted("tikhub", EP) and not capacity_view.is_exhausted("tikhub")
 
 
-async def test_a_failed_mark_never_fails_the_call(clients: AsyncClient, platform_on, monkeypatch):
-    await _publish("tikhub", exhausted=False)
+async def test_a_lock_never_outlives_the_ceiling_whatever_the_vendor_said(clients: AsyncClient, platform_on):
+    far = utcnow_naive() + timedelta(days=10)
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
+    lock = await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
+    assert lock.is_active() and lock.until - utcnow_naive() <= MAX_LOCK
+
+
+async def test_a_guessed_hold_lasts_an_hour(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    assert timedelta(minutes=59) < lock.until - utcnow_naive() <= DEFAULT_LOCK
+
+
+async def test_a_pending_endpoint_strike_does_not_hide_a_provider_lock(clients: AsyncClient, platform_on, monkeypatch):
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=None)  # one, pending
+    await _lock_by_two_signals(clients, monkeypatch)  # provider-wide, active
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"never":"reached"}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 503
+
+
+async def test_a_2xx_clears_a_strike_the_cached_view_has_not_seen(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200  # the view is loaded, no lock
+    # another call's settle strikes while this one is in flight: it writes, then invalidates
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
+    capacity_view.invalidate()
+    assert (await _lock("tikhub")).strikes == 1 and capacity_view.locks("tikhub", EP) == []
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert await _lock("tikhub") is None, "the success counts even though this process's view was stale"
+
+
+async def test_a_probe_never_takes_an_archived_answer(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+    lookups = []
+
+    async def lookup(**kw):
+        lookups.append(kw)
+        return None
+    monkeypatch.setattr(archive, "lookup", lookup)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    capacity_marks._last_probe.clear()
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert lookups == [], "a probe must reach the vendor"
+    assert await _lock(lock.key) is None
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert len(lookups) == 1, "an ordinary call consults the archive again"
+
+
+async def test_clear_is_conditional_on_the_lock_id(clients: AsyncClient, platform_on):
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
+    lock = await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
+    assert lock.is_active()
+    assert not await capacity_marks.clear("tikhub", lock_id="stale-probe")
+    assert not await capacity_marks.clear("tikhub", lock_id=None), "a plain 2xx never clears a lock"
+    assert (await _lock("tikhub")).lock_id == lock.lock_id
+    assert await capacity_marks.clear("tikhub", lock_id=lock.lock_id)
+    assert await _lock("tikhub") is None
+
+
+async def test_the_sweep_cannot_undo_a_call_path_lock(clients: AsyncClient, platform_on, monkeypatch):
+    await _lock_by_two_signals(clients, monkeypatch)
+    await _publish("tikhub", exhausted=False)  # the balance API sees a different meter
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"never":"reached"}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 503
+
+
+async def test_a_failed_strike_never_fails_the_call(clients: AsyncClient, platform_on, monkeypatch):
     monkeypatch.setattr(call_service, "relay", _fake_relay(402, b"out"))
 
     async def boom(*a, **k):
         raise RuntimeError("db gone")
-    monkeypatch.setattr(call_settle.capacity_marks, "mark_exhausted", boom)
-    # mark_exhausted itself swallows; simulate the seam above it raising to prove the guard
+    monkeypatch.setattr(call_settle.capacity_marks, "strike", boom)
+    # strike itself swallows; simulate the seam above it raising to prove the guard
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 402 and r.headers["X-Treg-Cost-Micro"] == "0"
 
