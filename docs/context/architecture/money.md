@@ -362,10 +362,12 @@ Where a provider's real rule is "whole units, rounded up, free on a miss", only 
 
 The row-count signal for that estimate (`resolve._LIMIT_PARAMS` / `_body_limit`) reads the caller's
 `limit`/`count`/`size`/`per_page`… in the query or body, the camelCase spellings (`pageSize`,
-`numResults`, `perPage`, `maxResults`), a nested `pagination.{size,…}`, and — for providers that
+`numResults`, `perPage`, `maxResults`, lusha's per-company `contactsLimit`), a nested `pagination.{size,…}`, and — for providers that
 bill one row per listed item — the length of `targets`/`keywords`/`domains`/`urls`/`lookups`/
 `emails`. Each of those was a live overcharge first (2026-08-28: companyenrich `pageSize: 2`
-settled 20 rows, moz's one `targets` entry settled 20 quota rows). Without any signal it is the
+settled 20 rows, moz's one `targets` entry settled 20 quota rows; 2026-09-02: lusha decision-makers,
+catalogued FREE, answered 44 contacts for one domain and settled $5.49 from `billing.creditsCharged`
+with nothing reserved). Without any signal it is the
 20-row page, and a settle-at-estimate provider then charges that page (seranking url.metrics on a
 single `target` still does).
 

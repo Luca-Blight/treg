@@ -16,7 +16,6 @@ from treg.routers import auth as auth_routes
 from treg.bootstrap import create_app
 from treg.config import Settings, get_settings
 
-pytestmark = pytest.mark.anyio
 
 MCP_HEADERS = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
 
