@@ -273,7 +273,9 @@ async def test_linkedin_does_not_get_googles_consent_params(clients: AsyncClient
 
 def test_instagram_direct_and_page_grants_use_explicit_app_profiles():
     assert P.INSTAGRAM.client_id_setting == "instagram_client_id"
-    assert P.INSTAGRAM.base_url.startswith("https://graph.instagram.com")
+    parsed = urlsplit(P.INSTAGRAM.base_url)
+    assert parsed.scheme == "https"
+    assert parsed.hostname == "graph.instagram.com"
     page = P.INSTAGRAM.profile_for_authorization("facebook-page")
     assert page.client_id_setting == P.FACEBOOK.client_id_setting == "meta_client_id"
     assert page.base_url == P.FACEBOOK.base_url

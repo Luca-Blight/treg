@@ -36,7 +36,9 @@ def instagram_apps(monkeypatch):
 def test_legacy_instagram_grants_keep_the_facebook_page_profile():
     assert oauth_providers.INSTAGRAM.authorization_method_name("") == "facebook-page"
     profile = oauth_providers.INSTAGRAM.profile_for_authorization("")
-    assert profile.base_url.startswith("https://graph.facebook.com")
+    parsed = urlsplit(profile.base_url)
+    assert parsed.scheme == "https"
+    assert parsed.hostname == "graph.facebook.com"
     assert profile.call_token_field == "page_access_token"
 
 
