@@ -43,6 +43,7 @@ for _k in (
     "X_CLIENT_ID", "X_CLIENT_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET",
     "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET",
     "META_CLIENT_ID", "META_CLIENT_SECRET",
+    "INSTAGRAM_CLIENT_ID", "INSTAGRAM_CLIENT_SECRET",
     # …and the tier-4 platform keys + their allow-list. A developer's .env carries real, FUNDED keys:
     # without this a suite run on their laptop could resolve tier 4 and spend actual money on the
     # in-process upstream's echo. Tests that exercise tier 4 set both halves via monkeypatch.
@@ -93,7 +94,22 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         # graph.facebook.com path must exist for a registry-mode Meta connect to complete.
         return {"access_token": "META-TOKEN", "token_type": "bearer", "expires_in": 5183944}
 
+    @up.post("/oauth/access_token")
+    async def instagram_short_token() -> dict:
+        return {"access_token": "IG-SHORT-TOKEN", "user_id": 17841400000000000}
+
+    @up.get("/access_token")
+    async def instagram_long_token() -> dict:
+        return {"access_token": "IG-LONG-TOKEN", "token_type": "bearer", "expires_in": 5184000}
+
+    @up.get("/v25.0/me")
+    async def instagram_identity(request: Request):
+        if request.headers.get("authorization") != "Bearer IG-LONG-TOKEN":
+            return JSONResponse({"error": {"message": "invalid token"}}, status_code=401)
+        return {"user_id": "17841400000000000", "username": "direct_ig"}
+
     @up.get("/me/accounts")
+    @up.get("/v25.0/me/accounts")
     async def meta_pages(request: Request) -> dict:
         # Meta's primary Page listing: what the user manages through a PERSONAL Page role. One row
         # carries both the facebook shape (id/name) and the instagram shape (nested professional
@@ -107,6 +123,7 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
         return {"data": [page]}
 
     @up.get("/me/businesses")
+    @up.get("/v25.0/me/businesses")
     async def meta_businesses(request: Request):
         # Meta's Business walk (needs business_management): each business row nests owned_pages /
         # client_pages whose entries are shaped like /me/accounts rows. PAGE-DIRECT reappears here
@@ -142,6 +159,12 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
 
     @up.get("/v25.0/{page_id}/conversations")
     async def instagram_conversations(page_id: str, request: Request):
+        if request.headers.get("authorization") == "Bearer IG-LONG-TOKEN":
+            return {
+                "auth": request.headers["authorization"],
+                "raw_path": request.scope.get("raw_path", b"").decode(),
+                "data": [{"id": "IG-DIRECT-CONVERSATION-1", "ig_user_id": page_id}],
+            }
         # Messaging is the regression this Meta token split fixes: the user token is valid OAuth,
         # but this edge accepts only the token of the Page linked to the selected Instagram account.
         if request.headers.get("authorization") != "Bearer PAGE-TOKEN-DIRECT":
@@ -149,6 +172,8 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
                 {"error": {"message": "must be called with a Page access token", "code": 190}},
                 status_code=403,
             )
+        if request.query_params.get("platform") != "instagram":
+            return {"data": []}
         return {"data": [{"id": "IG-CONVERSATION-1", "page_id": page_id}]}
 
     @up.post("/v25.0/{page_id}/subscribed_apps")

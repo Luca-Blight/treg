@@ -70,6 +70,20 @@ related:
 
 # Endpoint catalog — platform-grouped operations per provider
 
+## Authorization metadata
+
+An endpoint can declare `authorization_method`, ordered `authorization_methods`, method-specific
+`authorization_paths`, `required_scopes`, `required_resource`, and `token_type`. `_normalize`
+keeps these fields on the internal row and exposes them on endpoint detail only when present.
+Marketplace resolution uses them for preflight and grant selection. Instagram is the first user;
+its 32-row audit is in [instagram-oauth](instagram-oauth.md).
+
+Meta's published reference is not available as a machine-readable OpenAPI document. Reviewed
+Instagram `input` and authorization contracts are therefore curated catalog data, and ingestion
+carries them forward instead of erasing them on a later scrape.
+Instagram is also parameter-multiplexed: profile lookup and business discovery intentionally share
+`GET /{ig_user_id}`; the required `fields=business_discovery...` value selects the latter operation.
+
 ## Why
 
 The marketplace registry (`oauth_providers.py`) catalogs *credentials*: how to connect a provider.

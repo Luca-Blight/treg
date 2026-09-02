@@ -766,10 +766,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                method: str | None = None, idempotency_key: str | None = None,
                query: dict | None = None, body: dict | list | str | None = None,
                headers: dict | None = None, content_type: str | None = None,
+               authorization_method: str | None = None,
                ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     return await _call_impl(
         endpoint_id, params=params, method=method, idempotency_key=idempotency_key,
-        query=query, body=body, headers=headers, content_type=content_type, ctx=ctx,
+        query=query, body=body, headers=headers, content_type=content_type,
+        authorization_method=authorization_method, ctx=ctx,
         catalog_only=False, surface=_TEAM_SURFACE, allowed_methods=None,
     )
 
@@ -778,6 +780,7 @@ async def _call_impl(endpoint_id: str, params: dict | list | None = None,
                      method: str | None = None, idempotency_key: str | None = None,
                      query: dict | None = None, body: dict | list | str | None = None,
                      headers: dict | None = None, content_type: str | None = None,
+                     authorization_method: str | None = None,
                      ctx: Context = None, *, catalog_only: bool,
                      allowed_methods: frozenset[str] | None,
                      surface: _SurfacePolicy) -> CallOut:
@@ -857,7 +860,10 @@ async def _call_impl(endpoint_id: str, params: dict | list | None = None,
     # model fills in — a model that omits it mid-chain drops that spend out of its user's invoice.
     extra_headers = {k: str(v) for k, v in (headers or {}).items()
                      if k.lower() not in ("x-treg-token", "x-treg-org", "authorization",
-                                          "idempotency-key", "x-treg-meta")}
+                                          "idempotency-key", "x-treg-meta",
+                                          "x-treg-authorization-method")}
+    if authorization_method:
+        extra_headers["X-Treg-Authorization-Method"] = authorization_method
     if isinstance(the_body, str):
         # A raw string body travels as-is. Content-Type: explicit wins, else sniff JSON — the
         # CLI's rule, because upstreams that require `application/json` reject a JSON body
@@ -1109,10 +1115,12 @@ async def directory_catalog_call_read(
     idempotency_key: str | None = None,
     query: dict | None = None,
     headers: dict | None = None,
+    authorization_method: str | None = None,
     ctx: Context = None,  # type: ignore[assignment]
 ) -> CallOut:
     return await _call_impl(
         endpoint_id, params=params, idempotency_key=idempotency_key, query=query, headers=headers,
+        authorization_method=authorization_method,
         ctx=ctx, catalog_only=True, surface=_DIRECTORY_SURFACE,
         allowed_methods=frozenset({"GET", "HEAD", "OPTIONS"}),
     )
@@ -1138,11 +1146,13 @@ async def directory_catalog_call_write(
     body: dict | list | str | None = None,
     headers: dict | None = None,
     content_type: str | None = None,
+    authorization_method: str | None = None,
     ctx: Context = None,  # type: ignore[assignment]
 ) -> CallOut:
     return await _call_impl(
         endpoint_id, params=params, idempotency_key=idempotency_key, query=query, body=body,
-        headers=headers, content_type=content_type, ctx=ctx, catalog_only=True,
+        headers=headers, content_type=content_type, authorization_method=authorization_method,
+        ctx=ctx, catalog_only=True,
         surface=_DIRECTORY_SURFACE,
         allowed_methods=frozenset({"POST", "PUT", "PATCH", "DELETE"}),
     )

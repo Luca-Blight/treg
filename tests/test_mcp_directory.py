@@ -196,6 +196,8 @@ async def test_v2_declares_exact_directory_contract():
     assert "my_tools" not in tools and "call" not in tools
     assert "method" not in tools["catalog_call_read"].input_schema["properties"]
     assert "method" not in tools["catalog_call_write"].input_schema["properties"]
+    assert "authorization_method" in tools["catalog_call_read"].input_schema["properties"]
+    assert "authorization_method" in tools["catalog_call_write"].input_schema["properties"]
     for tool in tools.values():
         assert tool.output_schema and tool.output_schema.get("properties")
         assert not tool.output_schema.get("required")
@@ -298,6 +300,8 @@ async def test_v2_serializes_the_scanner_facing_contract(clients):
     assert tools["catalog_call_write"]["annotations"]["destructiveHint"] is True
     assert "method" not in tools["catalog_call_read"]["inputSchema"]["properties"]
     assert "method" not in tools["catalog_call_write"]["inputSchema"]["properties"]
+    assert "authorization_method" in tools["catalog_call_read"]["inputSchema"]["properties"]
+    assert "authorization_method" in tools["catalog_call_write"]["inputSchema"]["properties"]
 
 
 async def test_v2_shared_catalog_details_balance_and_guidance_work_end_to_end(clients):
@@ -403,6 +407,23 @@ async def test_team_and_directory_catalog_call_errors_match_or_keep_the_document
     assert "my_tools" in team_unknown["hint"]
     assert "my_tools" not in directory_unknown["hint"]
     assert "catalog endpoint id" in directory_unknown["hint"]
+
+
+async def test_both_mcp_surfaces_preserve_oauth_remediation_fields(clients):
+    token = clients.headers["X-Treg-Token"]
+    args = {"endpoint_id": "instagram.x.hashtag-search"}
+    async with paired_mcp_session() as client:
+        team = await _call_tool(client, "call", args, token, path="/mcp/")
+        directory = await _call_tool(client, "catalog_call_read", args, token)
+
+    assert team["status"] == directory["status"] == 428
+    assert team["body"] == directory["body"]
+    detail = team["body"]["detail"]
+    assert detail["error"] == "authorization_missing"
+    assert detail["provider"] == "instagram"
+    assert detail["required_authorization_method"] == "facebook-page"
+    assert detail["required_capability"] == "page-tools"
+    assert detail["cli_command"].endswith("--capability page-tools")
 
 
 async def test_v2_search_and_catalog_request_keep_directory_attribution(clients):

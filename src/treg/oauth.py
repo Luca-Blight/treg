@@ -116,9 +116,42 @@ async def exchange_code(p: PendingOAuth, code: str, client: httpx.AsyncClient) -
         # ask months from now, so the blob itself must remember — omitting this is exactly the bug
         # where connect succeeded and every refresh 401'd.
         blob["token_endpoint_auth_method"] = p.token_endpoint_auth_method
-    if getattr(p, "long_lived_exchange", False):
+    if getattr(p, "long_lived_exchange_style", "") == "instagram":
+        blob = await _extend_instagram_token(blob, client)
+    elif getattr(p, "long_lived_exchange", False):
         blob = await _extend_meta_token(blob, client)
     return blob
+
+
+async def _extend_instagram_token(blob: dict, client: httpx.AsyncClient) -> dict:
+    """Exchange a short Instagram token for a renewable, 60-day Instagram User token."""
+    resp = await client.get(
+        "https://graph.instagram.com/access_token",
+        params={
+            "grant_type": "ig_exchange_token",
+            "client_secret": blob["client_secret"],
+            "access_token": blob["access_token"],
+        },
+    )
+    resp.raise_for_status()
+    tok = resp.json()
+    access = tok.get("access_token")
+    if not access:
+        raise ValueError(f"Instagram long-lived exchange returned no access_token: {tok}")
+    return {
+        **blob,
+        "access_token": access,
+        "token": access,
+        # Instagram refreshes the long-lived access token itself. Store it in the generic refresh
+        # slot and snapshot the wire protocol so the refresh adapter stays provider-neutral.
+        "refresh_token": access,
+        "token_uri": "https://graph.instagram.com/refresh_access_token",
+        "refresh_method": "GET",
+        "refresh_grant_type": "ig_refresh_token",
+        "refresh_token_param": "access_token",
+        "refresh_include_client": False,
+        "expires_at": time.time() + float(tok.get("expires_in") or 5_184_000),
+    }
 
 
 async def _extend_meta_token(blob: dict, client: httpx.AsyncClient) -> dict:

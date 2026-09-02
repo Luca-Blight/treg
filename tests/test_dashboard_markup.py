@@ -19,7 +19,7 @@ TUTORIAL = (Path(api.__file__).parent / "web" / "tutorial.html").read_text(encod
 
 # Dialogs reachable from more than one view. Each is opened by a button that exists on both the
 # marketplace list and an integration page.
-SHARED_DIALOGS = ["tokenAsk", "capAsk", "resPick"]
+SHARED_DIALOGS = ["tokenAsk", "capAsk", "methodAsk", "resPick"]
 
 
 def test_oauth_entry_opens_the_existing_sign_in_modal_without_minting_a_sandbox():
@@ -66,6 +66,41 @@ def test_the_parser_can_actually_see_a_trapped_dialog():
     assert _enclosing_views('v-for="p in g.items"') == ["connections"]
 
 
+def test_separate_oauth_methods_share_one_single_choice_modal():
+    """Instagram's second grant used to live in a red provider-page banner while Add account
+    silently chose direct Login. Multi-method providers now get one radio decision and one CTA;
+    ordinary providers must retain the old zero/one-method path."""
+    assert 'v-if="methodAsk"' in INDEX
+    assert 'v-model="methodAsk.selected"' in INDEX
+    assert 'class="chip ok">Recommended</span>' in INDEX
+    assert '@click="continueMethod()">Continue</button>' in INDEX
+    assert "if(methods.length>1 && !conn)" in INDEX
+    assert "if(methods.length===1 && !conn) return this.connectProvider" in INDEX
+    assert "connectProvider(mkProvider,'page-tools')" not in INDEX
+    assert "Instagram Login {{mkInstagramDirect" not in INDEX
+    assert "if((method.capabilities||[]).length>1){ this.capAsk=" in INDEX
+    assert "if(ask && ask.method) return [...(ask.method.capabilities||[])].reverse()" in INDEX
+
+
+def test_connection_rows_retain_the_shared_production_layout():
+    assert "<b>{{c.identity_label || c.name}}</b>" in INDEX
+    assert "{{c.resource_name || c.resource_ref" in INDEX
+    assert "<span class=\"mono\" :title=\"'treg call '+c.name\">{{c.name}}</span>" in INDEX
+    assert "c.provider==='instagram'" not in INDEX[INDEX.index('<tr v-for="c in mkConns"') : INDEX.index('</table>', INDEX.index('<tr v-for="c in mkConns"'))]
+
+
+def test_permission_cards_can_use_method_specific_incremental_benefits():
+    panel = INDEX[INDEX.index('<div class="tgh">Permissions') : INDEX.index('<!-- Cross-link into the endpoint catalog:')]
+    assert "mkCapabilityIntro(cap)" in panel
+    assert "mkCapabilityDetails(cap)" in panel
+    computed = INDEX[INDEX.index("computed:{") : INDEX.index("methods:{")]
+    assert "mkCapabilityMethod(cap){" not in computed
+    logic = INDEX[INDEX.index("mkCapabilityMethod(cap){") : INDEX.index("capLabel(cap){")]
+    assert "m.capability_details && (m.capability_details[cap]||[]).length" in logic
+    assert "this.mkProvider&&this.mkProvider.scope_detail" in logic
+    assert "page-tools" not in logic and "instagram" not in logic
+
+
 # --- endpoint catalog: the marketplace's platform axis (view==='platform') --------------------
 
 
@@ -80,6 +115,12 @@ def test_the_platform_header_stacks_instead_of_putting_providers_in_a_column():
     assert "tut-actions" not in head  # the two-column header is gone from this view
     assert ".plat-provs{display:flex;flex-wrap:wrap" in INDEX  # ...and the chips wrap rather than scroll
     assert ".plat-intro{margin:10px 0 0;max-width:74ch}" in INDEX  # readable measure, full-width column
+
+
+def test_platform_provider_navigation_does_not_wait_for_connection_registry_state():
+    block = INDEX[INDEX.index("platProviders(){") : INDEX.index("// ---- the ledger ----")]
+    assert "this.providers.some" not in block
+    assert "seen.filter(s=>s!=='treg')" in block
 
 
 def test_platform_view_is_a_top_level_view():
@@ -618,7 +659,7 @@ def test_a_callable_row_is_marked_down_its_leading_edge():
     assert ':class="{open:platOpen[r.key], go:r.ready}"' in block
     assert ".lrow.go td:first-child{box-shadow:inset 3px 0 0" in INDEX
     rows = INDEX[INDEX.index("platRowsAll(){") :][:3400]
-    assert "ready: eps.some(e=>this.catConnected(e.provider))" in rows
+    assert "ready: eps.some(e=>this.catEndpointConnected(e))" in rows
 
 
 def test_cheapest_orders_on_the_servers_usd_not_a_local_fx_constant():
@@ -652,7 +693,7 @@ def test_a_connected_oauth_endpoint_counts_as_the_free_path():
     """The account you already connected is the licence — calling it costs nothing more, which is
     usually the right answer and must beat any metered scraper."""
     free = INDEX[INDEX.index("capFree(e){") :][:400]
-    assert "this.catConnected(e.provider)" in free
+    assert "this.catEndpointConnected(e)" in free
     assert "e.scope==='own_account'" in free
     assert "e.cost.type==='free'" in free
 
@@ -818,10 +859,10 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     assert 'openEpTry(e)' in bar and ':class="{primary:!mkOauth(e.provider)}"' in bar
     # OAuth → Connect is the ink-fill primary
     assert 'v-else-if="mkOauth(e.provider)" class="btn sm primary"' in bar and "openProvider(e.provider)" in bar
-    assert ">Connect {{e.provider_display||e.provider}}</button>" in bar
+    assert "{{endpointConnectLabel(e)}}</button>" in bar
     # key/token → own key is the secondary
     assert 'v-else-if="mkKnown(e.provider)" class="btn sm"' in bar and ">Bring your own key</button>" in bar
-    assert 'v-if="catConnected(e.provider)" class="chip go"' in bar and ">Connected</span>" in bar
+    assert 'v-if="catEndpointConnected(e)" class="chip go"' in bar and ">Connected</span>" in bar
     assert 'v-if="e.docs_url"' in bar  # ...docs sit up here too, not below the fold
     assert ".ltabs-r .btn.primary{background:var(--inverse)" in INDEX
 
@@ -843,6 +884,48 @@ def test_try_it_get_snippets_keep_query_and_auth_without_a_body():
     assert "curl -X ${method}" in block
     assert "if(this.sessionMode && this.activeSlugNow)" in block
     assert block.count("method!=='GET' && this.epTryBody.trim()") == 2
+
+
+def test_try_it_selects_registry_authorization_and_updates_every_call_surface():
+    start = INDEX.index('<!-- Try a MARKETPLACE endpoint right here.')
+    drawer = INDEX[start : INDEX.index('<!-- access reminder toast:', start)]
+    assert 'v-model="epTryAuthMethod"' in drawer
+    assert 'v-if="epTryShowAuthSelector"' in drawer
+    assert 'class="field auth-method-field"' in drawer
+    assert "authorizationMethodLabel(epTry.provider,m)" in drawer
+    assert "m==='instagram-login'" not in drawer
+    logic = INDEX[INDEX.index("epTryVisibleParams(){") : INDEX.index("tryExamples(){")]
+    assert "--authorization-method ${this.epTryAuthMethod}" in logic
+    assert 'X-Treg-Authorization-Method: ${this.epTryAuthMethod}' in logic
+    runner = INDEX[INDEX.index("openEpTry(e){") : INDEX.index("async runTry(){")]
+    assert "this.epTryAuthMethod=e.authorization_method" in runner
+    assert "opts.headers['X-Treg-Authorization-Method']=this.epTryAuthMethod" in runner
+    assert "(this.epTry.authorization_paths||{})[this.epTryAuthMethod]||this.epTry.path" in INDEX
+
+
+def test_instagram_try_it_only_shows_method_picker_when_both_grants_are_connected():
+    logic = INDEX[INDEX.index("epTryAuthMethods(){") : INDEX.index("epTryVisibleParams(){")]
+    assert "a.tier==='tool'||a.tier==='credential'" in logic
+    assert "this.epTryAuthMethods.length>1 && this.epTryConnectedMethods.length>1" in logic
+    policy = INDEX[INDEX.index("async loadEpTryAccessPolicy(){") : INDEX.index("async runEpTry(){")]
+    assert "if(connected.length===1) this.epTryAuthMethod=connected[0]" in policy
+    assert "else this.epTryAuthMethod=e.authorization_method||methods[0]||''" in policy
+
+
+def test_multi_method_picker_uses_only_available_methods():
+    picker = INDEX[INDEX.index("startConnect(p, conn){") : INDEX.index("async continueMethod(){")]
+    assert "const available=methods.filter(method=>method.configured)" in picker
+
+
+def test_catalog_connection_badges_require_an_endpoint_compatible_grant():
+    logic = INDEX[INDEX.index("catConnected(service){") : INDEX.index("catMetered(service){")]
+    assert "endpointAuthMethods(e)" in logic
+    assert "c.provider===e.provider && methods.includes(c.authorization_method)" in logic
+    assert "endpointConnectLabel(e)" in logic
+    drawer = INDEX[INDEX.index("<!-- MANUAL — the live test form -->") : INDEX.index("<!-- access reminder toast:")]
+    assert "epTryAccess.connect_command" not in drawer
+    assert "openProvider(epTry.provider); epTry=null" in drawer
+    assert "epTryAccess.action_label||endpointConnectLabel(epTry)" in drawer
 
 
 def test_provider_page_links_into_the_catalog():

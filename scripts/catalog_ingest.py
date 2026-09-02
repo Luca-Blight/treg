@@ -157,7 +157,7 @@ def core_routes(provider: str) -> set[tuple[str, str]]:
 
 
 def carry_verification(provider: str, endpoints: list[dict]) -> int:
-    """Re-attach `verified` / `example_response` / `unverified` / `capability` from the file being replaced.
+    """Re-attach reviewed and live-verified fields from the file being replaced.
 
     Those fields are the only ones NOT derived from upstream: verification stamps are the result
     of an actual paid call made by scripts/catalog_verify_extended.py, and `capability` is a
@@ -192,7 +192,13 @@ def carry_verification(provider: str, endpoints: list[dict]) -> int:
             continue
         if prev.get("method") != ep.get("method") or prev.get("path") != ep.get("path"):
             continue
-        for field in ("verified", "example_response", "unverified", "capability", "name", "kind"):
+        for field in (
+            "verified", "example_response", "unverified", "capability", "name", "kind",
+            # Meta publishes no machine-readable request schema or grant matrix. These contracts
+            # are reviewed against its HTML docs and must survive the next deterministic ingest.
+            "input", "authorization_method", "authorization_methods", "authorization_paths",
+            "required_scopes", "required_resource", "token_type",
+        ):
             if prev.get(field) is not None:
                 ep[field] = prev[field]
         if prev.get("capability") is not None and prev.get("platform"):
@@ -1905,7 +1911,7 @@ INSTAGRAM_EDGES: list[tuple[str, str, str, str, str]] = [
      "A comment that @-mentions this account, with its thread", ""),
     ("user-content-publishing-limit", "GET", "/{ig_user_id}/content_publishing_limit",
      "How many of the 24-hour posting quota (50 posts) this account has already used", ""),
-    ("user-business-discovery", "GET", "/{ig_user_id}?fields=business_discovery.username({username})",
+    ("user-business-discovery", "GET", "/{ig_user_id}",
      "Read ANOTHER public professional account's followers, media count and recent posts", ""),
     ("user-recently-searched-hashtags", "GET", "/{ig_user_id}/recently_searched_hashtags",
      "The hashtags this account has looked up recently (the 30-per-week search quota)", ""),
@@ -1927,8 +1933,8 @@ INSTAGRAM_EDGES: list[tuple[str, str, str, str, str]] = [
      "The replies under a comment", ""),
     ("comment-reply-create", "POST", "/{ig_comment_id}/replies",
      "Reply to a comment as the account", ""),
-    ("comment-hide", "POST", "/{ig_comment_id}?hide=true",
-     "Hide a comment on the account's own media", ""),
+    ("comment-hide", "POST", "/{ig_comment_id}",
+     "Hide or unhide a comment on the account's own media", ""),
     ("comment-delete", "DELETE", "/{ig_comment_id}",
      "Delete a comment on the account's own media", ""),
     ("media-comment-create", "POST", "/{ig_media_id}/comments",

@@ -34,6 +34,13 @@ related:
 
 # Data model
 
+## OAuth authorization method identity
+
+Revision `0010` adds `authorization_method` to `PendingOAuth` and `Secret`, plus the pending
+long-lived exchange style. It backfills existing Instagram secrets as `facebook-page`. New direct
+Instagram grants use `instagram-login`. This lets one provider keep two separate grants without
+inferring their token type from encrypted data.
+
 SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tenancy adds `Org`,
 `Membership`, `Invite` and an `org_id` on the resource nouns — the tenancy mechanics live in
 [multi-tenancy](multi-tenancy.md); this fragment is the table reference.

@@ -38,6 +38,7 @@ from .idempotency import IDEMPOTENCY_HEADER, _store_idempotent
 from .intake import META_HEADER, _parse_call_meta, _tag_telemetry, prepare_call_intake
 from .reserve import _enforce_tag_budgets, _platform_reserve
 from .resolve import (
+    AUTHORIZATION_METHOD_HEADER,
     MarketplaceCall,
     QueryValues,
     _billed_marketplace,
@@ -466,6 +467,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 read_body=request.body,
                 caller=caller,
                 resolve_call=_resolve_call,
+                authorization_method=request.headers.get(AUTHORIZATION_METHOD_HEADER, ""),
             ), request, call_ref)
         except CallFailure as mkexc:
             # Catalog resolution is allowed to fall through from a named miss, but its own 404 must

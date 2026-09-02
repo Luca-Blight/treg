@@ -229,6 +229,8 @@ async def test_successful_discovery_marks_the_connection_working(clients: AsyncC
 def treg_meta_app(monkeypatch):
     monkeypatch.setenv("TREG_META_CLIENT_ID", "treg-meta-cid")
     monkeypatch.setenv("TREG_META_CLIENT_SECRET", "treg-meta-csec")
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_ID", "treg-instagram-cid")
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_SECRET", "treg-instagram-csec")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -239,8 +241,18 @@ def _meta_test_provider(monkeypatch, service: str, **over):
 
     from treg import oauth_providers as P
 
+    provider = P.REGISTRY[service]
+    if service == "instagram":
+        methods = tuple(
+            dataclasses.replace(
+                method,
+                overrides=tuple({**dict(method.overrides), **over}.items()),
+            ) if method.name == "facebook-page" else method
+            for method in provider.authorization_methods
+        )
+        provider = dataclasses.replace(provider, authorization_methods=methods)
     monkeypatch.setitem(P.REGISTRY, service, dataclasses.replace(
-        P.REGISTRY[service], discover_base_url="http://upstream", **over))
+        provider, discover_base_url="http://upstream", **over))
 
 
 async def test_business_owned_pages_join_the_facebook_picker(clients: AsyncClient, treg_meta_app, monkeypatch):
@@ -266,7 +278,7 @@ async def test_business_owned_instagram_accounts_join_the_picker(clients: AsyncC
     professional accounts, a Page without one drops out instead of surviving as an id-less
     phantom row, and the directly-reachable account is not doubled."""
     _meta_test_provider(monkeypatch, "instagram")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     r = await clients.get(f"/connections/{st['secret_id']}/resources")
     assert r.status_code == 200, r.text
     got = {x["id"]: x["label"] for x in r.json()["resources"]}
@@ -287,7 +299,7 @@ async def test_instagram_selection_stores_and_binds_the_linked_page_token(
     user token stays available for future discovery and reconnect; calls inject only the Page token.
     """
     _meta_test_provider(monkeypatch, "instagram")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     sid = st["secret_id"]
 
     r = await clients.post(f"/connections/{sid}/resource", json={
@@ -303,7 +315,7 @@ async def test_instagram_selection_stores_and_binds_the_linked_page_token(
         assert blob["page_access_token"] == expected_token
         assert blob["page_id"] == expected_page
         tool = (await db.execute(select(Tool).where(
-            Tool.org_id == secret.org_id, Tool.name == "instagram"
+            Tool.org_id == secret.org_id, Tool.name == "instagram-page-tools"
         ))).scalars().one()
         assert tool.bindings[0]["secret_field"] == "page_access_token"
 
@@ -320,7 +332,7 @@ async def test_instagram_selection_subscription_failure_is_atomic(
         monkeypatch, "instagram",
         resource_setup_path="/{page_id}/missing-subscription-edge",
     )
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     sid = st["secret_id"]
 
     r = await clients.post(f"/connections/{sid}/resource", json={
@@ -341,7 +353,7 @@ async def test_resource_provider_io_runs_without_an_open_database_session(
 ):
     """A slow provider must not hold a database session while resource setup waits on HTTP."""
     _meta_test_provider(monkeypatch, "instagram")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     real_session_maker = connect_use_cases.session_maker
     real_resolve = connect_use_cases._resolve_resource_call_token
     open_sessions = 0
@@ -373,7 +385,7 @@ async def test_resource_selection_rejects_a_concurrent_reconnect(
 ):
     """Do not combine a Page token from an old grant with a reconnected root token."""
     _meta_test_provider(monkeypatch, "instagram")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     sid = st["secret_id"]
     real_resolve = connect_use_cases._resolve_resource_call_token
 
@@ -411,7 +423,7 @@ async def test_instagram_selection_rejects_an_unlinked_account_atomically(
     clients: AsyncClient, treg_meta_app, monkeypatch,
 ):
     _meta_test_provider(monkeypatch, "instagram")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     sid = st["secret_id"]
 
     r = await clients.post(f"/connections/{sid}/resource", json={
@@ -428,12 +440,14 @@ async def test_instagram_calls_inject_the_selected_page_token(
     clients: AsyncClient, treg_meta_app, monkeypatch,
 ):
     _meta_test_provider(monkeypatch, "instagram", base_url="http://upstream/v25.0")
-    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    st = await _connect_byo(clients, provider="instagram", capability="page-tools", name="")
     sid = st["secret_id"]
     # Emulate an Instagram connection provisioned before Page-token handling shipped. Selecting
     # the account should migrate its binding in place; a second OAuth reconnect is not required.
     async with session_maker() as db:
-        tool = (await db.execute(select(Tool).where(Tool.name == "instagram"))).scalars().one()
+        tool = (await db.execute(select(Tool).where(
+            Tool.name == "instagram-page-tools"
+        ))).scalars().one()
         binding = dict(tool.bindings[0])
         binding["secret_field"] = "access_token"
         tool.bindings = [binding]
@@ -443,7 +457,10 @@ async def test_instagram_calls_inject_the_selected_page_token(
     })
     assert selected.status_code == 200, selected.text
 
-    r = await clients.get("/call/instagram/PAGE-DIRECT/conversations")
+    r = await clients.get(
+        "/call/instagram-page-tools/PAGE-DIRECT/conversations",
+        params={"platform": "instagram"},
+    )
     assert r.status_code == 200, r.text
     assert r.json()["data"][0]["id"] == "IG-CONVERSATION-1"
     assert r.json()["data"][0]["page_id"] == "PAGE-DIRECT"

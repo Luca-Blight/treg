@@ -126,6 +126,13 @@ rejects on HTTP status by default.
   unconfigured OAuth platform — don't force a bad-fit provider.
 
 ## The heavy path — adding an OAuth provider
+
+One logical provider can have more than one explicit grant. Use `authorization_methods` with
+capability ownership and protocol overrides; do not duplicate the provider catalog. Store the
+selected method on the pending flow and secret. Add endpoint authorization metadata so catalog
+resolution selects by provider and grant identity before it compares shared upstream hosts.
+Instagram direct Login plus optional Facebook Page tools is the reference implementation; see
+[instagram-oauth](../architecture/instagram-oauth.md).
 1. treg must register its **own** dev app on the network → `client_id`/`client_secret` → add the two settings
    to `config.py` (`Settings`) so they load from env; the registry entry names them via
    `client_id_setting`/`client_secret_setting`.

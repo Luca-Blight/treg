@@ -374,7 +374,10 @@ def main(argv: list[str]) -> int:
     # `dataset_id`, GAQL's query body), so a core/extended path collision is legitimate THERE and
     # only there. Everywhere else it is the ingest-dedup failure that shipped 27 duplicate rows
     # (dataforseo via the /v3 prefix mismatch, scrapecreators via core being curated after ingest).
-    PARAM_MULTIPLEXED = {"serpapi", "brightdata", "google-ads"}
+    # Some APIs deliberately expose several catalog jobs on one method/path and select the job by
+    # required parameters. Instagram Graph's profile read and business_discovery both call
+    # GET /{ig_user_id}; the latter is selected by its required business_discovery `fields` value.
+    PARAM_MULTIPLEXED = {"serpapi", "brightdata", "google-ads", "instagram"}
     route_tiers: dict[tuple, dict[str, list[str]]] = {}
     for path in files:
         name = path.name

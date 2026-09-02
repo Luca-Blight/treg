@@ -117,6 +117,25 @@ async def test_unconfigured_provider_is_a_clear_422(clients: AsyncClient, monkey
         get_settings.cache_clear()
 
 
+def test_multi_method_provider_is_configured_when_any_method_is_available(monkeypatch):
+    """The registry gives every client one correct provider-level availability value."""
+    from treg import oauth_providers as P
+
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_ID", "")
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_SECRET", "")
+    monkeypatch.setenv("TREG_META_CLIENT_ID", "meta-cid")
+    monkeypatch.setenv("TREG_META_CLIENT_SECRET", "meta-secret")
+    get_settings.cache_clear()
+    try:
+        row = next(item for item in P.listing() if item["service"] == "instagram")
+        methods = {item["name"]: item for item in row["authorization_methods"]}
+        assert row["configured"] is True
+        assert methods["instagram-login"]["configured"] is False
+        assert methods["facebook-page"]["configured"] is True
+    finally:
+        get_settings.cache_clear()
+
+
 async def test_unknown_capability_is_422(clients: AsyncClient, treg_google_app):
     r = await clients.post(
         "/oauth/start", json={"provider": "google-search-console", "capability": "nope"}
@@ -172,7 +191,7 @@ def test_scope_label_falls_back_rather_than_raising():
 # Facebook's consent screen shows only that bare app name. Without a notice on the treg side, the
 # popup asks the user to authorize a product they have never heard of.
 
-META_SERVICES = ["facebook", "instagram", "meta-ads"]
+META_SERVICES = ["facebook", "meta-ads"]
 
 
 def test_meta_providers_disclose_the_crewlet_app_name():
@@ -183,6 +202,24 @@ def test_meta_providers_disclose_the_crewlet_app_name():
         notice = rows[service]["consent_notice"]
         assert "Crewlet" in notice, service
         assert "Superdesign Dev Inc" in notice, service
+    page = next(
+        method for method in rows["instagram"]["authorization_methods"]
+        if method["name"] == "facebook-page"
+    )
+    assert "Crewlet" in page["consent_notice"]
+    assert page["connect_capability"] == "page-tools"
+    assert page["action_label"] == "Enable Facebook Page tools"
+    assert "linked to a Facebook Page" in page["description"]
+    assert "separate from Instagram Login" in page["description"]
+    assert "Facebook Page authorization" in page["missing_message"]
+    assert "Adds these Page-only tools" in page["capability_intros"]["page-tools"]
+    assert page["capability_details"]["page-tools"] == [
+        "Search hashtags and read recent or top hashtag media",
+        "Discover another professional account by username",
+        "Read media, comments and tags that mention your account",
+        "Search the linked product catalog and inspect product appeals",
+        "Read this account's recently searched hashtags",
+    ]
 
 
 def test_only_the_meta_family_carries_a_consent_notice():
@@ -192,15 +229,22 @@ def test_only_the_meta_family_carries_a_consent_notice():
     meta_auth = {p.service for p in P.REGISTRY.values() if p.auth_uri == P._META_AUTH}
     assert meta_auth == set(META_SERVICES)
     with_notice = {row["service"] for row in P.listing() if row["consent_notice"]}
-    assert with_notice == meta_auth
+    assert with_notice == meta_auth | {"instagram"}
 
 
-def test_a_notice_provider_always_reaches_the_capability_modal():
-    """The dashboard renders `consent_notice` ONLY in the capability modal, and `startConnect`
-    skips that modal for a single-capability provider. So a provider carrying a notice must have
-    at least two capabilities, or its disclosure silently never renders."""
+def test_a_notice_provider_always_reaches_a_pre_consent_modal():
+    """A provider-level notice needs a modal before redirect. Traditional providers reach the
+    capability modal; a provider with separate authorization methods reaches the method picker,
+    whose listing entries carry the profile-specific notice."""
     from treg import oauth_providers as P
 
     for p in P.REGISTRY.values():
-        if p.consent_notice:
+        if not p.consent_notice:
+            continue
+        if p.authorization_methods:
+            assert all(
+                p.profile_for_authorization(method.name).consent_notice
+                for method in p.authorization_methods
+            )
+        else:
             assert len(p.capabilities) >= 2, p.service

@@ -18,6 +18,7 @@ from ..application.call.resolve import (
     QueryValues,
     _enforce_catalog_status,
     _marketplace_secret,
+    _provider_tool_grant,
     _may_have_body as may_have_body,
     _platform_estimate_micro,
     _platform_offer,
@@ -167,7 +168,8 @@ async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -
 
 @app.get("/catalog/endpoints/{endpoint_id}/access", include_in_schema=False)
 async def catalog_endpoint_access(
-    endpoint_id: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    endpoint_id: str, authorization_method: str = "",
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
     """Authenticated dry-run of the marketplace credential ladder — which tier would serve YOU.
     Read by `treg catalog get` to print an honest access line under RUN IT (the open catalog
@@ -215,6 +217,18 @@ async def catalog_endpoint_access(
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:
         return {"tier": "none", "detail": f"{service} isn't proxy-callable yet"}
+    registry_provider = provider
+    methods = tuple(ep.get("authorization_methods") or ())
+    selected_method = authorization_method.strip().lower()
+    if selected_method:
+        if selected_method not in methods:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"{endpoint_id} does not support {selected_method}; choose "
+                        + " or ".join(methods)),
+            )
+        methods = (selected_method,)
+        provider = provider.profile_for_authorization(selected_method)
     # An oauth-billed provider is metered even on the org's own connection (the upstream bills
     # treg's app, not the account) — the dry-run must say so, or the price is a surprise.
     billed_note = ""
@@ -224,20 +238,42 @@ async def catalog_endpoint_access(
         billed_note = (f" — metered from the team balance (~${ledger.usd(est):g}/call: "
                        f"{service} bills treg's app per use)") if est else \
                       f" — metered from the team balance ({service} bills treg's app per use)"
-    probe = provider.base_url.rstrip("/") + "/" + (ep["path"] or "/").lstrip("/")
-    try:
-        target = await resolve_call_target(probe, caller, _resolve_call)
-        tool = target.tool
-        return {"tier": "tool", "metered": bool(billed_note),
-                "detail": f"will use this org's registered {tool.name!r} tool{billed_note}"}
-    except CallFailure as exc:
-        if exc.status_code == 403:
-            return {"tier": "restricted", "detail": "a registered tool exists but your access is restricted — ask an admin"}
-        if exc.status_code != 404:
+    # Authorization-aware endpoints must resolve by provider + grant method, not only by host.
+    # Meta's Facebook and Instagram tools share graph.facebook.com, where a host-only dry-run can
+    # be ambiguous even though the selected grant is exact.
+    if methods:
+        try:
+            grant = await _provider_tool_grant(service, methods, caller, db)
+        except CallFailure as exc:
+            if exc.status_code == 403:
+                return {"tier": "restricted", "detail": "a connected account exists but your access is restricted — ask an admin"}
             raise _translate_call_failure(exc) from exc
-    if await _marketplace_secret(service, caller.org_id, db) is not None:
-        return {"tier": "credential", "metered": bool(billed_note),
-                "detail": f"will use this org's {service} credential (no tool needed){billed_note}"}
+        if grant is not None:
+            tool, _, grant_method = grant
+            return {"tier": "tool", "authorization_method": grant_method,
+                    "metered": bool(billed_note),
+                    "detail": f"will use this org's registered {tool.name!r} tool{billed_note}"}
+        secret = await _marketplace_secret(service, caller.org_id, db, methods)
+        if secret is not None:
+            return {"tier": "credential", "authorization_method": methods[0],
+                    "metered": bool(billed_note),
+                    "detail": f"will use this org's {service} credential (no tool needed){billed_note}"}
+    if not methods:
+        probe_path = ep["path"] or "/"
+        probe = provider.base_url.rstrip("/") + "/" + probe_path.lstrip("/")
+        try:
+            target = await resolve_call_target(probe, caller, _resolve_call)
+            tool = target.tool
+            return {"tier": "tool", "metered": bool(billed_note),
+                    "detail": f"will use this org's registered {tool.name!r} tool{billed_note}"}
+        except CallFailure as exc:
+            if exc.status_code == 403:
+                return {"tier": "restricted", "detail": "a registered tool exists but your access is restricted — ask an admin"}
+            if exc.status_code != 404:
+                raise _translate_call_failure(exc) from exc
+        if await _marketplace_secret(service, caller.org_id, db) is not None:
+            return {"tier": "credential", "metered": bool(billed_note),
+                    "detail": f"will use this org's {service} credential (no tool needed){billed_note}"}
     cost = _platform_offer(ep, provider, caller.org)
     if cost is not None:
         # The number is the honest per-call price at the DEFAULT page size — a `per_result` endpoint
@@ -250,10 +286,34 @@ async def catalog_endpoint_access(
             "estimated_cost_micro": est,
             "estimated_cost_usd": ledger.usd(est),
         }
-    hint = (f"connect with: treg connections connect --provider {service}"
+    capability = None
+    action_label = ""
+    missing_message = ""
+    if methods:
+        # `provider` may now be a method-specific protocol profile. Keep presentation and connect
+        # metadata on the registry provider: profiling deliberately removes the method list so the
+        # call layer cannot accidentally select a second grant later in resolution.
+        spec = next((item for item in registry_provider.authorization_methods
+                     if item.name == methods[0]), None)
+        if spec:
+            capability = spec.connect_capability
+            action_label = spec.action_label
+            missing_message = spec.missing_message
+    connect = f"treg connections connect --provider {service}"
+    if capability:
+        connect += f" --capability {capability}"
+    hint = (f"connect with: {connect}"
             if not provider.uses_pasted_secret else
-            f"connect with: treg connections connect --provider {service}, or treg secret add {service} …")
-    return {"tier": "none", "detail": f"no {service} credential in this org yet — {hint}"}
+            f"connect with: {connect}, or treg secret add {service} …")
+    return {
+        "tier": "none",
+        "authorization_method": methods[0] if methods else "",
+        "connect_capability": capability or "",
+        "connect_command": connect,
+        "action_label": action_label,
+        "missing_message": missing_message,
+        "detail": f"no {service} credential in this org yet — {hint}",
+    }
 
 @app.api_route(
     "/call/{rest:path}",
