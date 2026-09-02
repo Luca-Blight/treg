@@ -510,24 +510,30 @@ async def _finish_cancelled_call(
             # same cleanup task so compensation completes before the original cancellation escapes.
             continue
     await cleanup
-async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> None:
+async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> str | None:
     """After a tier-4 answer: did the provider just tell us OUR account is out? A confirmed balance/
     quota signature (domain.capacity.signatures) marks the provider exhausted in ratestore so the next
     call is refused before a hold exists. Burst/unknown 429s only log (D′ smooths them). Runs after
     the settle, on its own short session, and never raises. Platform tier only: an org's own key
-    running dry is the org's business, and an oauth-billed connect has no shared account to mark."""
+    running dry is the org's business, and an oauth-billed connect has no shared account to mark.
+    Returns the signal kind for the audit funnel."""
     if mk.tier != "platform" or status_code < 400:
-        return
+        return None
+    signal = None
     try:
         signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
         if signal is None:
-            return
+            return None
         if capacity_signatures.is_exhausting(signal):
             await capacity_marks.mark_exhausted(
                 mk.provider, until=signal.resets_at,
                 note=f"{signal.kind} signature on {mk.endpoint_id}: {signal.detail[:80]}")
             logging.getLogger("treg.capacity").warning(
                 "platform account exhausted: %s (%s on %s)", mk.provider, signal.kind, mk.endpoint_id)
+        elif signal.kind == "edge_block":  # not our account: no mark, but worth a warning
+            logging.getLogger("treg.capacity").warning(
+                "edge block on %s (%s): the vendor's CDN answered, not the vendor",
+                mk.provider, mk.endpoint_id)
         else:
             logging.getLogger("treg.capacity").info(
                 "rate signal on %s: %s retry_after=%s", mk.provider, signal.kind, signal.retry_after_s)
@@ -535,6 +541,7 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
         raise
     except Exception:  # noqa: BLE001 — the caller already has the provider's answer; a mark is a hint
         logging.getLogger("treg.capacity").warning("capacity signal handling failed", exc_info=True)
+    return signal.kind if signal is not None else None
 
 
 async def _record_first_call(org_id: int) -> None:

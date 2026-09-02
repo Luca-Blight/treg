@@ -1,4 +1,5 @@
-"""The signature table (plan §4.1): what a provider's error body means for OUR account.
+"""The signature table (plan §4.1): what an upstream error answer means for OUR account, or that no
+account was consulted at all.
 
 One table shared by the sweep, the future call-path trigger and the alerts, so "exhausted" means
 one thing everywhere. Pure functions over (provider, status, headers, body).
@@ -7,6 +8,8 @@ one thing everywhere. Pure functions over (provider, status, headers, body).
   quota    — the period allowance is used up (a 429 wearing quota clothes) → exhausted until reset
   burst    — a genuine rate limit with a short retry-after → smoothed, NEVER exhausted
   unknown  — a 429 we cannot classify → logged for classification (treated as burst: never refuse)
+  edge_block - the vendor's CDN refused the request's shape before the vendor's code saw it → NEVER
+             exhausted, only recorded (so a chart can attribute it to a UA family)
   None     — not a capacity signal at all (caller-caused 4xx, 5xx, success)
 """
 
@@ -39,7 +42,7 @@ _TABLE: list[tuple[str, int, str, str]] = [
 
 @dataclass(frozen=True)
 class Signal:
-    kind: str                    # balance | quota | burst | unknown
+    kind: str                    # balance | quota | burst | unknown | edge_block
     resets_at: datetime | None   # when the account serves again, if the provider told us
     retry_after_s: int | None    # for burst: how long the provider asked us to wait
     detail: str = ""
@@ -78,6 +81,16 @@ def _retry_after(headers, now: datetime) -> int | None:
     return None
 
 
+def _edge_block(status: int, headers) -> bool:
+    """Headers only, never the User-Agent: Cloudflare's `cf-mitigated` marker, or its HTML block page
+    where the vendor's app would have answered JSON."""
+    if status in (403, 503) and _header(headers, "cf-mitigated") is not None:
+        return True
+    return (status == 403
+            and "cloudflare" in (_header(headers, "server") or "").lower()
+            and "text/html" in (_header(headers, "content-type") or "").lower())
+
+
 def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
              now: datetime | None = None) -> Signal | None:
     """The capacity meaning of one upstream answer, or None when it has none."""
@@ -85,6 +98,8 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
     text = body.decode("utf-8", "replace") if isinstance(body, bytes) else (body or "")
     text_l = text.lower()
     provider = (provider or "").lower()
+    if _edge_block(status, headers):  # before the table: a block page carries no vendor body to match
+        return Signal("edge_block", None, None, detail=text[:120])
     for prov, st, pattern, kind in _TABLE:
         if st != status or prov not in ("*", provider):
             continue
@@ -115,5 +130,5 @@ def _quota_reset(provider: str, kind: str, headers, now: datetime) -> datetime |
 
 def is_exhausting(signal: Signal | None) -> bool:
     """Does this signal mark the account exhausted? Only confirmed balance/quota signatures do;
-    burst and unknown never refuse a call (plan §4.1)."""
+    burst, unknown and edge_block never refuse a call (plan §4.1)."""
     return signal is not None and signal.kind in ("balance", "quota")

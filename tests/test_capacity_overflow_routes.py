@@ -180,6 +180,26 @@ def test_signature_table_classifies_balance_quota_and_burst():
     assert S.is_exhausting(S.classify("findymail", 402, {}, b"x")) and not S.is_exhausting(None)
 
 
+_CF_PAGE = (b"<!DOCTYPE html><html><head><title>Access denied | api.example.com used Cloudflare "
+            b"to restrict access</title></head><body>Error 1010</body></html>")
+
+
+def test_a_cdn_block_page_is_an_edge_block_not_an_account_signal():
+    """A CDN refusing the request's shape says nothing about treg's account: never exhausting."""
+    assert S.classify("anyone", 403, {"cf-mitigated": "challenge"}, b"").kind == "edge_block"
+    assert S.classify("anyone", 503, {"cf-mitigated": "challenge"}, b"").kind == "edge_block"
+    hdrs = ((b"Server", b"cloudflare"), (b"Content-Type", b"text/html; charset=UTF-8"), (b"CF-RAY", b"9x"))
+    sig = S.classify("anyone", 403, hdrs, _CF_PAGE)
+    assert sig.kind == "edge_block" and not S.is_exhausting(sig)
+    # A JSON 403 from behind the same CDN is the vendor's own answer.
+    assert S.classify("anyone", 403, {"server": "cloudflare", "content-type": "application/json"},
+                      b'{"error":"too many requests"}') is None
+    assert S.classify("thecompaniesapi", 403, {"server": "cloudflare", "content-type": "application/json"},
+                      b'{"code":"noCreditsRemaining"}').kind == "balance"
+    # An HTML 503 without the marker is the vendor down, not a block.
+    assert S.classify("anyone", 503, {"server": "cloudflare", "content-type": "text/html"}, b"<html>") is None
+
+
 # ---- aggregator envelopes round-trip their fixtures --------------------------------------------
 
 def test_orthogonal_build_wraps_the_vendor_request_unchanged():

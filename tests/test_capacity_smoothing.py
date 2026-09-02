@@ -97,6 +97,43 @@ async def test_still_429_after_the_retry_is_relayed_as_is(clients: AsyncClient, 
     assert r.headers["X-Treg-Cost-Micro"] == "0"
 
 
+async def test_tool_called_reads_a_vendor_429_as_the_vendors_burst(
+    clients: AsyncClient, platform_on, monkeypatch, posthog_events,
+):
+    """The event says who produced the 429, what it meant, and what the vendor's edge saw."""
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_script(
+        [(429, ((b"retry-after", b"0"),), b"x"), (429, ((b"retry-after", b"0"),), b"y")], seen))
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"User-Agent": "Python-urllib/3.12"})
+    assert r.status_code == 429
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["outcome"] == "vendor_error" and p["refused_by"] is None
+    assert p["capacity_signal"] == "burst" and p["smoothed"] == "retry=1"
+    assert p["call_ref"] == r.headers["X-Treg-Call-Id"]
+    assert p["duration_ms"] is not None and p["cached"] is False and p["response_bytes"] == 1
+    assert p["ua_family"] == "python-urllib" and p["user_agent"] == "Python-urllib/3.12"
+    assert p["provider"] == "tikhub" and p["tier"] == "platform" and p["charged_micro"] == 0
+
+
+async def test_a_cloudflare_403_is_recorded_as_an_edge_block_and_exhausts_nothing(
+    clients: AsyncClient, platform_on, monkeypatch, posthog_events,
+):
+    """One caller's blocked request shape must not take the provider away from every other team."""
+    seen = []
+    page = b"<!DOCTYPE html><html><title>Access denied | Cloudflare</title>Error 1010</html>"
+    cf = ((b"server", b"cloudflare"), (b"content-type", b"text/html; charset=UTF-8"))
+    monkeypatch.setattr(call_service, "relay", _relay_script([(403, cf, page), (403, cf, page)], seen))
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7", headers={"User-Agent": "Python-urllib/3.12"})
+    r2 = await clients.get(f"/call/{EP}?aweme_id=8", headers={"User-Agent": "Python-urllib/3.12"})
+    assert r1.status_code == 403 and r2.status_code == 403
+    assert len(seen) == 2, "the second call still reached the vendor: nothing was marked exhausted"
+    events = await posthog_events()
+    assert [e["properties"]["capacity_signal"] for e in events] == ["edge_block", "edge_block"]
+    assert all(e["properties"]["outcome"] == "vendor_error" for e in events)
+    assert all(e["properties"]["ua_family"] == "python-urllib" for e in events)
+
+
 async def test_no_retry_for_a_post_a_long_retry_after_or_a_quota_429(clients: AsyncClient, platform_on, monkeypatch):
     from test_marketplace_call import EP_DFS
     seen = []

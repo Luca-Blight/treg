@@ -136,7 +136,10 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
 - **`signatures.py`** — the signature table: what a provider's error body means for OUR account
   (`balance` / `quota` → exhausted; `burst` → smoothed, never exhausted; `unknown` 429 → logged).
   Lusha's "Daily" 429 and Hunter's "per billing period" 429 are quota exhaustion wearing a 429;
-  a `retry-after ≤ 60 s` is a burst. Shared by the sweep, the future call-path trigger and alerts.
+  a `retry-after ≤ 60 s` is a burst. `edge_block` is the odd one out: the vendor's CDN refused the
+  request's shape (decided on headers, never the caller's UA), so it exhausts nothing, overflows
+  nothing and alerts nothing; it exists so a chart can tell a bot-filtered UA family from a
+  provider outage. Shared by the sweep, the future call-path trigger and alerts.
 - **`infra/upstream/aggregators/`** — the envelopes, and nothing else: `build()` wraps the
   vendor request (Orthogonal `POST /run {api, path, query, body}`; Monid `POST /run {provider,
   endpoint, input}`), `parse()` unwraps the vendor status + body + the real in-band charge, and
