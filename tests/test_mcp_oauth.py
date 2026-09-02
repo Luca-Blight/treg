@@ -25,7 +25,6 @@ from treg.config import Settings, get_settings
 # drive a tool, so reuse them rather than keeping a second copy that can drift.
 from test_mcp import _call_tool, mcp_session
 
-pytestmark = pytest.mark.anyio
 
 
 # ---- metadata: what we tell a client we support --------------------------------------------

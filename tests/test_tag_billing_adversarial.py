@@ -72,7 +72,6 @@ def _assert_meta_rejected(value: str) -> None:
     assert exc.value.status_code == 422
 
 
-@pytest.mark.anyio
 async def test_attack_1_all_ingress_paths_reject_storage_key_delimiters(
     clients: AsyncClient, platform_on,
 ):
@@ -101,7 +100,6 @@ async def test_attack_1_all_ingress_paths_reject_storage_key_delimiters(
     assert all(bad not in meta.primary_val for bad in ("\x1f", "\n", ","))
 
 
-@pytest.mark.anyio
 async def test_attack_2_usage_identity_survives_five_tags_zero_release_settle_and_org_overlap(
     clients: AsyncClient, platform_on, monkeypatch,
 ):
@@ -172,7 +170,6 @@ async def test_attack_2_usage_identity_survives_five_tags_zero_release_settle_an
     assert usage["attributed_micro"] + usage["unattributed_micro"] == usage["total_micro"]
 
 
-@pytest.mark.anyio
 async def test_attack_3_settle_and_release_cannot_reattribute_reserved_tags(clients: AsyncClient):
     org_id = await _org_id(clients)
     async with session_maker() as db:
@@ -199,7 +196,6 @@ async def test_attack_3_settle_and_release_cannot_reattribute_reserved_tags(clie
             db, org_id, "customer", "release_attacker", datetime(2000, 1, 1)) == 0
 
 
-@pytest.mark.anyio
 async def test_attack_4_concurrent_prechecks_overshoot_is_bounded_not_exact(
     clients: AsyncClient, platform_on, monkeypatch,
 ):
@@ -276,7 +272,6 @@ def _drop_audit(coro) -> None:
     coro.close()
 
 
-@pytest.mark.anyio
 async def test_review_usage_window_uses_settlement_time(clients: AsyncClient):
     org_id = await _org_id(clients)
     async with session_maker() as db:
@@ -292,7 +287,6 @@ async def test_review_usage_window_uses_settlement_time(clients: AsyncClient):
     assert usage["unattributed_micro"] == 0
 
 
-@pytest.mark.anyio
 async def test_review_reserve_failure_rolls_back_tag_and_balance_together(clients: AsyncClient):
     org_id = await _org_id(clients)
     call_id = f"duplicate-{uuid.uuid4().hex}"
@@ -310,7 +304,6 @@ async def test_review_reserve_failure_rolls_back_tag_and_balance_together(client
         await ledger.release(db, call_id, reason="cleanup")
 
 
-@pytest.mark.anyio
 async def test_review_concurrent_settle_release_preserves_the_money_invariant(
     clients: AsyncClient, monkeypatch,
 ):
@@ -358,7 +351,6 @@ async def test_review_concurrent_settle_release_preserves_the_money_invariant(
         assert len(terminal) == 1, (results, [(entry.kind, entry.amount_micro) for entry in terminal])
 
 
-@pytest.mark.anyio
 async def test_review_pin_bypass_matrix_never_attributes_a_different_value(
     clients: AsyncClient, platform_on,
 ):
@@ -395,7 +387,6 @@ async def test_review_pin_bypass_matrix_never_attributes_a_different_value(
             db, org_id, "customer", "cust_A", datetime(2000, 1, 1)) == successes * EP_MICRO
 
 
-@pytest.mark.anyio
 async def test_review_pins_cannot_bypass_the_five_pair_limit(clients: AsyncClient):
     org_id = await _org_id(clients)
     response = await clients.post(
@@ -405,7 +396,6 @@ async def test_review_pins_cannot_bypass_the_five_pair_limit(clients: AsyncClien
     assert response.status_code == 422, response.text
 
 
-@pytest.mark.anyio
 async def test_review_distinct_memberships_never_share_idempotent_bodies(
     clients: AsyncClient, platform_on, monkeypatch,
 ):
@@ -438,7 +428,6 @@ async def test_review_distinct_memberships_never_share_idempotent_bodies(
     assert first_a.content != first_b.content
 
 
-@pytest.mark.anyio
 async def test_review_replay_keeps_the_original_call_id(clients: AsyncClient, platform_on):
     headers = {"X-Treg-Meta": "customer=cust_A", "Idempotency-Key": "review-call-id"}
     first = await clients.get(f"/call/{EP}?aweme_id=idem", headers=headers)
@@ -460,7 +449,6 @@ def test_review_idempotency_separator_and_post_fingerprint_are_unambiguous():
     assert original != call_idem._request_fingerprint("POST", "endpoint", b'{"amount":1}', "mode=slow")
 
 
-@pytest.mark.anyio
 async def test_review_primary_call_cap_survives_audit_loss(
     clients: AsyncClient, platform_on, monkeypatch,
 ):
@@ -475,7 +463,6 @@ async def test_review_primary_call_cap_survives_audit_loss(
     assert refused.status_code == 429, refused.text
 
 
-@pytest.mark.anyio
 async def test_review_non_primary_call_cap_and_export_counts_work(
     clients: AsyncClient, platform_on,
 ):
@@ -495,7 +482,6 @@ async def test_review_non_primary_call_cap_and_export_counts_work(
     assert refused.status_code == 429, refused.text
 
 
-@pytest.mark.anyio
 async def test_review_every_ledger_writer_overrides_false_provenance(clients: AsyncClient):
     org_id = await _org_id(clients)
     suffix = uuid.uuid4().hex
