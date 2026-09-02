@@ -4373,12 +4373,9 @@ createApp({
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
     },
     activityShown(){ return this.actOkOnly ? this.activityRows.filter(a=>a.ok) : this.activityRows; },
-    callBodyTruncated(){ const t=this.callView&&this.callView.response&&this.callView.response.body_text; return !!t && !this.callViewFull && t.length>262144; },
-    callBodyShown(){  // pretty-print JSON when it parses; cap the rendered text at 256 KB unless asked for all of it
-      const t=this.callView&&this.callView.response&&this.callView.response.body_text; if(!t) return '';
-      if(this.callBodyTruncated) return t.slice(0,262144)+'\n… (truncated)';
-      return this.pretty(t);
-    },
+    callBodyPretty(){ const t=this.callView&&this.callView.response&&this.callView.response.body_text; return t?this.pretty(t):''; },  // JSON pretty-printed when it parses (a 2 MB parse is ~20 ms)
+    callBodyTruncated(){ return !this.callViewFull && this.callBodyPretty.length>262144; },  // cap the RENDERED text at 256 KB unless asked for all of it
+    callBodyShown(){ const t=this.callBodyPretty; return this.callBodyTruncated ? t.slice(0,262144)+'\n… (truncated)' : t; },
     anyTagged(){  // hide the column entirely for teams that never send X-Treg-Meta
       return (this.calls||[]).some(c=>c.tags && Object.keys(c.tags).length);
     },
