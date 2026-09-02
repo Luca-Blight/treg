@@ -309,6 +309,31 @@ def _reset_call_path_caches():
     _clear()
 
 
+@pytest.fixture
+def posthog_events(monkeypatch):
+    """The PostHog mirror, switched on for one test with its POST stubbed. `await posthog_events()`
+    drains the queue and returns every `tool_called` event the server would have batched out, so a
+    test can assert on the product-analytics shape of a call without the two-second flush timer."""
+    from treg import analytics
+    from treg.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "posthog_key", "phc_test_suite", raising=False)
+    sent: list[dict] = []
+
+    async def _keep(batch):
+        sent.extend(batch)
+
+    monkeypatch.setattr(analytics, "_post", _keep)
+    analytics._queue.clear()
+
+    async def collect(event: str = "tool_called") -> list[dict]:
+        await analytics.drain()
+        return [e for e in sent if e["event"] == event]
+
+    yield collect
+    analytics._queue.clear()
+
+
 @pytest.fixture(autouse=True)
 def _no_ambient_treg_identity(monkeypatch):
     """A dev machine may carry a per-agent identity in its environment (TREG_TOKEN et al — the

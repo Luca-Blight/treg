@@ -294,7 +294,8 @@ client — no semaphore, because HTTP to PostHog never touches the DB pool. **Em
 module is off** (self-hosters and the test suite send nothing). `$groups: {team: org_slug}` mirrors the
 browser's `posthog.group('team', slug)` and `distinct_id` is the user email, so server events join the
 same PostHog person/group the SPA identifies. Emitters: `call_tool`'s `_audit` funnel (`tool_called`,
-with the catalog `provider` as vendor or the upstream host for own tools), `billing_topup`
+with the catalog `provider` as vendor or the upstream host for own tools; the field list is in
+[proxy-model](proxy-model.md)), `billing_topup`
 (`topup_started`), and `billing._credit` (`topup_completed`, gated on `fresh`). Drained in the lifespan
 `finally` after `audit.drain()`. The engine adds Postgres pool
 hygiene (`pool_pre_ping`/`pool_recycle`/sizing) for non-SQLite URLs, and `verify_db` refuses to start with

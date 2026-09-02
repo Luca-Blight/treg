@@ -206,31 +206,23 @@ async def test_promotion_link_survives_a_rotate(env):
 
 
 # ---- product analytics mirror ------------------------------------------------------------------
-async def test_call_emits_one_tool_called_event(env, monkeypatch):
+async def test_call_emits_one_tool_called_event(env, posthog_events):
     """The audit funnel also mirrors each /call to PostHog (when a key is set): one `tool_called`
     per call, carrying the runtime attribution and — for own tools — the upstream host as vendor."""
-    from treg import analytics
-    from treg.config import get_settings
-    monkeypatch.setattr(get_settings(), "posthog_key", "phc_test_suite", raising=False)
-
-    async def _no_post(batch):  # the flusher must not reach the real PostHog host
-        pass
-    monkeypatch.setattr(analytics, "_post", _no_post)
-    analytics._queue.clear()
-
     r = await env.c.get("/call/alpha/ok", headers=_h(env.member, "claude-code"))
     assert r.status_code == 200
-    events = [e for e in analytics._queue if e["event"] == "tool_called"]
-    assert len(events) == 1
-    e = events[0]
+    (e,) = await posthog_events()
     assert e["distinct_id"] == "m@x.dev"
     p = e["properties"]
     assert p["client"] == "claude-code" and p["status_code"] == 200
     assert p["own_tool"] is True and p["tool_name"] == "alpha"
     assert p["provider"] == "upstream"  # own tool → vendor falls back to the upstream host
     assert p["$groups"] == {"team": "team"}
-    await analytics.drain()
-    analytics._queue.clear()
+    assert p["outcome"] == "ok" and p["refused_by"] is None
+    assert p["call_ref"] == r.headers["X-Treg-Call-Id"]
+    assert p["cached"] is False and p["smoothed"] is None and p["hit"] is None
+    assert p["ua_family"] == "python-httpx" and p["user_agent"].startswith("python-httpx/")
+    assert "capacity_signal" not in p, "a capacity reading belongs to catalog calls only"
 
 
 async def test_no_key_no_tool_called_events(env):

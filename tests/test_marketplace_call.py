@@ -342,6 +342,23 @@ async def test_empty_balance_is_a_402_an_agent_can_act_on(clients: AsyncClient, 
     assert "treg topup --auto on" in d["message"]
 
 
+async def test_a_balance_refusal_is_a_treg_refused_event_not_a_vendor_402(
+    clients: AsyncClient, platform_on, posthog_events,
+):
+    """treg said no before any upstream trip, and the event says so as data, not as a status code."""
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        await ledger.reserve(db, org_id, "drain", 1_000_000)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 402, r.text
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["status_code"] == 402
+    assert p["outcome"] == "treg_refused" and p["refused_by"] == "balance"
+    assert p["duration_ms"] is None and p["capacity_signal"] is None and p["smoothed"] is None
+    assert p["provider"] == "tikhub" and p["tier"] == "platform" and p["call_ref"]
+
+
 async def test_402_with_autotopup_on_names_the_policy_not_a_missing_card(clients: AsyncClient, platform_on):
     """Auto top-up ON and still out of money means the cooldown or the cap is holding. Saying "add
     funds" alone reads as "auto top-up is broken"; the message names the amount/threshold/cap and
