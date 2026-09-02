@@ -246,6 +246,19 @@ def test_call_preserves_duplicate_query_keys(monkeypatch):
     assert params == [("tag", "a"), ("tag", "b")]  # both survive; a dict would drop tag=a
 
 
+def test_call_sends_explicit_authorization_method_as_treg_control_header(monkeypatch):
+    fake = _FakeClient()
+    monkeypatch.setattr(cli, "_client", lambda cfg: fake)
+    monkeypatch.setattr(cli, "_show", lambda r: None)
+    args = cli.build_parser().parse_args([
+        "call", "future-provider.endpoint",
+        "--authorization-method", "delegated-admin",
+        "--query", "page_id=PAGE-1",
+    ])
+    cli.cmd_call(args, {"base_url": "http://x"})
+    assert fake.calls[0][4]["X-Treg-Authorization-Method"] == "delegated-admin"
+
+
 def test_call_query_without_equals_exits_cleanly(monkeypatch):
     monkeypatch.setattr(cli, "_client", lambda cfg: _FakeClient())
     args = cli.build_parser().parse_args(["call", "echo", "--query", "flag"])
@@ -282,6 +295,38 @@ def test_oauth_connect_without_provider_or_client_secret_exits():
                           "provider": None, "capability": None})()
     with pytest.raises(SystemExit):
         cli.cmd_oauth_connect(args, {"base_url": "http://x"})
+
+
+def test_oauth_connect_prints_provider_guidance_from_the_api(monkeypatch, capsys):
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {
+                "state": "STATE",
+                "redirect_uri": "https://registry.example/oauth/callback",
+                "consent_url": "https://provider.example/authorize",
+                "connect_guidance": "Use the linked workspace administrator grant.",
+            }
+
+    class StatusResponse:
+        def json(self):
+            return {"status": "done", "secret_id": 7, "name": "future-provider"}
+
+    class Client:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def post(self, path, json): return Response()
+        def get(self, path): return StatusResponse()
+
+    monkeypatch.setattr(cli, "_client", lambda cfg: Client())
+    monkeypatch.setattr(cli.time, "sleep", lambda seconds: None)
+    args = cli.build_parser().parse_args([
+        "connections", "connect", "--provider", "future-provider",
+    ])
+    cli.cmd_oauth_connect(args, {"base_url": "http://x"})
+    output = capsys.readouterr().out
+    assert "Use the linked workspace administrator grant." in output
 
 
 def test_skill_push_missing_file_exits():

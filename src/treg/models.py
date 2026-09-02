@@ -378,6 +378,9 @@ class PendingOAuth(SQLModel, table=True):
     # The registry service this connect came from ("" for a bring-your-own-app connect). Carried
     # through the redirect so the callback knows which provider's tool to auto-provision.
     provider: str = Field(default="")
+    # One catalog provider can have more than one explicit OAuth grant. Instagram uses a
+    # direct Instagram grant by default and a separate Facebook Page grant for Page-only tools.
+    authorization_method: str = Field(default="")
     # Per-provider auth quirks, captured at start so the callback exchanges the code the same way
     # the consent URL was built. `code_verifier` is PKCE (empty = not used); `auth_params` is a JSON
     # object of extra consent-URL query params.
@@ -392,6 +395,9 @@ class PendingOAuth(SQLModel, table=True):
     # Snapshotted for the same reason as the fields above — the callback must not have to look the
     # provider up again to know how the token was meant to be obtained.
     long_lived_exchange: bool = Field(default=False)
+    # Empty keeps the legacy boolean behavior. "instagram" uses Instagram's ig_exchange_token
+    # endpoint and records its renewable long-lived-token protocol in the encrypted blob.
+    long_lived_exchange_style: str = Field(default="")
     # Which existing connection this consent is REPLACING, if any. Set when the user reconnects or
     # widens access on a specific account; left null when they are adding another one. Without it
     # the callback cannot tell "renew this Slack workspace" from "attach a second Slack workspace",
@@ -424,6 +430,9 @@ class Secret(SQLModel, table=True):
     # Connection metadata (registry connects — see oauth_providers.py). Empty `provider` means this
     # credential did not come from the registry (uploaded, or a bring-your-own-app connect).
     provider: str = Field(default="", index=True)
+    # The explicit grant that minted this credential. Kept separate from provider so two grants for
+    # one logical provider never overwrite or impersonate each other.
+    authorization_method: str = Field(default="", index=True)
     granted_scopes: str = Field(default="")  # space-joined; what the user ACTUALLY consented to
     resource_ref: str = Field(default="")  # the chosen site / property / account this connection acts on
     # The human name for that ref. Upstream ids are opaque ("properties/384078430"); showing one to

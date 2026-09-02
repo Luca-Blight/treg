@@ -1,6 +1,6 @@
 [project]
 name = "tools-registry"
-version = "0.14.0"
+version = "0.15.0"
 description = "A remote registry that turns team skills into shareable, callable tools via a credential-injecting proxy."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -164,6 +164,21 @@ name = "Call application does not depend on HTTP adapters"
 type = "forbidden"
 source_modules = ["treg.application.call"]
 forbidden_modules = ["treg.api", "treg.bootstrap", "treg.routers", "fastapi", "starlette"]
+allow_indirect_imports = true
+as_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Connections domain does not depend on outer layers"
+type = "forbidden"
+source_modules = ["treg.domain.connections"]
+forbidden_modules = [
+    "treg.api",
+    "treg.bootstrap",
+    "treg.routers",
+    "treg.application",
+    "fastapi",
+    "starlette",
+]
 allow_indirect_imports = true
 as_packages = true
 

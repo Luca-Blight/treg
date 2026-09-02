@@ -2297,6 +2297,8 @@ def cmd_call(args, cfg) -> None:
         except ValueError:
             pass
     headers = {"content-type": ctype} if ctype else {}
+    if authorization_method := getattr(args, "authorization_method", None):
+        headers["X-Treg-Authorization-Method"] = authorization_method
     # Some APIs need a caller-supplied header the binding can't know: Google Ads wants
     # `login-customer-id` naming the manager account whenever you act on a client under an MCC,
     # and it changes per call, so it can't live on the tool. Injected bindings still win — a
@@ -4944,6 +4946,8 @@ def cmd_oauth_connect(args, cfg) -> None:
             _show(r)
             return
         d = r.json()
+        if d.get("connect_guidance"):
+            print(f"\n{d['connect_guidance']}")
         print(f"\n1. Ensure this redirect URI is allowed:\n   {d['redirect_uri']}")
         print(f"\n2. Open to authorize:\n   {d['consent_url']}\n\nWaiting…")
         for _ in range(150):
@@ -5349,6 +5353,8 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--method", default=None,
                     help="HTTP method (default: GET, or POST when --data/--file/--upload is given)")
     cl.add_argument("--query", action="append", default=[], metavar="K=V", help="a query param (repeatable)")
+    cl.add_argument("--authorization-method", metavar="METHOD",
+                    help="select an authorization method declared by the catalog endpoint")
     cl.add_argument("--data", help="request body (string)"); cl.add_argument("--file", help="request body from a file")
     cl.add_argument("--content-type", dest="content_type", metavar="TYPE",
                     help="Content-Type for the body (default: sniffed — a body that parses as JSON sends application/json)")
@@ -5654,7 +5660,7 @@ def build_parser() -> argparse.ArgumentParser:
     def _connect_args(parser, prefix):
         parser.add_argument("name", nargs="?", help="a name for the resulting oauth secret (default: the provider service)")
         parser.add_argument("--provider", help=f"a registry service id — see `{prefix} providers`")
-        parser.add_argument("--capability", help="which scope set to request (default: read)")
+        parser.add_argument("--capability", help="scope set to request (default: provider-specific)")
         parser.add_argument("--client-secret", help="path to your own OAuth client-secret JSON (bring-your-own-app)")
         parser.add_argument("--scopes", nargs="+", default=[], help="one or more OAuth scopes (with --client-secret)")
         parser.set_defaults(fn=cmd_oauth_connect)

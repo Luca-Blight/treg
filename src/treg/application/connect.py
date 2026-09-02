@@ -12,10 +12,14 @@ from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import crypto, health, oauth, oauth_providers
+from .. import crypto, health, oauth_providers
 from ..config import get_settings
 from ..domain.catalog import store as catalog_store
+from ..domain.connections import refresh as connection_refresh
+from ..domain.connections.oauth_flow import consent_url
 from ..infra.db import session_maker
+from ..infra.oauth_exchange import HTTPXOAuthExchangePort
+from ..infra.oauth_refresh import HTTPXOAuthRefreshPort
 from ..models import PendingOAuth, Secret, Tool
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
@@ -226,8 +230,8 @@ def _provider_tool_examples(provider) -> list[dict]:
     return out
 
 
-async def _record_connected_identity(provider, secret: Secret, blob: dict, client) -> None:
-    """Ask the provider who just connected, and remember it.
+async def _record_connected_identity(provider, blob: dict, client) -> tuple[str, str] | None:
+    """Ask the provider who just connected and return its stable id and label.
 
     Providers with nothing to choose between (LinkedIn acts as the one member who consented) would
     otherwise show a connection with no indication of WHICH account it is. This also captures the
@@ -239,16 +243,17 @@ async def _record_connected_identity(provider, secret: Secret, blob: dict, clien
             headers={"Authorization": f"Bearer {blob.get('access_token')}"},
         )
         if resp.status_code != 200:
-            return
+            return None
         data = resp.json()
         ident = _dig(data, provider.identity_id_path)
         if not ident:
-            return
-        secret.resource_ref = provider.identity_ref_format.format(id=ident)
+            return None
+        resource_ref = provider.identity_ref_format.format(id=ident)
         label = _dig(data, provider.identity_label_path) if provider.identity_label_path else None
-        secret.resource_name = str(label) if label else str(ident)
+        return resource_ref, str(label) if label else str(ident)
     except Exception as exc:  # noqa: BLE001
         print(f"[oauth] identity lookup failed for {provider.service}: {exc}")
+        return None
 
 
 def _dig(obj, dotted: str):
@@ -291,7 +296,8 @@ async def start_oauth_connection(
     async with session_maker() as db:
         code_verifier, auth_params, auth_method = "", "", "client_secret_post"
         cid_param, scope_sep = "client_id", " "
-        long_lived = False
+        long_lived, long_lived_style, authorization_method = False, "", ""
+        connect_guidance = ""
 
         if provider_name:
             provider = oauth_providers.get(provider_name)
@@ -304,17 +310,22 @@ async def start_oauth_connection(
             chosen_capability = capability or provider.default_capability
             try:
                 scopes = provider.scopes_for(chosen_capability)
-                client_id, client_secret = oauth_providers.credentials(provider)
+                authorization = provider.authorization_for_capability(chosen_capability)
+                profile = provider.profile_for_authorization(authorization.name if authorization else "")
+                client_id, client_secret = oauth_providers.credentials(profile)
             except ValueError as exc:
                 raise ConnectError("invalid_provider", str(exc)) from None
-            auth_uri, token_uri = provider.auth_uri, provider.token_uri
-            name = name or provider.service
-            auth_method = provider.token_endpoint_auth_method
-            cid_param, scope_sep = provider.client_id_param, provider.scope_separator
-            long_lived = provider.long_lived_exchange
-            if provider.auth_params is not None:
-                auth_params = json.dumps(provider.auth_params)
-            if provider.pkce:
+            authorization_method = authorization.name if authorization else ""
+            connect_guidance = authorization.description if authorization else ""
+            auth_uri, token_uri = profile.auth_uri, profile.token_uri
+            name = name or (authorization.connection_name if authorization else provider.service)
+            auth_method = profile.token_endpoint_auth_method
+            cid_param, scope_sep = profile.client_id_param, profile.scope_separator
+            long_lived = profile.long_lived_exchange
+            long_lived_style = profile.long_lived_exchange_style
+            if profile.auth_params is not None:
+                auth_params = json.dumps(profile.auth_params)
+            if profile.pkce:
                 code_verifier = crypto.new_token()
         elif not (client_id and client_secret):
             raise ConnectError(
@@ -339,6 +350,17 @@ async def start_oauth_connection(
                     "invalid_provider",
                     f"connection {connection_id} is {target.provider or 'not a provider connection'}, not {provider_name}",
                 )
+            target_provider = oauth_providers.get(target.provider) if target.provider else None
+            target_method = (
+                target_provider.authorization_method_name(target.authorization_method)
+                if target_provider else target.authorization_method
+            )
+            if provider_name and target_method != authorization_method:
+                raise ConnectError(
+                    "invalid_provider",
+                    f"connection {connection_id} uses {target_method or 'the default'} authorization, "
+                    f"not {authorization_method or 'the default'} authorization",
+                )
             replaces_id = target.id
             name = target.name
 
@@ -354,21 +376,29 @@ async def start_oauth_connection(
             client_id=client_id, client_secret=crypto.encrypt(client_secret),
             auth_uri=auth_uri, token_uri=token_uri, scopes=scope_sep.join(scopes),
             redirect_uri=redirect_uri, provider=provider_name or "",
+            authorization_method=authorization_method if provider_name else "",
             code_verifier=code_verifier, auth_params=auth_params,
             token_endpoint_auth_method=auth_method, client_id_param=cid_param,
             scope_separator=scope_sep, long_lived_exchange=long_lived,
+            long_lived_exchange_style=long_lived_style if provider_name else "",
             replaces_secret_id=replaces_id,
         )
         db.add(pending)
         await db.commit()
-        return {"state": state, "consent_url": oauth.consent_url(pending), "redirect_uri": redirect_uri}
+        return {
+            "state": state,
+            "consent_url": consent_url(pending),
+            "redirect_uri": redirect_uri,
+            "connect_guidance": connect_guidance,
+        }
 
 
 async def complete_oauth_connection(
     *, state: str, code: str, error: str, client_factory,
 ) -> OAuthCallbackOutcome:
+    # Phase 1 reads and validates the pending grant. Provider requests happen only after this
+    # session closes; a slow OAuth or identity endpoint must not hold a pool slot or transaction.
     async with session_maker() as db:
-        # Hit by the BROWSER on redirect — no token; protected by the unguessable `state`.
         pending = (
             await db.execute(select(PendingOAuth).where(PendingOAuth.state == state))
         ).scalar_one_or_none()
@@ -387,10 +417,40 @@ async def complete_oauth_connection(
             await db.commit()
             return OAuthCallbackOutcome("authorization_failed")
 
+    try:
+        client = client_factory()
+        blob = await HTTPXOAuthExchangePort(client).exchange_code(pending, code)
+        provider = oauth_providers.get(pending.provider) if pending.provider else None
+        profile = (
+            provider.profile_for_authorization(pending.authorization_method)
+            if provider else None
+        )
+        identity = (
+            await _record_connected_identity(profile, blob, client)
+            if profile and profile.has_identity else None
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[oauth] token exchange failed for state {state}: {exc}")
+        async with session_maker() as db:
+            current = (
+                await db.execute(select(PendingOAuth).where(PendingOAuth.state == state))
+            ).scalar_one_or_none()
+            if current is not None and current.status == "pending":
+                current.status, current.detail = "error", "token exchange failed"
+                await db.commit()
+        return OAuthCallbackOutcome("exchange_failed")
+
+    # Phase 2 stores the result and provisions local rows. Re-read the pending row so two callback
+    # deliveries cannot create two credentials after both complete their provider requests.
+    async with session_maker() as db:
+        pending = (
+            await db.execute(select(PendingOAuth).where(PendingOAuth.state == state))
+        ).scalar_one_or_none()
+        if pending is None:
+            return OAuthCallbackOutcome("invalid")
+        if pending.status != "pending":
+            return OAuthCallbackOutcome("done" if pending.status == "done" else "already_failed")
         try:
-            client = client_factory()
-            blob = await oauth.exchange_code(pending, code, client)
-            provider = oauth_providers.get(pending.provider) if pending.provider else None
             # A consent either REPLACES one named connection or ADDS another. `replaces_secret_id` says
             # which, decided back at /oauth/start where the user's intent was known. This used to
             # blanket-replace by provider, which fixed the real bug — widening read→write silently made
@@ -413,29 +473,40 @@ async def complete_oauth_connection(
                 secret.value = crypto.encrypt(json.dumps(blob))
                 secret.last_error = ""
             secret.provider = pending.provider or ""
+            secret.authorization_method = pending.authorization_method or ""
             # granted_scopes stays canonically SPACE-joined whatever dialect went over the wire, so the
             # readers (satisfied_capabilities, the health payload) can keep using a plain .split().
             # TikTok comma-joins its consent scopes; without this normalisation a whole grant would
             # come back as one bogus scope string and every capability would read as unsatisfied.
             separator = pending.scope_separator or " "
             secret.granted_scopes = " ".join(s for s in pending.scopes.split(separator) if s)
-            secret.expires_at = oauth.expiry_of(blob)
+            secret.expires_at = connection_refresh.expiry_of(blob)
             await db.flush()
             # A connect that yields no callable tool is a dead end — the user consented and got
             # nothing. Auto-provision the provider's tool bound to this credential so the very next
             # thing they can do is make a real proxied call.
-            if provider and provider.can_autoprovision:
-                await _autoprovision_provider_tool(provider, secret, pending, db)
-            if provider and provider.has_identity:
-                await _record_connected_identity(provider, secret, blob, client)
+            if identity is not None:
+                secret.resource_ref, secret.resource_name = identity
+            if profile and profile.identity_required and identity is None:
+                secret.health_status = "setup_required"
+                secret.health_detail = (
+                    profile.identity_missing_detail
+                    or "The provider did not return a usable account. Confirm the account setup, then connect again."
+                )
+            elif profile and profile.can_autoprovision:
+                await _autoprovision_provider_tool(profile, secret, pending, db)
+                if identity is not None:
+                    secret.health_status = "ok"
+                    secret.health_detail = "The provider returned a usable account."
+                    secret.health_checked_at = _utcnow_naive()
             pending.status, pending.secret_id, pending.detail = "done", secret.id, "connected"
             await db.commit()
         except Exception as exc:  # noqa: BLE001
-            print(f"[oauth] token exchange failed for state {state}: {exc}")  # detail stays server-side
-            pending.status, pending.detail = "error", "token exchange failed"
+            print(f"[oauth] connection storage failed for state {state}: {exc}")
+            pending.status, pending.detail = "error", "connection storage failed"
             await db.commit()
             return OAuthCallbackOutcome("exchange_failed")
-        return OAuthCallbackOutcome("connected")
+    return OAuthCallbackOutcome("connected")
 
 
 async def connect_with_pasted_secret(
@@ -567,7 +638,7 @@ async def connect_with_pasted_secret(
         await _autoprovision_provider_tool(provider, secret, pending, db)
         await db.commit()
         await db.refresh(secret)
-        return oauth.connection_view(secret)
+        return connection_refresh.connection_view(secret)
 
 
 async def get_oauth_status(*, state: str, org_id: int) -> dict:
@@ -641,22 +712,32 @@ async def list_connections(*, org_id: int) -> list[dict]:
         ).scalars().all()
         out = []
         for s in rows:
-            view = oauth.connection_view(s)
+            view = connection_refresh.connection_view(s)
             provider = oauth_providers.get(s.provider) if s.provider else None
             if provider is not None:
+                method_name = provider.authorization_method_name(s.authorization_method)
+                profile = provider.profile_for_authorization(method_name)
                 granted = s.granted_scopes.split()
                 have = provider.satisfied_capabilities(granted)
                 view["capabilities"] = have
                 # Providers don't backfill scopes onto an issued grant, so a capability the user never
                 # consented to can only be added by re-consenting. Naming the gap here is what turns an
                 # opaque upstream 403 into "reconnect to enable write".
-                view["missing_capabilities"] = [c for c in provider.capabilities if c not in have]
-                if not provider.extra_credential_is_platform:
-                    view["extra_credential_note"] = provider.extra_credential_note
-                view["extra_credential_label"] = provider.extra_credential_label
+                view["authorization_method"] = method_name or "default"
+                method = next(
+                    (m for m in provider.authorization_methods if m.name == method_name), None
+                )
+                view["authorization_method_label"] = method.display_name if method else "Connected"
+                view["supports_discovery"] = profile.supports_discovery
+                view["resource_label"] = profile.resource_label
+                eligible = method.capabilities if method else tuple(provider.capabilities)
+                view["missing_capabilities"] = [c for c in eligible if c not in have]
+                if not profile.extra_credential_is_platform:
+                    view["extra_credential_note"] = profile.extra_credential_note
+                view["extra_credential_label"] = profile.extra_credential_label
                 # Outstanding only while no tool exists for this provider — once one does, the second
                 # credential has been supplied and the connection is callable.
-                if provider.needs_extra_credential and not provider.extra_credential_is_platform:
+                if profile.needs_extra_credential and not profile.extra_credential_is_platform:
                     built = (await db.execute(
                         select(Tool).where(Tool.org_id == org_id, Tool.name == provider.service)
                     )).scalars().first()
@@ -666,113 +747,131 @@ async def list_connections(*, org_id: int) -> list[dict]:
         return out
 
 
+async def _connection_for_upstream(
+    *, secret_id: int, org_id: int, client,
+) -> tuple[Secret, str]:
+    """Load one connection and delegate freshness to the single domain implementation."""
+    async with session_maker() as db:
+        secret = await _owned_connection(secret_id, org_id, db)
+        await connection_refresh.ensure_fresh(
+            secret, db, HTTPXOAuthRefreshPort(client),
+        )
+        return secret, crypto.decrypt(secret.value)
+
+
 async def list_connection_resources(
     *, secret_id: int, org_id: int, client_factory,
 ) -> dict:
-    async with session_maker() as db:
-        secret = await _owned_connection(secret_id, org_id, db)
-        provider = oauth_providers.get(secret.provider)
-        if provider is None or not provider.supports_discovery:
-            raise ConnectError(
-                "no_resource_discovery",
-                f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
-            )
-        client = client_factory()
-        await oauth.ensure_fresh(secret, db, client)  # no-op for a non-oauth secret
-        # A pasted-secret (bot token / API key) secret is a PLAIN STRING, not an oauth blob — json.loads
-        # on it throws. (Only header-auth pasted providers reach here; a query-key provider like Semrush
-        # has nothing to discover, so supports_discovery is False and this endpoint 422s earlier.)
-        raw = crypto.decrypt(secret.value)
-        if provider.uses_pasted_secret:
-            disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
-        else:
-            blob = json.loads(raw)
-            token = blob.get("access_token") or blob.get("token")
-            disc_headers = {"Authorization": f"Bearer {token}"}
-        if provider.needs_extra_credential:  # Ads won't list accounts without the developer token
-            disc_headers[provider.extra_credential_header] = provider.platform_extra_credential
-        resp = await client.get(
-            f"{provider.discovery_base.rstrip('/')}{provider.discover_path}",
-            headers=disc_headers,
+    client = client_factory()
+    secret, raw = await _connection_for_upstream(
+        secret_id=secret_id, org_id=org_id, client=client,
+    )
+    provider = oauth_providers.get(secret.provider)
+    if provider is not None:
+        provider = provider.profile_for_authorization(
+            provider.authorization_method_name(secret.authorization_method)
         )
+    if provider is None or not provider.supports_discovery:
+        raise ConnectError(
+            "no_resource_discovery",
+            f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
+        )
+    if provider.uses_pasted_secret:
+        token = raw
+        disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
+    else:
+        blob = json.loads(raw)
+        token = blob.get("access_token") or blob.get("token")
+        disc_headers = {"Authorization": f"Bearer {token}"}
+    if provider.needs_extra_credential:
+        disc_headers[provider.extra_credential_header] = provider.platform_extra_credential
+
+    # All provider I/O is outside a database session, including optional enrichment.
+    resp = await client.get(
+        f"{provider.discovery_base.rstrip('/')}{provider.discover_path}", headers=disc_headers,
+    )
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001
         body = {}
-        try:
-            body = resp.json()
-        except Exception:  # noqa: BLE001
-            body = {}
-        # Slack answers 200 with {"ok": false, "error": "missing_scope"} — status alone would report an
-        # empty picker instead of naming the scope the bot is missing.
-        if resp.status_code >= 400 or body.get("ok") is False:
-            upstream = ""
-            err = body.get("error")
-            if isinstance(err, dict):
-                upstream = err.get("message", "")
-            elif isinstance(err, str):
-                upstream = err
-            if not upstream:
-                upstream = (resp.text or "")[:200]
-            raise ConnectError(
-                "resource_discovery_failed",
-                f"could not list {provider.resource_plural} ({resp.status_code}): {upstream}".strip(),
-            )
-        # A successful discovery call is a real authenticated request to the upstream — the strongest
-        # evidence we get that this credential works. Recording it turns the connection's health from
-        # "unknown" into something earned, instead of waiting for the next health sweep.
-        if secret.health_status != "ok":
-            secret.health_status, secret.health_detail = "ok", "listed upstream resources"
-            secret.health_checked_at = _utcnow_naive()
-            await db.commit()
-        rows = body.get(provider.discover_key) or []
-        if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
-            rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
-        # Some providers expose delegated assets through a second listing whose rows hold nested
-        # lists of primary-shaped resources. Best-effort by design: an older grant can lack the
-        # extra scope while the primary result remains valid.
-        if provider.discover_extra_path:
-            try:
-                extra = await client.get(
-                    f"{provider.discovery_base.rstrip('/')}{provider.discover_extra_path}",
-                    headers=disc_headers,
-                )
-                if extra.status_code < 400:
-                    for holder in (extra.json().get(provider.discover_key) or []):
-                        for path in provider.discover_extra_list_paths:
-                            rows.extend(n for n in (_dig(holder, path) or []) if isinstance(n, dict))
-            except Exception:  # noqa: BLE001 — the extra listing must never break the picker
-                pass
-        label_field = provider.discover_label_field or provider.discover_id_field
-        resources = [
-            # A row is usually an object, but some providers return bare strings — Google Ads'
-            # listAccessibleCustomers gives ["customers/6186675831", …]. Treat the string as both id
-            # and label rather than silently dropping every row.
-            {"id": r, "label": r.rsplit("/", 1)[-1], "raw": r} if isinstance(r, str)
-            # _dig, not .get — YouTube's channel title is nested at snippet.title. A plain key is just
-            # a one-hop path, so every existing provider walks the same code.
-            else {"id": _dig(r, provider.discover_id_field), "label": _dig(r, label_field), "raw": r}
-            for r in rows if isinstance(r, (dict, str))
+    if resp.status_code >= 400 or body.get("ok") is False:
+        err = body.get("error")
+        upstream = err.get("message", "") if isinstance(err, dict) else (err or "")
+        if not upstream:
+            upstream = (resp.text or "")[:200]
+        raise ConnectError(
+            "resource_discovery_failed",
+            f"could not list {provider.resource_plural} ({resp.status_code}): {upstream}".strip(),
+        )
+    rows = body.get(provider.discover_key) or []
+    if provider.discover_nested_key:
+        rows = [
+            nested for row in rows if isinstance(row, dict)
+            for nested in (row.get(provider.discover_nested_key) or [])
         ]
-        if provider.discover_extra_path:
-            # Direct and delegated listings can overlap. Keep the first primary sighting. Remove
-            # id-less rows too, or one None value can survive as a phantom picker choice.
-            seen: set = set()
-            resources = [x for x in resources if x["id"] and not (x["id"] in seen or seen.add(x["id"]))]
-        if provider.supports_enrichment:
-            await _enrich_resource_labels(provider, resources, token, client)
-        # Self-heal a connection whose target was chosen before we stored labels (or via the API, which
-        # has no label to give). We're already holding the upstream's own naming — resolving it here
-        # spares the user a pointless re-pick just to make the row readable.
-        if secret.resource_ref and not secret.resource_name:
-            match = next((x for x in resources if x["id"] == secret.resource_ref), None)
-            if match and match["label"]:
-                secret.resource_name = match["label"]
-                await db.commit()
-        return {
-            "provider": provider.service,
-            "resource_label": provider.resource_label,
-            "resource_plural": provider.resource_plural,
-            "selected": secret.resource_ref,
-            "resources": resources,
+    if provider.discover_extra_path:
+        try:
+            extra = await client.get(
+                f"{provider.discovery_base.rstrip('/')}{provider.discover_extra_path}",
+                headers=disc_headers,
+            )
+            if extra.status_code < 400:
+                for holder in (extra.json().get(provider.discover_key) or []):
+                    for path in provider.discover_extra_list_paths:
+                        rows.extend(
+                            item for item in (_dig(holder, path) or []) if isinstance(item, dict)
+                        )
+        except Exception:  # noqa: BLE001
+            pass
+    label_field = provider.discover_label_field or provider.discover_id_field
+    resources = [
+        {"id": row, "label": row.rsplit("/", 1)[-1], "raw": row}
+        if isinstance(row, str) else {
+            "id": _dig(row, provider.discover_id_field),
+            "label": _dig(row, label_field), "raw": row,
         }
+        for row in rows if isinstance(row, (dict, str))
+    ]
+    if provider.discover_extra_path:
+        seen: set = set()
+        resources = [
+            item for item in resources
+            if item["id"] and not (item["id"] in seen or seen.add(item["id"]))
+        ]
+    if provider.supports_enrichment:
+        await _enrich_resource_labels(provider, resources, token, client)
+
+    async with session_maker() as db:
+        current = await _owned_connection(secret_id, org_id, db)
+        if current.value != secret.value:
+            raise ConnectError(
+                "connection_changed",
+                "the connection changed during account discovery; list the accounts again",
+            )
+        setup_required = provider.discovery_required and not resources
+        if setup_required:
+            current.health_status = "setup_required"
+            current.health_detail = (
+                provider.empty_resource_detail or "No usable account was returned."
+            )
+        else:
+            current.health_status, current.health_detail = "ok", "listed upstream resources"
+        current.health_checked_at = _utcnow_naive()
+        if current.resource_ref and not current.resource_name:
+            match = next((item for item in resources if item["id"] == current.resource_ref), None)
+            if match and match["label"]:
+                current.resource_name = match["label"]
+        await db.commit()
+        selected = current.resource_ref
+    return {
+        "provider": provider.service,
+        "resource_label": provider.resource_label,
+        "resource_plural": provider.resource_plural,
+        "selected": selected,
+        "resources": resources,
+        "setup_required": setup_required,
+        "setup_detail": provider.empty_resource_detail if setup_required else "",
+    }
 
 
 async def select_connection_resource(
@@ -781,15 +880,18 @@ async def select_connection_resource(
     provider = None
     source_value = ""
     setup_fields: dict[str, str] | None = None
-    async with session_maker() as db:
-        secret = await _owned_connection(secret_id, org_id, db)
-        provider = oauth_providers.get(secret.provider) if secret.provider else None
-        if provider and provider.resource_token_path:
-            client = client_factory()
-            await oauth.ensure_fresh(secret, db, client)
-            await db.refresh(secret)
-            source_value = secret.value
-            granted_scopes = secret.granted_scopes
+    client = client_factory()
+    secret, _ = await _connection_for_upstream(
+        secret_id=secret_id, org_id=org_id, client=client,
+    )
+    provider = oauth_providers.get(secret.provider) if secret.provider else None
+    if provider is not None:
+        provider = provider.profile_for_authorization(
+            provider.authorization_method_name(secret.authorization_method)
+        )
+    if provider and provider.resource_token_path:
+        source_value = secret.value
+        granted_scopes = secret.granted_scopes
 
     # Resource discovery and provider setup are external work. Do them after the read session is
     # closed so provider latency cannot hold a database connection or transaction open.
@@ -836,7 +938,7 @@ async def select_connection_resource(
                 tool.examples = [rendered] + others
         await db.commit()
         await db.refresh(secret)
-        return oauth.connection_view(secret)
+        return connection_refresh.connection_view(secret)
 
 
 async def _resolve_resource_call_token(
@@ -1037,7 +1139,11 @@ async def supply_extra_credential(
             tool.bindings = bindings
         await db.commit()
         await db.refresh(secret)
-        return {**oauth.connection_view(secret), "tool": provider.service, "ready": True}
+        return {
+            **connection_refresh.connection_view(secret),
+            "tool": provider.service,
+            "ready": True,
+        }
 
 
 async def revoke_connection(*, secret_id: int, org_id: int) -> dict:

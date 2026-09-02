@@ -377,14 +377,15 @@ class Settings(BaseSettings):
     # points at a sandbox client while production points at the reviewed one.
     tiktok_client_id: str = ""
     tiktok_client_secret: str = ""
-    # ONE Meta app backs both the facebook and instagram providers. Meta App Review, business
-    # verification and Tech Provider status are all scoped to the app, not to an OAuth client, so a
-    # second client would isolate nothing and would need its own review from zero. Instagram
-    # Business is reached through Facebook Login (graph.facebook.com), not the separate
-    # Instagram-Login API on graph.instagram.com — that is a different token family entirely and
-    # will reject these credentials outright.
+    # Facebook Login credentials. These continue to back Facebook Pages, Meta Ads, and the optional
+    # Page-based Instagram authorization method.
     meta_client_id: str = ""
     meta_client_secret: str = ""
+    # Business Login for Instagram has its own Instagram App ID and App Secret. Meta documents
+    # these under Instagram → API setup with Instagram login. They are not interchangeable with
+    # the Facebook Login app credentials above.
+    instagram_client_id: str = ""
+    instagram_client_secret: str = ""
     # Advertising OAuth platforms — unset by default, so these providers list as "not configured"
     # until this deployment registers its own developer app on each network.
     microsoft_ads_client_id: str = ""

@@ -22,7 +22,12 @@ class HTTPXOAuthRefreshPort:
         # refresh months later still speaks the dialect the grant was minted with.
         cid_param = blob.get("client_id_param") or "client_id"
         token_uri = blob.get("token_uri", _DEFAULT_TOKEN_URI)
-        data = {"grant_type": "refresh_token", "refresh_token": rt, cid_param: cid}
+        grant_type = blob.get("refresh_grant_type") or "refresh_token"
+        refresh_param = blob.get("refresh_token_param") or "refresh_token"
+        include_client = blob.get("refresh_include_client", True)
+        data = {"grant_type": grant_type, refresh_param: rt}
+        if include_client:
+            data[cid_param] = cid
 
         # Client authentication must match what the provider demands, same as exchange_code: X and
         # Pinterest REQUIRE HTTP Basic and reject a secret in the body. This bit the connect path first
@@ -34,9 +39,12 @@ class HTTPXOAuthRefreshPort:
         method = blob.get("token_endpoint_auth_method")
 
         async def _post(basic: bool) -> httpx.Response:
+            if (blob.get("refresh_method") or "POST").upper() == "GET":
+                return await self.client.get(token_uri, params=data)
             if basic:
                 return await self.client.post(token_uri, data=data, auth=(cid, csec))
-            return await self.client.post(token_uri, data={**data, "client_secret": csec})
+            body = {**data, "client_secret": csec} if include_client else data
+            return await self.client.post(token_uri, data=body)
 
         tried_basic = method == "client_secret_basic"
         resp = await _post(basic=tried_basic)
@@ -56,6 +64,8 @@ class HTTPXOAuthRefreshPort:
         # Always stamp an expiry (fallback 1h). A provider that omits/nulls expires_in would otherwise
         # leave the token perpetually "unknown expiry" → is_stale True → a live refresh on EVERY call.
         new["expires_at"] = time.time() + float(tok.get("expires_in") or 3600)
-        if tok.get("refresh_token"):  # providers may rotate the refresh token
+        if blob.get("refresh_token_param") == "access_token":
+            new["refresh_token"] = access
+        elif tok.get("refresh_token"):  # providers may rotate the refresh token
             new["refresh_token"] = tok["refresh_token"]
         return new

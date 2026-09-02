@@ -19,6 +19,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .config import platform_setting_name, get_settings
+from .domain.connections import authorization as connection_authorization
+
+
+# Compatibility name for callers that still import provider definitions from this legacy module.
+OAuthAuthorizationMethod = connection_authorization.AuthorizationMethod
 
 
 @dataclass(frozen=True)
@@ -139,6 +144,16 @@ class OAuthProvider:
     # renewed unattended, so the connection surfaces through the same `needs_reconnect` path as
     # LinkedIn's non-refreshable tokens rather than pretending it auto-heals.
     long_lived_exchange: bool = False
+    # Instagram Login uses a different long-lived exchange and a renewable 60-day access token.
+    # Empty keeps the standard provider behavior; "instagram" snapshots that protocol on PendingOAuth.
+    long_lived_exchange_style: str = ""
+    # One logical catalog provider can expose explicit, separate grants. Each method selects a
+    # protocol profile without changing the provider id or duplicating its endpoint catalog.
+    authorization_methods: tuple[OAuthAuthorizationMethod, ...] = ()
+    default_capability_name: str = ""
+    # Method assigned to grants created before explicit method identity existed. Empty means the
+    # provider's normal default. This keeps compatibility policy in provider metadata.
+    legacy_authorization_method: str = ""
 
     # Some providers need a SECOND credential alongside the user's OAuth token — Google Ads wants a
     # developer-token header from an approved MCC. We can't auto-provision a working tool from the
@@ -204,6 +219,10 @@ class OAuthProvider:
     # listing is ignored because an older grant can lack its scope while the primary result is valid.
     discover_extra_path: str = ""
     discover_extra_list_paths: tuple[str, ...] = ()
+    # An empty successful listing is still non-working for providers whose grant must target one
+    # discovered account. The detail is safe user-facing setup guidance.
+    discovery_required: bool = False
+    empty_resource_detail: str = ""
 
     # Most OAuth providers call their API with the token returned by the token endpoint. A provider
     # can instead declare a private lookup that derives a resource-scoped call credential after the
@@ -270,6 +289,11 @@ class OAuthProvider:
     identity_id_path: str = ""  # dotted path to the id, e.g. "sub"
     identity_label_path: str = ""  # dotted path to the display name, e.g. "name"
     identity_ref_format: str = "{id}"  # e.g. "urn:li:person:{id}"
+    # A successful token exchange is not a usable connection when this lookup returns no account.
+    identity_required: bool = False
+    # Keep a required-identity failure beside the identity protocol. The shared callback must not
+    # need provider names to explain why a completed consent did not yield a callable account.
+    identity_missing_detail: str = ""
 
     @property
     def is_token_kind(self) -> bool:
@@ -305,7 +329,18 @@ class OAuthProvider:
         # empty sequence and take the whole /oauth/providers listing down with it.
         if not self.scopes:
             return ""
+        if self.default_capability_name:
+            return self.default_capability_name
         return max(self.capabilities, key=lambda c: len(self.scopes[c]))
+
+    def authorization_for_capability(self, capability: str) -> OAuthAuthorizationMethod | None:
+        return connection_authorization.method_for_capability(self, capability)
+
+    def profile_for_authorization(self, method: str) -> "OAuthProvider":
+        return connection_authorization.provider_profile(self, method)
+
+    def authorization_method_name(self, stored: str) -> str:
+        return connection_authorization.method_name(self, stored)
 
     @property
     def resource_plural(self) -> str:
@@ -799,6 +834,9 @@ TIKTOK = OAuthProvider(
 _META_AUTH = "https://www.facebook.com/v25.0/dialog/oauth"
 _META_TOKEN = "https://graph.facebook.com/v25.0/oauth/access_token"
 _META_BASE = "https://graph.facebook.com/v25.0"
+_INSTAGRAM_AUTH = "https://www.instagram.com/oauth/authorize"
+_INSTAGRAM_TOKEN = "https://api.instagram.com/oauth/access_token"
+_INSTAGRAM_BASE = "https://graph.instagram.com/v25.0"
 
 # The Meta app behind all three providers is registered as "Crewlet" — a sibling product from the
 # same company — and Facebook's consent screen renders only that bare app name, with no parent
@@ -873,77 +911,131 @@ FACEBOOK = OAuthProvider(
 INSTAGRAM = OAuthProvider(
     service="instagram",
     display_name="Instagram",
-    auth_uri=_META_AUTH,
-    token_uri=_META_TOKEN,
-    # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
-    # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
-    # superset rather than a swap.
-    # business_management is here for the same reason it is in _FB_READ: an agency member's
-    # Instagram accounts hang off Business-owned Pages that /me/accounts cannot see.
+    auth_uri=_INSTAGRAM_AUTH,
+    token_uri=_INSTAGRAM_TOKEN,
+    # Direct Instagram scopes are cumulative. `page-tools` is a separate grant, not a wider direct
+    # grant: it starts Facebook Login and is stored beside the direct Instagram credential.
     scopes={
         "read": [
-            "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "business_management",
+            "instagram_business_basic", "instagram_business_manage_insights",
         ],
         "post": [
-            "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "business_management", "instagram_content_publish",
+            "instagram_business_basic", "instagram_business_manage_insights",
+            "instagram_business_content_publish",
         ],
-        # Adds the two-way surfaces: comment moderation and direct messages. Kept off `post` so a
-        # publish-only connect never puts "manage your messages" on the consent screen.
         "manage": [
-            "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "business_management", "instagram_content_publish",
-            "instagram_manage_comments", "instagram_manage_messages", "pages_messaging",
+            "instagram_business_basic", "instagram_business_manage_insights",
+            "instagram_business_content_publish", "instagram_business_manage_comments",
+            "instagram_business_manage_messages",
+        ],
+        "page-tools": [
+            "instagram_basic", "instagram_manage_insights", "instagram_content_publish",
+            "instagram_manage_comments", "instagram_manage_messages",
+            "instagram_shopping_tag_products", "pages_show_list", "pages_read_engagement",
+            "pages_messaging", "business_management",
         ],
     },
-    client_id_setting="meta_client_id",
-    client_secret_setting="meta_client_secret",
+    client_id_setting="instagram_client_id",
+    client_secret_setting="instagram_client_secret",
     category="Social media",
     summary=(
         "Your Instagram media, comments and insights, plus publishing to your account."
     ),
-    base_url=_META_BASE,
-    docs_url="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api",
-    consent_notice=_META_CONSENT_NOTICE,
-    auth_params={},
-    long_lived_exchange=True,
+    base_url=_INSTAGRAM_BASE,
+    docs_url="https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login",
+    consent_notice="Instagram will ask you to sign in to the professional account that you want to connect.",
+    auth_params={"enable_fb_login": "false"},
+    scope_separator=",",
+    long_lived_exchange_style="instagram",
+    default_capability_name="manage",
+    legacy_authorization_method="facebook-page",
+    authorization_methods=(
+        OAuthAuthorizationMethod(
+            name="instagram-login", display_name="Instagram Login",
+            capabilities=("read", "post", "manage"), connection_name="instagram",
+            description="Connect an Instagram Professional account directly. A Facebook Page is not required.",
+        ),
+        OAuthAuthorizationMethod(
+            name="facebook-page", display_name="Facebook Page tools",
+            capabilities=("page-tools",), connection_name="instagram-page-tools",
+            description=(
+                "Facebook Page tools require an Instagram Professional account that is linked "
+                "to a Facebook Page. This authorization is separate from Instagram Login."
+            ),
+            connect_capability="page-tools",
+            action_label="Enable Facebook Page tools",
+            missing_message=(
+                "This tool requires Facebook Page authorization and an Instagram Professional "
+                "account linked to that Page."
+            ),
+            capability_intros=((
+                "page-tools",
+                "Also supports core Instagram access through the linked Page. Adds these Page-only tools:",
+            ),),
+            capability_details=(("page-tools", (
+                "Search hashtags and read recent or top hashtag media",
+                "Discover another professional account by username",
+                "Read media, comments and tags that mention your account",
+                "Search the linked product catalog and inspect product appeals",
+                "Read this account's recently searched hashtags",
+            )),),
+            scope_aliases=(
+                ("instagram_business_basic", "instagram_basic"),
+                ("instagram_business_manage_insights", "instagram_manage_insights"),
+                ("instagram_business_content_publish", "instagram_content_publish"),
+                ("instagram_business_manage_comments", "instagram_manage_comments"),
+                ("instagram_business_manage_messages", "instagram_manage_messages"),
+            ),
+            scope_riders=("pages_read_engagement",),
+            scope_riders_by_scope=(("instagram_business_manage_messages", "pages_messaging"),),
+            overrides=(
+                ("auth_uri", _META_AUTH), ("token_uri", _META_TOKEN),
+                ("client_id_setting", "meta_client_id"),
+                ("client_secret_setting", "meta_client_secret"),
+                ("base_url", _META_BASE),
+                ("docs_url", "https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-facebook-login"),
+                ("consent_notice", _META_CONSENT_NOTICE), ("auth_params", {}),
+                ("scope_separator", " "), ("long_lived_exchange", True),
+                ("long_lived_exchange_style", ""),
+                ("identity_path", ""), ("identity_id_path", ""),
+                ("identity_label_path", ""), ("identity_required", False),
+                ("discover_path", "/me/accounts?fields=instagram_business_account{id,username}"),
+                ("discover_key", "data"),
+                ("discover_id_field", "instagram_business_account.id"),
+                ("discover_label_field", "instagram_business_account.username"),
+                ("discover_extra_path", "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},client_pages{instagram_business_account{id,username}}"),
+                ("discover_extra_list_paths", _META_BIZ_PAGE_LISTS),
+                ("discovery_required", True),
+                ("empty_resource_detail", (
+                    "No usable Instagram Professional account was returned. Confirm that the "
+                    "account is linked to a Facebook Page that you can manage."
+                )),
+                ("call_token_field", "page_access_token"),
+                ("resource_token_path", "/me/accounts?fields=id,access_token,instagram_business_account{id}"),
+                ("resource_token_id_field", "instagram_business_account.id"),
+                ("resource_token_value_field", "access_token"),
+                ("resource_token_context_fields", (("page_id", "id"),)),
+                ("resource_token_extra_path", "/me/businesses?fields=owned_pages{id,access_token,instagram_business_account{id}},client_pages{id,access_token,instagram_business_account{id}}"),
+                ("resource_token_extra_list_paths", _META_BIZ_PAGE_LISTS),
+                ("resource_setup_method", "POST"),
+                ("resource_setup_path", "/{page_id}/subscribed_apps"),
+                ("resource_setup_scope", "pages_messaging"),
+                ("resource_setup_payload", (("subscribed_fields", "messages,messaging_postbacks"),)),
+                ("probe_path", "/me?fields=id,name"),
+            ),
+        ),
+    ),
     resource_label="account",
     resource_label_plural="accounts",
-    # There is no endpoint that lists Instagram accounts directly: you list Pages and read the
-    # professional account linked to each. Pages with no linked account come back with the field
-    # absent, so the dotted id path yields nothing for them and they drop out of the picker.
-    discover_path="/me/accounts?fields=instagram_business_account{id,username}",
-    discover_key="data",
-    discover_id_field="instagram_business_account.id",
-    discover_label_field="instagram_business_account.username",
-    # The Business walk asks for the SAME nested field, so its flattened rows are again
-    # Page-shaped and the dotted id path above reads both listings unchanged.
-    discover_extra_path=(
-        "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},"
-        "client_pages{instagram_business_account{id,username}}"
+    identity_path="/me?fields=user_id,username",
+    identity_id_path="user_id",
+    identity_label_path="username",
+    identity_required=True,
+    identity_missing_detail=(
+        "No usable Instagram Professional account was returned. Confirm that the account is a "
+        "Business or Creator account, then connect again."
     ),
-    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
-    # Meta exchanges the code for a USER token, but Instagram Graph calls are made as the Facebook
-    # Page linked to the selected professional account. Resolve that Page token server-side at pick
-    # time; the dashboard and calling agent only ever see the Instagram id and username.
-    call_token_field="page_access_token",
-    resource_token_path=(
-        "/me/accounts?fields=id,access_token,instagram_business_account{id}"
-    ),
-    resource_token_id_field="instagram_business_account.id",
-    resource_token_value_field="access_token",
-    resource_token_context_fields=(("page_id", "id"),),
-    resource_token_extra_path=(
-        "/me/businesses?fields=owned_pages{id,access_token,instagram_business_account{id}},"
-        "client_pages{id,access_token,instagram_business_account{id}}"
-    ),
-    resource_token_extra_list_paths=_META_BIZ_PAGE_LISTS,
-    resource_setup_method="POST",
-    resource_setup_path="/{page_id}/subscribed_apps",
-    resource_setup_scope="pages_messaging",
-    resource_setup_payload=(("subscribed_fields", "messages,messaging_postbacks"),),
-    probe_path="/me?fields=id,name",
+    probe_path="/me?fields=user_id,username",
 )
 
 META_ADS = OAuthProvider(
@@ -2490,6 +2582,11 @@ def credentials(provider: OAuthProvider) -> tuple[str, str]:
 def is_configured(provider: OAuthProvider) -> bool:
     """Whether THIS deployment can offer the provider. A pasted-secret provider (bot token or API
     key) needs nothing from us — the user brings their own — so it is always offerable."""
+    if provider.authorization_methods:
+        return any(
+            is_configured(provider.profile_for_authorization(method.name))
+            for method in provider.authorization_methods
+        )
     if provider.uses_pasted_secret:
         return True
     try:
@@ -2571,6 +2668,13 @@ SCOPE_LABELS: dict[str, str] = {
     "instagram_content_publish": "Publish posts to your Instagram account",
     "instagram_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
     "instagram_manage_messages": "Read and reply to your Instagram direct messages",
+    "instagram_shopping_tag_products": "Use products from the catalog linked to your Instagram account",
+    # Meta — direct Instagram Login
+    "instagram_business_basic": "See your Instagram Professional account, media and comments",
+    "instagram_business_manage_insights": "Read your Instagram reach and engagement insights",
+    "instagram_business_content_publish": "Publish posts to your Instagram Professional account",
+    "instagram_business_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
+    "instagram_business_manage_messages": "Read and reply to your Instagram direct messages",
     # Meta — Ads
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
@@ -2633,6 +2737,25 @@ def listing() -> list[dict]:
             "docs_url": p.docs_url,
             "consent_notice": p.consent_notice,
             "configured": is_configured(p),
+            "authorization_methods": [
+                {
+                    "name": method.name,
+                    "display_name": method.display_name,
+                    "capabilities": list(method.capabilities),
+                    "description": method.description,
+                    "connect_capability": method.connect_capability,
+                    "action_label": method.action_label,
+                    "missing_message": method.missing_message,
+                    "capability_intros": dict(method.capability_intros),
+                    "capability_details": {
+                        capability: list(details)
+                        for capability, details in method.capability_details
+                    },
+                    "configured": is_configured(p.profile_for_authorization(method.name)),
+                    "consent_notice": p.profile_for_authorization(method.name).consent_notice,
+                }
+                for method in p.authorization_methods
+            ],
             # Whether calls on this connection are metered from the team balance (the provider
             # bills treg's app per use), with the default rates — shown BEFORE consent, so nobody
             # connects an account without seeing the price. Off unless the deployment enables it.

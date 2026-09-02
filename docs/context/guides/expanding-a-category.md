@@ -1,8 +1,11 @@
 ---
-title: Expanding a marketplace category — the add-a-provider playbook
+title: Expanding a catalog category — the add-a-provider playbook
 status: guide
 sources:
   - src/treg/oauth_providers.py
+  - src/treg/domain/connections/authorization.py
+  - src/treg/domain/connections/oauth_flow.py
+  - src/treg/infra/oauth_exchange.py
   - src/treg/application/connect.py
   - src/treg/routers/connections.py
   - src/treg/config.py
@@ -11,7 +14,7 @@ related:
   - interface/api.md
 ---
 
-# Expanding a marketplace category (adding providers)
+# Expanding a catalog category (adding providers)
 
 How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each — and then
 Enrichment again by eight providers in one pass (2026-08-20: companyenrich, oceanio, tomba, predictleads,
@@ -20,9 +23,11 @@ category needs more providers. Creator/influencer data (influencers.club, 2026-0
 provider added under the vendor-listing skill end to end: registry + 15-endpoint catalog, every price
 reconciled against the provider's own credit meter.
 
-Everything lives in **`oauth_providers.py`** (the `REGISTRY` of `OAuthProvider` entries). Connecting,
-verifying and auto-provisioning a pasted-key provider is **`connect_with_token`** (`POST /connections/token`)
-in `routers.connections`, backed by `application.connect`. Both are documented in
+Provider definitions and setup metadata live in **`oauth_providers.py`** (the `REGISTRY` of
+`OAuthProvider` entries). Reusable authorization and consent rules live in `domain/connections`, and
+token endpoint I/O lives in `infra/oauth_exchange.py`. Connecting, verifying, and auto-provisioning a
+pasted-key provider is **`connect_with_token`** (`POST /connections/token`) in
+`routers.connections`, backed by `application.connect`. These parts are documented in
 [auth-secrets](../architecture/auth-secrets.md) + [api](../interface/api.md);
 this fragment is the *process*, not the mechanics reference.
 
@@ -45,7 +50,7 @@ this fragment is the *process*, not the mechanics reference.
    because you validate them **live**. Have the research agent say "unconfirmed" rather than guess a path.
 3. **Add the registry entry** — an `OAuthProvider(auth_kind="key", …)` in `oauth_providers.py`; add it to the
    `REGISTRY` tuple; add the category to `CATEGORY_ORDER` if it's new. Key providers have `scopes={}` (no
-   consent screen); the marketplace card leans on `summary`.
+   consent screen); the catalog card uses `summary`.
 4. **Placeholder logo** — `web/logos/<service>.svg` (a lettermark; swap for the official brand SVG later). The
    guard test `test_every_provider_has_a_logo` fails without one. Do NOT reproduce a real brand mark — a neutral
    lettermark is the placeholder.
@@ -59,7 +64,7 @@ this fragment is the *process*, not the mechanics reference.
    This one step caught Apollo (`is_logged_in`), Akta (trailing slash), Majestic (`Code`), and ScrapeCreators
    (accepts any key). **Never ship a key provider you haven't watched reject a bogus key.** Run in a throwaway
    org and delete it after (test users are `e2e-…@treg.local`).
-7. **Run the suite, [sync docs](../../../.claude/skills/tools-registry-context/MAINTAINING.md), commit + push.**
+7. **Run the suite, [sync docs](../../../.agents/skills/tools-registry-context/MAINTAINING.md), commit + push.**
 
 ## The verify toolbox — which `OAuthProvider` field for which bad-key behavior
 
@@ -126,6 +131,13 @@ rejects on HTTP status by default.
   unconfigured OAuth platform — don't force a bad-fit provider.
 
 ## The heavy path — adding an OAuth provider
+
+One logical provider can have more than one explicit grant. Use `authorization_methods` with
+capability ownership and protocol overrides; do not duplicate the provider catalog. Store the
+selected method on the pending flow and secret. Add endpoint authorization metadata so catalog
+resolution selects by provider and grant identity before it compares shared upstream hosts.
+Instagram direct Login plus optional Facebook Page tools is the reference implementation; see
+[instagram-oauth](../architecture/instagram-oauth.md).
 1. treg must register its **own** dev app on the network → `client_id`/`client_secret` → add the two settings
    to `config.py` (`Settings`) so they load from env; the registry entry names them via
    `client_id_setting`/`client_secret_setting`.
@@ -145,8 +157,8 @@ rejects on HTTP status by default.
    `resource_example` to stamp a ready-made call onto the tool once the user picks their resource.
 5. **NON-STANDARD OAuth is not free.** TikTok Ads (`app_id`/`auth_code`, JSON-body token exchange, `code==0`
    envelope, `Access-Token` header instead of `Authorization: Bearer`) does NOT work with the standard
-   `oauth.py` flow or the Bearer auto-provision binding. Add it as a **flagged placeholder** — it needs real
-   `oauth.py` + binding work before it can run.
+   shared connection flow or the Bearer auto-provision binding. Add it as a **flagged placeholder** — it
+   needs a protocol adapter and binding work before it can run.
 
 ## The tests that gate every new provider
 - `test_every_provider_is_registered` — add the id.

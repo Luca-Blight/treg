@@ -9,20 +9,15 @@ from fastapi.responses import Response, StreamingResponse
 from starlette.background import BackgroundTask
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import audit, oauth_providers
+from .. import audit
 from .. import sandbox as demo_sandbox
+from ..application.call.access import catalog_endpoint_access as get_catalog_endpoint_access
 from ..application.call.idempotency import (
     _release_idempotent_claim as release_idempotent_claim,
 )
 from ..application.call.resolve import (
     QueryValues,
-    _enforce_catalog_status,
-    _marketplace_secret,
     _may_have_body as may_have_body,
-    _platform_estimate_micro,
-    _platform_offer,
-    _resolve_call,
-    resolve_call_target,
 )
 from ..application.call.service import create_call_context, execute_call, _refusal_kind
 from ..application.call.intake import (
@@ -33,8 +28,6 @@ from ..application.call.intake import (
 from ..application.call.types import CallerSnapshot, CallFailure, CallInput, UpstreamResponse
 from ..caller_metadata import _client_of
 from ..config import get_settings
-from ..domain import money as ledger
-from ..domain.catalog import store as catalog_store
 from ..domain.governance import access as access_policy
 from ..domain.governance import publicdemo as publicdemo_policy
 from ..domain.identity.access import Caller, require_member
@@ -167,93 +160,19 @@ async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -
 
 @app.get("/catalog/endpoints/{endpoint_id}/access", include_in_schema=False)
 async def catalog_endpoint_access(
-    endpoint_id: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    endpoint_id: str, authorization_method: str = "",
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Authenticated dry-run of the marketplace credential ladder — which tier would serve YOU.
-    Read by `treg catalog get` to print an honest access line under RUN IT (the open catalog
-    endpoints stay unauthenticated; this one needs to know who is asking)."""
-    ep = catalog_store.load().by_id.get(endpoint_id)
-    if ep is None:
-        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+    """Translate the catalog access use case into HTTP."""
     try:
-        _enforce_catalog_status(ep)
+        return await get_catalog_endpoint_access(
+            endpoint_id=endpoint_id,
+            authorization_method=authorization_method,
+            caller=caller,
+            db=db,
+        )
     except CallFailure as exc:
         raise _translate_call_failure(exc) from exc
-    service = ep["provider"]
-    if ep.get("kind") == "routed":
-        # The routed row's dry-run IS the plan for this org: which child would go first, and why.
-        from ..application.call.route import RouteOptions, build_plan
-        opts = RouteOptions.from_headers(lambda k: None)
-        plan = await build_plan(ep, dict(ep.get("test_request", {}).get("body") or {}), caller, opts)
-        if not plan.candidates:
-            # The example body is one identity shape; a team may hold keys for providers that take
-            # another. Try each variant of the contract before declaring the job unservable.
-            contract = catalog_store.load().contracts.get(ep.get("capability") or "")
-            for variant in (contract.identity if contract else []):
-                trial = await build_plan(ep, {k: "example" for k in variant}, caller, opts)
-                if trial.candidates:
-                    plan = trial
-                    break
-        if not plan.candidates:
-            return {"tier": "none", "detail": "no provider can serve any identity shape of this job for your team right now",
-                    "dropped": plan.dropped}
-        first = plan.candidates[0]
-        how = ("your registered tool" if first.tier == "tool" else "your own credential" if first.tier == "credential"
-               else f"treg's {first.endpoint['provider']} key, ~${(first.price_micro or 0) / 1e6:g}")
-        # The plan above is for ONE identity shape — the endpoint's example body. Most drops are
-        # "this adapter takes a different identity", not "your team cannot reach this provider";
-        # labelling them "not available here" read as no-key and sent a reader hunting for a
-        # missing credential (2026-08-29). Name the shape, and give each drop its reason.
-        dropped_note = ""
-        if plan.dropped:
-            dropped_note = ("; for this {" + ", ".join(plan.variant) + "} example, not usable: "
-                            + ", ".join(f"{d['endpoint_id']} ({d['why']})" for d in plan.dropped))
-        return {"tier": "routed", "detail": f"routed — {len(plan.candidates)} providers callable now; first: "
-                                            f"{first.endpoint['id']} on {how} (send {{{', '.join(first.variant)}}})"
-                                            + dropped_note,
-                "plan": [c.view() for c in plan.candidates], "dropped": plan.dropped}
-    provider = oauth_providers.get(service)
-    if provider is None or not provider.base_url:
-        return {"tier": "none", "detail": f"{service} isn't proxy-callable yet"}
-    # An oauth-billed provider is metered even on the org's own connection (the upstream bills
-    # treg's app, not the account) — the dry-run must say so, or the price is a surprise.
-    billed_note = ""
-    if provider.platform_billed and service in get_settings().oauth_billed_set:
-        cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
-        est = _platform_estimate_micro(cv, {}) if cv and cv.get("usd") else 0
-        billed_note = (f" — metered from the team balance (~${ledger.usd(est):g}/call: "
-                       f"{service} bills treg's app per use)") if est else \
-                      f" — metered from the team balance ({service} bills treg's app per use)"
-    probe = provider.base_url.rstrip("/") + "/" + (ep["path"] or "/").lstrip("/")
-    try:
-        target = await resolve_call_target(probe, caller, _resolve_call)
-        tool = target.tool
-        return {"tier": "tool", "metered": bool(billed_note),
-                "detail": f"will use this org's registered {tool.name!r} tool{billed_note}"}
-    except CallFailure as exc:
-        if exc.status_code == 403:
-            return {"tier": "restricted", "detail": "a registered tool exists but your access is restricted — ask an admin"}
-        if exc.status_code != 404:
-            raise _translate_call_failure(exc) from exc
-    if await _marketplace_secret(service, caller.org_id, db) is not None:
-        return {"tier": "credential", "metered": bool(billed_note),
-                "detail": f"will use this org's {service} credential (no tool needed){billed_note}"}
-    cost = _platform_offer(ep, provider, caller.org)
-    if cost is not None:
-        # The number is the honest per-call price at the DEFAULT page size — a `per_result` endpoint
-        # costs more or less depending on how many rows the caller asks for, so it is "~".
-        est = _platform_estimate_micro(cost, {})
-        return {
-            "tier": "platform",
-            "detail": (f"no key needed — uses treg's {service} key, ~${ledger.usd(est):g}/call "
-                       f"from your team balance (treg balance)"),
-            "estimated_cost_micro": est,
-            "estimated_cost_usd": ledger.usd(est),
-        }
-    hint = (f"connect with: treg connections connect --provider {service}"
-            if not provider.uses_pasted_secret else
-            f"connect with: treg connections connect --provider {service}, or treg secret add {service} …")
-    return {"tier": "none", "detail": f"no {service} credential in this org yet — {hint}"}
 
 @app.api_route(
     "/call/{rest:path}",
