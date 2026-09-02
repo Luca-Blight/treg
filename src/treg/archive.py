@@ -210,21 +210,31 @@ def record(
     media_type: str,
     body: bytes,
     origin: str = "caller",
-) -> None:
+) -> tuple[str, str]:
     """Schedule one observation of a metered platform answer. Returns immediately; the write runs
     off-request on its own session. Call sites gate on `recording()` and 2xx — this function
-    trusts them and never raises."""
+    trusts them and never raises.
+
+    Returns `(key_hash, content_hash)` — the identities of the question and of this exact
+    answer. They are what the audit row keeps so a call can later be joined back to its stored
+    bytes (`/calls/{id}/result`). Computed here rather than in `_store` so they are computed
+    ONCE (the store reuses them) and are true whether or not the write lands: a shed recording
+    still names the answer the caller received."""
+    kh = cache_key(method, endpoint_id, url, caller_body, headers)
+    ch = content_hash(body)
     if len(_pending) >= _MAX_PENDING:  # shed load; the stream self-heals on the next call
-        return
+        return kh, ch
     task = asyncio.create_task(asyncio.wait_for(_store(
         method=method, endpoint_id=endpoint_id, provider=provider, url=url,
         caller_body=caller_body, headers=headers, status_code=status_code,
-        media_type=media_type, body=body, origin=origin), timeout=_STORE_TIMEOUT_S))
+        media_type=media_type, body=body, origin=origin, key_hash=kh, body_hash=ch),
+        timeout=_STORE_TIMEOUT_S))
     _pending.add(task)
     # NOT redundant with drain()'s own removal: on a running server drain() never fires, and this
     # callback is the only exit from `_pending` — without it the set fills to _MAX_PENDING and
     # record() sheds every recording from then on.
     task.add_done_callback(_pending.discard)
+    return kh, ch
 
 
 async def drain() -> None:
@@ -256,6 +266,8 @@ async def _store(
     media_type: str,
     body: bytes,
     origin: str = "caller",
+    key_hash: str | None = None,
+    body_hash: str | None = None,
 ) -> None:
     """One recording: upsert the key, append a version, keep the change statistics honest.
 
@@ -276,8 +288,10 @@ async def _store(
 
         entry = catalog_store.load().by_id.get(endpoint_id)
         pol = policy(entry)
-        kh = cache_key(method, endpoint_id, url, caller_body, headers)
-        ch = content_hash(body)
+        # `record()` hands both hashes in, computed once on the call path; the fallback keeps
+        # `_store` callable on its own (tests).
+        kh = key_hash or cache_key(method, endpoint_id, url, caller_body, headers)
+        ch = body_hash or content_hash(body)
         cap = get_settings().archive_max_body_bytes
         keep_bytes = pol in _STORABLE and len(body) <= cap
         now = _utcnow()
@@ -345,6 +359,55 @@ async def _store(
                 await s.rollback()
     except Exception:  # noqa: BLE001 — recording must never surface anywhere
         _log.warning("archive recording dropped for %s", endpoint_id, exc_info=True)
+
+
+# ---------------------------------------------------------------------------------------------
+# Reading one call's stored answer back (the team-facing `/calls/{id}/result`)
+
+def _decode(body: bytes | None) -> str | None:
+    if body is None:
+        return None
+    try:
+        return body.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+async def resolve_result(session, key_hash: str, content_hash: str) -> dict[str, Any] | None:
+    """The request shape and the stored answer a call row points at, or None when the key or
+    that exact answer is no longer on file.
+
+    `content_hash` names the exact bytes the caller received (dedup means several versions can
+    share them — the newest matching version is the one reported). Follows a `body_of` reference
+    to the row carrying the bytes; a hash-only version returns `stored=False` with the bytes
+    honestly absent. Never raises on decode: a non-UTF-8 body reports `body_text=None`."""
+    from sqlalchemy import select
+
+    from .models import ArchiveKey, ArchiveSnapshot
+
+    key = (await session.execute(
+        select(ArchiveKey).where(ArchiveKey.key_hash == key_hash))).scalars().one_or_none()
+    if key is None:
+        return None
+    snap = (await session.execute(
+        select(ArchiveSnapshot)
+        .where(ArchiveSnapshot.key_id == key.id, ArchiveSnapshot.content_hash == content_hash)
+        .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+    if snap is None:
+        return None
+    body = snap.body
+    if body is None and snap.body_of is not None:
+        carrier = await session.get(ArchiveSnapshot, snap.body_of)
+        body = carrier.body if carrier is not None else None
+    return {
+        "stored": body is not None,
+        "request": {"method": key.req_method or "", "url": key.req_url or "",
+                    "body_text": _decode(key.req_body)},
+        "response": {"status_code": snap.status_code, "media_type": snap.media_type,
+                     "size_bytes": snap.size_bytes, "fetched_at": snap.fetched_at.isoformat(),
+                     "origin": snap.origin, "version": snap.version,
+                     "body_text": _decode(body)},
+    }
 
 
 # ---------------------------------------------------------------------------------------------
@@ -471,7 +534,9 @@ async def lookup(
         _touch(kh)
         return {"body": body, "media_type": newest.media_type,
                 "status_code": newest.status_code, "fetched_at": newest.fetched_at,
-                "age_s": age_s}
+                "age_s": age_s,
+                # Identities of the served answer, for the audit row's call→archive link.
+                "key_hash": kh, "content_hash": newest.content_hash, "version": newest.version}
     except Exception:  # noqa: BLE001 — a lookup fault must degrade to a live call, never a 500
         _log.warning("archive lookup failed for %s — serving live", endpoint_id, exc_info=True)
         return None

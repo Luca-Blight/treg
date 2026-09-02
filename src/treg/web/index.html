@@ -429,6 +429,7 @@ addEventListener('load', function(){
   .soon-note:hover::after{opacity:1}
   .chip.demo{border-color:var(--accent);color:var(--accent)}
   .modal .hd{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}
+  tr.act-row{cursor:pointer} tr.act-row:hover td{background:var(--panel2)} .act-view{font-size:11px;color:var(--accent);margin-left:6px;white-space:nowrap}
   .drawer{position:fixed;top:0;right:0;height:100vh;width:min(520px,96vw);background:var(--panel);border-left:1px solid var(--line);z-index:50;box-shadow:-12px 0 44px rgba(20,16,10,.34);display:flex;flex-direction:column}
   pre{margin:0;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:50vh}
   pre.code{white-space:pre;overflow-x:auto;word-break:normal;overflow-wrap:normal;line-height:1.55}
@@ -2751,7 +2752,7 @@ a:hover{text-decoration-color:var(--muted)}
           <template v-if="actTab==='feed'">
           <p class="sub">Every proxy call and server CLI run in this org.</p>
           <table><tr><th>When</th><th>Who</th><th v-if="anyTagged">Tagged</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
-            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
+            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id" :class="{'act-row':a.kind==='call'}" @click="a.kind==='call'&&openCall(a)" :title="a.kind==='call'?(a.has_result?'Show request and response':'Show call details'):''"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span><span v-if="a.has_result" class="act-view">result ›</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
           <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
           </template>
 
@@ -3840,6 +3841,43 @@ product, including per-customer usage tracking and billing.</pre>
     <!-- Try a MARKETPLACE endpoint right here. Same relay as any call — served by the org's own
          key when one exists, else treg's key billed to the team balance — and logged in Activity
          exactly like a CLI call. -->
+    <!-- Activity → one call. The archive's copy of what was asked and what came back (metered
+         platform calls only — own-key and own-tool calls are relayed without being stored). -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="callView" @click.self="callView=null" style="place-items:stretch;justify-items:end">
+      <div class="drawer" style="width:min(680px,96vw)"><div class="hd" style="padding:15px 18px;border-bottom:1px solid var(--line)"><b>{{callView.endpoint_id||callView.tool||'Call'}}</b><button class="btn sm" @click="callView=null" aria-label="Close">✕</button></div>
+        <div class="bd" style="padding:16px 18px;overflow:auto">
+          <div class="kv">
+            <div><b>When</b>{{when(callView.created_at)}}</div>
+            <div><b>Status</b><span class="badge" :class="callView.status_code<400?'ok':'invalid'">{{callView.status_code}}</span></div>
+            <div v-if="callView.provider"><b>Provider</b>{{callView.provider}}</div>
+            <div v-if="callView.credential_tier"><b>Served on</b>{{callView.credential_tier==='platform'?'treg key':'your key'}}</div>
+            <div v-if="callView.cached"><b>Answer</b><span class="chip" title="served from the archive instead of the vendor">cached</span></div>
+            <div v-if="callView.call_ref"><b>Call id</b><span class="mono" style="font-size:11px">{{callView.call_ref}}</span></div>
+          </div>
+          <p v-if="callView.loading" class="sub">Loading…</p>
+          <p v-else-if="callView.error" class="sub" style="color:var(--red)">{{callView.error}}</p>
+          <template v-else>
+            <p v-if="callView.note" class="sub" style="margin:4px 0 12px">{{callView.note}}</p>
+            <template v-if="callView.request">
+              <h3 style="margin:10px 0 6px;font-size:13px">Request</h3>
+              <p class="explain" style="margin:0 0 6px"><span class="mono">{{callView.request.method}} {{callView.request.url}}</span></p>
+              <pre v-if="callView.request.body_text" style="max-height:24vh">{{pretty(callView.request.body_text)}}</pre>
+            </template>
+            <template v-if="callView.response">
+              <h3 style="margin:14px 0 6px;font-size:13px;display:flex;align-items:center;gap:8px">Response
+                <span class="muted" style="font-weight:400;font-size:11px">{{callView.response.status_code}} · {{callView.response.media_type||'—'}} · {{fmtBytes(callView.response.size_bytes)}} · fetched {{when(callView.response.fetched_at)}}</span>
+                <button v-if="callView.response.body_text" class="btn sm" style="margin-left:auto" @click="copyCallBody()">{{callCopied||'Copy'}}</button>
+              </h3>
+              <template v-if="callView.response.body_text">
+                <pre style="max-height:60vh">{{callBodyShown}}</pre>
+                <p v-if="callBodyTruncated" class="sub" style="margin:6px 0 0"><a href="#" @click.prevent="callViewFull=true">Show full response ({{fmtBytes(callView.response.body_text.length)}})</a></p>
+              </template>
+              <p v-else-if="callView.stored" class="sub">The stored answer is not text — copy is unavailable for binary bodies.</p>
+            </template>
+          </template>
+        </div>
+      </div>
+    </div>
     <div class="scrim" role="dialog" aria-modal="true" v-if="epTry" @click.self="epTry=null" style="place-items:stretch;justify-items:end">
       <div class="drawer"><div class="hd" style="padding:15px 18px;border-bottom:1px solid var(--line)"><b>Try “{{epTry.id}}”</b><button class="btn sm" @click="epTry=null" aria-label="Close">✕</button></div>
         <div class="bd" style="padding:16px 18px;overflow:auto">
@@ -4060,6 +4098,7 @@ createApp({
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       // marketplace endpoint Try-it drawer
+      callView:null, callViewFull:false, callCopied:'',  // Activity → one call's request/response drawer
       epTry:null, epTryTab:'agent', epTryAccess:null, epTryAccessByMethod:{}, epTryAuthMethod:'', epTryParams:[], epTryBody:'', epTryResp:'', epTryStatus:null,
       epTryMs:null, epTryCost:null, epTryBusy:false,
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
@@ -4324,9 +4363,16 @@ createApp({
       // Cost precedence: what was CHARGED (settle amount; 0 on a release — the estimate alone would
       // over-report a refunded call as spend), else observed, else the estimate (old rows / own-key).
       const calls=(this.calls||[]).filter(c=>c.kind!=='local_run').map(c=>({kind:'call', id:c.id, created_at:c.created_at, user_email:c.user_email, client:c.client, tool:c.tool_name, action:c.method, status:c.status_code, ok:c.status_code<400,
-        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier, tags:c.tags}));
+        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier, tags:c.tags,
+        has_result:!!c.has_result, endpoint_id:c.endpoint_id, call_ref:c.call_ref, path:c.path, cached:c.cached}));
       const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, client:r.client, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
+    },
+    callBodyTruncated(){ const t=this.callView&&this.callView.response&&this.callView.response.body_text; return !!t && !this.callViewFull && t.length>262144; },
+    callBodyShown(){  // pretty-print JSON when it parses; cap the rendered text at 256 KB unless asked for all of it
+      const t=this.callView&&this.callView.response&&this.callView.response.body_text; if(!t) return '';
+      if(this.callBodyTruncated) return t.slice(0,262144)+'\n… (truncated)';
+      return this.pretty(t);
     },
     anyTagged(){  // hide the column entirely for teams that never send X-Treg-Meta
       return (this.calls||[]).some(c=>c.tags && Object.keys(c.tags).length);
@@ -6236,6 +6282,15 @@ createApp({
         if(this.view==='secrets') this.loadSecrets();  // …and the Secrets view (was showing the previous org's)
       }catch(e){ this.err='Failed to load: '+(e.detail||e.status); }
       finally{ this.loading=false; } },
+    async openCall(a){  // Activity row → the drawer; details load from /calls/{id}/result
+      this.callViewFull=false; this.callCopied='';
+      this.callView={id:a.id, tool:a.tool, endpoint_id:a.endpoint_id, call_ref:a.call_ref, created_at:a.created_at, status_code:a.status, credential_tier:a.tier, cached:a.cached, loading:true};
+      try{ const d=await this.api('/calls/'+a.id+'/result'); this.callView={...this.callView, ...d, loading:false}; }
+      catch(e){ this.callView={...this.callView, loading:false, error:'Could not load this call.'}; }
+    },
+    pretty(text){ try{ return JSON.stringify(JSON.parse(text), null, 2); }catch(e){ return text; } },
+    fmtBytes(n){ if(n==null) return '—'; if(n<1024) return n+' B'; if(n<1048576) return (n/1024).toFixed(1)+' KB'; return (n/1048576).toFixed(2)+' MB'; },
+    async copyCallBody(){ const t=this.callView&&this.callView.response&&this.callView.response.body_text; if(!t) return; if(await this.toClipboard(t)){ this.callCopied='Copied'; setTimeout(()=>{ this.callCopied=''; },1400); } },
     async loadCalls(){ try{ const [calls,runs]=await Promise.all([this.api('/calls?limit=100'), this.api('/runs?limit=100').catch(()=>[])]); this.calls=calls; this.runs=runs; }catch(e){ this.err='Failed to load activity.'; } },
     async loadAdmin(){ this.confirmAdmUser=null; this.confirmAdmOrg=null;
       try{ this.adminStats=await this.api('/admin/stats'); this.adminOrgs=await this.api('/admin/orgs'); this.adminUsers=await this.api('/admin/users'); }

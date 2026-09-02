@@ -316,6 +316,13 @@ Server side (`domain.identity.access`): `require_identity` (who, from token OR s
 - **Activity** — one time-sorted feed (`activityRows`) merging `GET /calls` (proxy calls) + `GET /runs`
   (CLI executions). Local runs now arrive via `/runs` (tagged `where`), so the calls feed **excludes**
   `local_run` rows to avoid double-counting, and each run row shows a **local/server** chip.
+  A call row is clickable (`openCall` → `callView`, a right-side drawer in the `epTry` pattern)
+  and loads `GET /calls/{id}/result`: the request line (method + vendor URL before injection),
+  the response (status · media type · size · fetch time, JSON pretty-printed by `pretty`, a Copy
+  button via `toClipboard`, rendered text capped at 256 KB with a "show full" link), or the
+  endpoint's `note` when nothing is on file. Rows whose `has_result` is true show a small
+  "result ›" affordance next to the status badge; own-key, own-tool and failed calls open the
+  same drawer and read the note. Only metered platform 2xx calls ever have a stored answer.
 - **Admin** — nav auto-appears iff the caller is `is_superadmin` (read from `/auth/me` on boot — **not**
   by probing `/admin/stats`, which would 403 + log a console error on every load for normal users); `loadAdmin` fetches `stats` + `orgs` + `users` only when you open the panel. Shows `stats` + `orgs` + `users`, each
   with **mutations** (`_adm` helper): `admGrant`/`admSuspendUser`/`admDeleteUser`,
