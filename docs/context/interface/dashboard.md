@@ -675,7 +675,7 @@ their declared `authorization_methods` with each connection's stored `authorizat
 grant for a provider therefore cannot mark an endpoint that requires a different grant as connected.
 Providers without multiple authorization methods retain the provider-level `catConnected` behavior.
 The endpoint-aware label names the sole required method when one exists, but the **Connect** action
-always navigates to the provider marketplace page; consent never starts unexpectedly inside the catalog
+always navigates to the provider connection page; consent never starts unexpectedly inside the catalog
 ledger. It is shown only when `mkKnown(service)`, since the catalog can name a provider this deployment
 carries no client credentials for.
 
@@ -712,7 +712,7 @@ banner, which now carries a real **Connect** / **Bring your own key** button ins
 its own key (calls act as your account), so the order flips: **Connect {provider}** is the ink-fill
 primary and Try-it is secondary. Once a compatible account method is connected the connect/own-key button
 is replaced in place by the green **`Connected`** chip. A missing method uses the registry's action label
-and missing-message, then routes the user to the provider marketplace page. The exact CLI connect command
+and missing-message, then routes the user to the provider connection page. The exact CLI connect command
 remains in the access response for CLI and agent consumers, but is not rendered in the Manual banner.
 Everything here renders identically in a single row's expansion
 and in a merged row's provider sub-row, because both paths share the one `.lep` block.

@@ -378,7 +378,7 @@ class PendingOAuth(SQLModel, table=True):
     # The registry service this connect came from ("" for a bring-your-own-app connect). Carried
     # through the redirect so the callback knows which provider's tool to auto-provision.
     provider: str = Field(default="")
-    # One marketplace provider can have more than one explicit OAuth grant. Instagram uses a
+    # One catalog provider can have more than one explicit OAuth grant. Instagram uses a
     # direct Instagram grant by default and a separate Facebook Page grant for Page-only tools.
     authorization_method: str = Field(default="")
     # Per-provider auth quirks, captured at start so the callback exchanges the code the same way

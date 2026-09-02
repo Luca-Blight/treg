@@ -3,12 +3,16 @@ title: Instagram OAuth — direct Login and optional Facebook Page tools
 status: built; Meta configuration and live verification pending
 sources:
   - scripts/catalog_ingest.py
+  - src/treg/application/call/access.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/service.py
   - src/treg/catalog/instagram.yaml
   - src/treg/catalog/instagram.extended.yaml
   - src/treg/cli.py
   - src/treg/domain/catalog/store.py
+  - src/treg/domain/connections/authorization.py
+  - src/treg/domain/connections/oauth_flow.py
+  - src/treg/infra/oauth_exchange.py
   - src/treg/mcp.py
   - src/treg/routers/call.py
   - src/treg/web/index.html
@@ -160,7 +164,7 @@ treg and never relayed upstream. Shared clients accept method ids and display la
 metadata. `POST /oauth/start` returns the selected method description as `connect_guidance`, which
 lets the CLI explain the grant without provider-specific code.
 
-When several stored grants match one method, marketplace fallback selects the newest row. Tool-grant
+When several stored grants match one method, catalog fallback selects the newest row. Tool-grant
 resolution loads the provider's secrets once and matches bindings from that set, rather than loading
 one secret for every binding.
 
@@ -171,9 +175,8 @@ No repository task changes Meta settings. A human must do these steps:
 1. Open [Meta App Dashboard](https://developers.facebook.com/apps/) and select the app that will
    own Instagram Login.
 2. Add or open **Instagram > API setup with Instagram login > Business login settings**.
-3. Set the production redirect URI to `https://treg.to/oauth/callback`. For the current local
-   tunnel, set `https://4f52-103-119-102-198.ngrok-free.app/oauth/callback` only while that tunnel
-   is active.
+3. Set the production redirect URI to `https://treg.to/oauth/callback`. For local testing, set
+   `https://<your-tunnel-host>/oauth/callback` only while that tunnel is active.
 4. Copy the separate Instagram App ID and Instagram App Secret into local `.env` as
    `TREG_INSTAGRAM_CLIENT_ID` and `TREG_INSTAGRAM_CLIENT_SECRET`. Do not put these values in chat or
    source control.

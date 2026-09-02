@@ -7,7 +7,10 @@ sources:
   - src/treg/crypto.py
   - src/treg/oauth.py
   - src/treg/domain/connections/__init__.py
+  - src/treg/domain/connections/authorization.py
+  - src/treg/domain/connections/oauth_flow.py
   - src/treg/domain/connections/refresh.py
+  - src/treg/infra/oauth_exchange.py
   - src/treg/infra/oauth_refresh.py
   - src/treg/oauth_providers.py
   - src/treg/health.py
@@ -35,6 +38,12 @@ short token for a renewable long-lived token and stores the generic refresh prot
 encrypted blob. The optional `facebook-page` profile uses the existing Meta app, Facebook Login,
 Page discovery, and a derived Page token. The grants are separate `Secret` rows. See
 [instagram-oauth](instagram-oauth.md) for the endpoint matrix and setup contract.
+
+The reusable multi-method rules live in `domain/connections/authorization.py`: capability
+ownership, legacy-method inference, method-specific profiles, endpoint-method selection, and scope
+translation. `oauth_providers.py` supplies registry data and keeps compatibility methods that
+delegate to those domain rules. The initial token exchange is an infrastructure adapter in
+`infra/oauth_exchange.py`; `oauth.py` is a compatibility facade only.
 
 `authorization_method` is stored on both `PendingOAuth` and `Secret`. Existing Instagram rows are
 backfilled as `facebook-page`. The callback performs token and required identity requests after it
@@ -87,6 +96,10 @@ clobber a refresh_token the first already rotated (the in-process lock alone doe
 provider that omits `expires_in` doesn't force a refresh on every call), coerces a null `expires_in`,
 and raises a clear error when a 200 body carries no `access_token`; `_expires_at` treats a naive ISO
 `expiry` as UTC.
+
+Resource discovery and resource selection also call this same `ensure_fresh` implementation before
+they close their read session and start provider I/O. They do not implement their own lock, exchange,
+or conditional write path.
 
 `refresh()` posts the credential's recorded `client_id_param` dialect (TikTok reads `client_key`, not
 `client_id`), snapshotted onto the blob at mint time so a refresh months later still speaks the dialect
@@ -166,7 +179,7 @@ module symbols:
 - `get(service)` — look up one provider. `credentials(provider)` — treg's own id/secret (raises if this
   deployment hasn't set them). `is_configured(provider)` — whether this deployment can offer it (a
   `token`-kind provider needs nothing from treg, so always offerable).
-- `listing()` — the marketplace payload (`GET /oauth/providers`): every provider, grouped by
+- `listing()` — the catalog payload (`GET /oauth/providers`): every provider, grouped by
   `CATEGORY_ORDER`, each flagged `configured`, with per-capability scopes already in plain English via
   `scope_label()`/`SCOPE_LABELS` (a lookup keyed by the raw scope string;
   `test_every_requested_scope_has_a_plain_english_label` guards it). Authorization methods include

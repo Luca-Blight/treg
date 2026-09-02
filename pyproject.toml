@@ -168,6 +168,21 @@ allow_indirect_imports = true
 as_packages = true
 
 [[tool.importlinter.contracts]]
+name = "Connections domain does not depend on outer layers"
+type = "forbidden"
+source_modules = ["treg.domain.connections"]
+forbidden_modules = [
+    "treg.api",
+    "treg.bootstrap",
+    "treg.routers",
+    "treg.application",
+    "fastapi",
+    "starlette",
+]
+allow_indirect_imports = true
+as_packages = true
+
+[[tool.importlinter.contracts]]
 name = "Catalog domain is a leaf: no outer layers, no sibling domains"
 type = "forbidden"
 source_modules = ["treg.domain.catalog"]

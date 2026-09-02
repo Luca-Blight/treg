@@ -18,6 +18,7 @@ from ...config import get_settings, platform_setting_name
 from ...domain.capacity.routes_view import view as overflow_routes_view
 from ...domain.capacity.view import view as capacity_view
 from ...domain.catalog import store as catalog_store
+from ...domain.connections import authorization as connection_authorization
 from ...domain.connections.refresh import expiry_state
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
@@ -823,20 +824,12 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
         })
 
 
-def _endpoint_authorization_methods(ep: dict) -> tuple[str, ...]:
-    methods = ep.get("authorization_methods") or []
-    if not methods and ep.get("authorization_method"):
-        methods = [ep["authorization_method"]]
-    default = ep.get("authorization_method") or ""
-    return tuple([default] + [m for m in methods if m != default]) if default else tuple(methods)
-
-
 async def _provider_tool_grant(
     service: str, methods: tuple[str, ...], caller: Caller, db: AsyncSession,
 ) -> tuple[Tool, Secret, str] | None:
     """Resolve a named catalog endpoint by provider and grant identity, not only by host.
 
-    This is the generic fix for providers that share one upstream host. It stays in marketplace
+    This is the generic fix for providers that share one upstream host. It stays in catalog-call
     resolution; the faithful relay still receives one resolved tool and knows no provider rules.
     """
     tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
@@ -879,23 +872,6 @@ async def _provider_tool_grant(
     return tool, secret, method
 
 
-def _authorization_spec(provider, method: str):
-    return next((item for item in provider.authorization_methods if item.name == method), None)
-
-
-def _required_scopes(ep: dict, authorization) -> list[str]:
-    declared = list(ep.get("required_scopes") or [])
-    if authorization is None:
-        return declared
-    aliases = dict(authorization.scope_aliases)
-    out = [aliases.get(scope, scope) for scope in declared]
-    out.extend(authorization.scope_riders)
-    out.extend(
-        rider for source, rider in authorization.scope_riders_by_scope if source in declared
-    )
-    return list(dict.fromkeys(out))
-
-
 def _authorization_error(
     ep: dict, method: str, *, code: str, explanation: str, scopes: list[str], authorization=None,
 ) -> ResolutionFailed:
@@ -922,7 +898,7 @@ def _authorization_error(
 
 
 def _preflight_authorization(ep: dict, secret: Secret, method: str, authorization=None) -> None:
-    required = _required_scopes(ep, authorization)
+    required = connection_authorization.required_scopes(ep, authorization)
     state = expiry_state(secret.expires_at, oauth.secret_is_refreshable(secret))
     if state == "expired":
         raise _authorization_error(
@@ -974,19 +950,14 @@ async def _resolve_marketplace_call(
             "method_mismatch", status_code=400,
             detail=f"{ep['id']} is {ep['method']} — add --method {ep['method']}")
 
-    methods = _endpoint_authorization_methods(ep)
-    requested_method = authorization_method.strip().lower()
-    if requested_method:
-        if not methods:
-            raise ResolutionFailed(
-                "catalog_parameter_invalid", status_code=400,
-                detail=f"{ep['id']} does not support authorization-method selection")
-        if requested_method not in methods:
-            raise ResolutionFailed(
-                "catalog_parameter_invalid", status_code=400, detail=(
-                    f"{ep['id']} does not support {requested_method}; choose "
-                    + " or ".join(methods)))
-        methods = (requested_method,)
+    try:
+        methods = connection_authorization.select_endpoint_methods(
+            ep, authorization_method,
+        )
+    except ValueError as exc:
+        raise ResolutionFailed(
+            "catalog_parameter_invalid", status_code=400, detail=str(exc),
+        ) from None
     chosen_tool: Tool | None = None
     chosen_secret: Secret | None = None
     chosen_method = ""
@@ -1001,16 +972,17 @@ async def _resolve_marketplace_call(
                 chosen_method = _authorization_method(chosen_secret)
         if chosen_secret is None:
             required_method = methods[0]
-            authorization = _authorization_spec(provider, required_method)
+            authorization = connection_authorization.method_spec(provider, required_method)
             raise _authorization_error(
                 ep, required_method, code="authorization_missing",
                 explanation=(
                     authorization.missing_message if authorization and authorization.missing_message
                     else f"This tool requires {provider.display_name} authorization."
                 ),
-                scopes=_required_scopes(ep, authorization), authorization=authorization,
+                scopes=connection_authorization.required_scopes(ep, authorization),
+                authorization=authorization,
             )
-        authorization = _authorization_spec(provider, chosen_method)
+        authorization = connection_authorization.method_spec(provider, chosen_method)
         _preflight_authorization(ep, chosen_secret, chosen_method, authorization)
         provider = provider.profile_for_authorization(chosen_method)
 

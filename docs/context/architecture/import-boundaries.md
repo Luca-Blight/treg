@@ -6,6 +6,7 @@ sources:
   - .github/workflows/ci.yml
   - src/treg/application/__init__.py
   - src/treg/application/call/__init__.py
+  - src/treg/application/call/access.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/overflow.py
@@ -27,6 +28,10 @@ sources:
   - src/treg/domain/governance/teams.py
   - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/__init__.py
+  - src/treg/domain/connections/__init__.py
+  - src/treg/domain/connections/authorization.py
+  - src/treg/domain/connections/oauth_flow.py
+  - src/treg/domain/connections/refresh.py
   - src/treg/domain/money/__init__.py
   - src/treg/domain/capacity/__init__.py
   - src/treg/infra/upstream/__init__.py
@@ -77,10 +82,16 @@ absent until their packages exist, so no placeholder domain makes a future bound
 Governance owns shared tool/project ACLs, tag-budget rules, and public-demo rate policy. The package also
 forbids direct FastAPI and Starlette imports; semantic policy errors are translated by each HTTP interface.
 The call application package owns the framework-neutral staged use case: request intake, idempotency
-state, target resolution, marketplace pricing, authorization, reservation, relay orchestration, and
-finalization. The HTTP adapter captures a `CallInput`, translates typed failures, and wraps the returned
-`UpstreamResponse`. Client-name normalization lives in a neutral leaf so the application path does not
+state, target resolution, catalog pricing and access decisions, authorization, reservation, relay
+orchestration, and finalization. The HTTP adapter captures a `CallInput`, translates typed failures, and
+wraps the returned `UpstreamResponse`. Client-name normalization lives in a neutral leaf so the application path does not
 load the Request-aware caller metadata adapter.
+
+The complete `treg.domain.connections` package is also an inward-facing domain package. It owns
+provider-neutral authorization-method selection, consent URL construction, and refresh state changes.
+It cannot import the API, bootstrap, routers, application layer, FastAPI, or Starlette. Provider registry
+data can call these rules through the legacy compatibility modules, while HTTP exchange adapters stay in
+`treg.infra` and workflow coordination stays in `treg.application`.
 
 Two runtime contracts keep that boundary executable. `treg.application.call` cannot import the legacy
 API, bootstrap, routers, FastAPI, or Starlette. `treg.infra.upstream` cannot import those HTTP adapters

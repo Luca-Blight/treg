@@ -9,6 +9,7 @@ sources:
   - src/treg/caller_metadata.py
   - src/treg/client_identity.py
   - src/treg/application/auth.py
+  - src/treg/application/call/access.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py

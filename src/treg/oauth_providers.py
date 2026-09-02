@@ -16,36 +16,14 @@ the user, and it asks for authority the capability doesn't need.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from .config import platform_setting_name, get_settings
+from .domain.connections import authorization as connection_authorization
 
 
-@dataclass(frozen=True)
-class OAuthAuthorizationMethod:
-    """One explicit grant for a logical provider.
-
-    `overrides` changes only the provider protocol fields for this grant. Catalog identity and the
-    marketplace service stay on the parent provider, so two methods never create two catalogs.
-    """
-
-    name: str
-    display_name: str
-    capabilities: tuple[str, ...]
-    connection_name: str
-    description: str
-    connect_capability: str = ""
-    action_label: str = "Add account"
-    missing_message: str = ""
-    # Optional marketplace copy for a capability whose raw scope labels would be misleading.
-    # Kept on the method rather than in the dashboard so every multi-grant provider can describe
-    # what one grant adds without teaching the reusable renderer provider names.
-    capability_intros: tuple[tuple[str, str], ...] = ()
-    capability_details: tuple[tuple[str, tuple[str, ...]], ...] = ()
-    scope_aliases: tuple[tuple[str, str], ...] = ()
-    scope_riders: tuple[str, ...] = ()
-    scope_riders_by_scope: tuple[tuple[str, str], ...] = ()
-    overrides: tuple[tuple[str, object], ...] = ()
+# Compatibility name for callers that still import provider definitions from this legacy module.
+OAuthAuthorizationMethod = connection_authorization.AuthorizationMethod
 
 
 @dataclass(frozen=True)
@@ -169,7 +147,7 @@ class OAuthProvider:
     # Instagram Login uses a different long-lived exchange and a renewable 60-day access token.
     # Empty keeps the standard provider behavior; "instagram" snapshots that protocol on PendingOAuth.
     long_lived_exchange_style: str = ""
-    # One logical marketplace provider can expose explicit, separate grants. Each method selects a
+    # One logical catalog provider can expose explicit, separate grants. Each method selects a
     # protocol profile without changing the provider id or duplicating its endpoint catalog.
     authorization_methods: tuple[OAuthAuthorizationMethod, ...] = ()
     default_capability_name: str = ""
@@ -356,40 +334,13 @@ class OAuthProvider:
         return max(self.capabilities, key=lambda c: len(self.scopes[c]))
 
     def authorization_for_capability(self, capability: str) -> OAuthAuthorizationMethod | None:
-        """The explicit grant that owns a capability, or None for a one-method provider."""
-        matches = [m for m in self.authorization_methods if capability in m.capabilities]
-        if len(matches) > 1:
-            raise ValueError(f"{self.service} capability {capability!r} has multiple authorization methods")
-        if not matches:
-            if self.authorization_methods:
-                raise ValueError(f"{self.service} capability {capability!r} has no authorization method")
-            return None
-        return matches[0]
+        return connection_authorization.method_for_capability(self, capability)
 
     def profile_for_authorization(self, method: str) -> "OAuthProvider":
-        """Return the provider protocol profile for one stored grant."""
-        if not self.authorization_methods:
-            return self
-        name = method or self.legacy_authorization_method
-        if not name:
-            name = self.authorization_for_capability(self.default_capability).name
-        selected = next((m for m in self.authorization_methods if m.name == name), None)
-        if selected is None:
-            raise ValueError(f"{self.service} has no authorization method {name!r}")
-        return replace(
-            self,
-            **dict(selected.overrides),
-            authorization_methods=(),
-            default_capability_name="",
-        )
+        return connection_authorization.provider_profile(self, method)
 
     def authorization_method_name(self, stored: str) -> str:
-        """Normalize a stored method, including a declared legacy value."""
-        if stored or not self.authorization_methods:
-            return stored
-        return self.legacy_authorization_method or self.authorization_for_capability(
-            self.default_capability
-        ).name
+        return connection_authorization.method_name(self, stored)
 
     @property
     def resource_plural(self) -> str:

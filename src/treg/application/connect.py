@@ -12,10 +12,14 @@ from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import crypto, health, oauth, oauth_providers
+from .. import crypto, health, oauth_providers
 from ..config import get_settings
 from ..domain.catalog import store as catalog_store
+from ..domain.connections import refresh as connection_refresh
+from ..domain.connections.oauth_flow import consent_url
 from ..infra.db import session_maker
+from ..infra.oauth_exchange import HTTPXOAuthExchangePort
+from ..infra.oauth_refresh import HTTPXOAuthRefreshPort
 from ..models import PendingOAuth, Secret, Tool
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
@@ -383,7 +387,7 @@ async def start_oauth_connection(
         await db.commit()
         return {
             "state": state,
-            "consent_url": oauth.consent_url(pending),
+            "consent_url": consent_url(pending),
             "redirect_uri": redirect_uri,
             "connect_guidance": connect_guidance,
         }
@@ -415,7 +419,7 @@ async def complete_oauth_connection(
 
     try:
         client = client_factory()
-        blob = await oauth.exchange_code(pending, code, client)
+        blob = await HTTPXOAuthExchangePort(client).exchange_code(pending, code)
         provider = oauth_providers.get(pending.provider) if pending.provider else None
         profile = (
             provider.profile_for_authorization(pending.authorization_method)
@@ -476,7 +480,7 @@ async def complete_oauth_connection(
             # come back as one bogus scope string and every capability would read as unsatisfied.
             separator = pending.scope_separator or " "
             secret.granted_scopes = " ".join(s for s in pending.scopes.split(separator) if s)
-            secret.expires_at = oauth.expiry_of(blob)
+            secret.expires_at = connection_refresh.expiry_of(blob)
             await db.flush()
             # A connect that yields no callable tool is a dead end — the user consented and got
             # nothing. Auto-provision the provider's tool bound to this credential so the very next
@@ -634,7 +638,7 @@ async def connect_with_pasted_secret(
         await _autoprovision_provider_tool(provider, secret, pending, db)
         await db.commit()
         await db.refresh(secret)
-        return oauth.connection_view(secret)
+        return connection_refresh.connection_view(secret)
 
 
 async def get_oauth_status(*, state: str, org_id: int) -> dict:
@@ -708,7 +712,7 @@ async def list_connections(*, org_id: int) -> list[dict]:
         ).scalars().all()
         out = []
         for s in rows:
-            view = oauth.connection_view(s)
+            view = connection_refresh.connection_view(s)
             provider = oauth_providers.get(s.provider) if s.provider else None
             if provider is not None:
                 method_name = provider.authorization_method_name(s.authorization_method)
@@ -743,47 +747,23 @@ async def list_connections(*, org_id: int) -> list[dict]:
         return out
 
 
-async def _fresh_connection_snapshot(
+async def _connection_for_upstream(
     *, secret_id: int, org_id: int, client,
 ) -> tuple[Secret, str]:
-    """Return a detached fresh connection; token refresh runs with no database session open."""
-    async with oauth._locks[secret_id]:
-        async with session_maker() as db:
-            secret = await _owned_connection(secret_id, org_id, db)
-            old_value = secret.value
-            raw = crypto.decrypt(old_value)
-            if secret.kind != "oauth":
-                return secret, raw
-            blob = json.loads(raw)
-            if not oauth.is_refreshable(blob) or not oauth.is_stale(blob):
-                return secret, raw
-
-        try:
-            fresh = await oauth.refresh(blob, client)
-        except Exception as exc:  # noqa: BLE001
-            async with session_maker() as db:
-                current = await _owned_connection(secret_id, org_id, db)
-                current.last_error = str(exc)[:300]
-                await db.commit()
-            raise
-
-        async with session_maker() as db:
-            current = await _owned_connection(secret_id, org_id, db)
-            if current.value == old_value:
-                current.value = crypto.encrypt(json.dumps(fresh))
-                current.expires_at = oauth.expiry_of(fresh)
-                current.last_refresh_at = _utcnow_naive()
-                current.last_error = ""
-                await db.commit()
-                await db.refresh(current)
-            return current, crypto.decrypt(current.value)
+    """Load one connection and delegate freshness to the single domain implementation."""
+    async with session_maker() as db:
+        secret = await _owned_connection(secret_id, org_id, db)
+        await connection_refresh.ensure_fresh(
+            secret, db, HTTPXOAuthRefreshPort(client),
+        )
+        return secret, crypto.decrypt(secret.value)
 
 
 async def list_connection_resources(
     *, secret_id: int, org_id: int, client_factory,
 ) -> dict:
     client = client_factory()
-    secret, raw = await _fresh_connection_snapshot(
+    secret, raw = await _connection_for_upstream(
         secret_id=secret_id, org_id=org_id, client=client,
     )
     provider = oauth_providers.get(secret.provider)
@@ -901,7 +881,7 @@ async def select_connection_resource(
     source_value = ""
     setup_fields: dict[str, str] | None = None
     client = client_factory()
-    secret, _ = await _fresh_connection_snapshot(
+    secret, _ = await _connection_for_upstream(
         secret_id=secret_id, org_id=org_id, client=client,
     )
     provider = oauth_providers.get(secret.provider) if secret.provider else None
@@ -958,7 +938,7 @@ async def select_connection_resource(
                 tool.examples = [rendered] + others
         await db.commit()
         await db.refresh(secret)
-        return oauth.connection_view(secret)
+        return connection_refresh.connection_view(secret)
 
 
 async def _resolve_resource_call_token(
@@ -1159,7 +1139,11 @@ async def supply_extra_credential(
             tool.bindings = bindings
         await db.commit()
         await db.refresh(secret)
-        return {**oauth.connection_view(secret), "tool": provider.service, "ready": True}
+        return {
+            **connection_refresh.connection_view(secret),
+            "tool": provider.service,
+            "ready": True,
+        }
 
 
 async def revoke_connection(*, secret_id: int, org_id: int) -> dict:
