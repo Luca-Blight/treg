@@ -109,6 +109,8 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/connectors/claude', ('GET',), 'claude_connector_page'),
     ('/adtrack.js', ('GET',), 'adtrack_js'),
     ('/resources', ('GET',), 'resources_page'),
+    ('/grokbot', ('GET',), 'grokbot_page'),
+    ('/people-search', ('GET',), 'people_search_page'),
     ('/usecase.css', ('GET',), 'usecase_css'),
     ('/oauth/register', ('POST',), 'oauth_register'),
     ('/oauth/authorize', ('GET',), 'oauth_authorize'),
@@ -435,6 +437,7 @@ def _lifespan(role: AppRole):
         mcp_reader_bound = role != "control" and _mcp is not None
         if mcp_reader_bound:
             _mcp.configure_endpoint_observation_reader(endpoint_observations)
+        fault_handler = analytics.install_fault_handler()
         try:
             if role == "control" or _mcp is None:
                 yield
@@ -445,18 +448,21 @@ def _lifespan(role: AppRole):
                 async with _mcp.mcp_lifespan():
                     yield
         finally:
-            if ads_task is not None:
-                ads_task.cancel()
-            if archive_task is not None:
-                archive_task.cancel()
-            if mcp_reader_bound:
-                _mcp.clear_endpoint_observation_reader(endpoint_observations)
-            routed_call.clear_endpoint_observation_reader(endpoint_observations)
-            await endpoint_observations.aclose()
-            await audit.drain()
-            await analytics.drain()
-            await archive.drain()
-            await app.state.http.aclose()
+            try:
+                if ads_task is not None:
+                    ads_task.cancel()
+                if archive_task is not None:
+                    archive_task.cancel()
+                if mcp_reader_bound:
+                    _mcp.clear_endpoint_observation_reader(endpoint_observations)
+                routed_call.clear_endpoint_observation_reader(endpoint_observations)
+                await endpoint_observations.aclose()
+                await audit.drain()
+                await analytics.drain()
+                await archive.drain()
+                await app.state.http.aclose()
+            finally:
+                analytics.remove_fault_handler(fault_handler)
 
     return lifespan
 

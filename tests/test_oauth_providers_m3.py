@@ -298,6 +298,7 @@ def test_meta_messaging_stays_out_of_the_publish_tier():
     for provider in (P.FACEBOOK, P.INSTAGRAM):
         for cap in ("read", "post"):
             assert not two_way & set(provider.scopes[cap]), (provider.service, cap)
+    assert {"instagram_manage_messages", "pages_messaging"} <= set(P.INSTAGRAM.scopes["manage"])
 
 
 def test_lead_retrieval_brings_its_required_rider():

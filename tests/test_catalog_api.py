@@ -349,6 +349,35 @@ async def test_endpoint_detail_answers_everything_in_one_call(clients: AsyncClie
     assert isinstance(body["example_response"], (dict, list)), "inline, so parsing needs no second call"
 
 
+async def test_instagram_message_send_is_try_ready_but_never_auto_verified(clients: AsyncClient):
+    """App Review needs a deliberate UI send, so the catalog must explain the real recipient/body
+    shape while keeping the write action out of automated verification."""
+    r = await clients.get("/catalog/endpoints/instagram.instagram.message.send")
+    assert r.status_code == 200, r.text
+    ep = r.json()["endpoint"]
+    assert ep["method"] == "POST" and ep["path"] == "/{page_id}/messages"
+    assert set(ep["input"]["pathParams"]) == {"page_id"}
+    assert ep["input"]["bodyType"] == "json"
+    assert set(ep["input"]["body"]) == {"recipient", "message"}
+    assert "IGSID" in ep["input"]["body"]["recipient"]["note"]
+    loaded = cs.load().by_id[ep["id"]]
+    assert loaded["verified"] is None and not loaded["test_request"]
+
+
+async def test_instagram_conversations_use_the_linked_facebook_page_id(clients: AsyncClient):
+    """Facebook-login Instagram inbox sync is a Page conversation edge filtered to Instagram.
+
+    The Instagram account id identifies the profile but Meta rejects it on this graph.facebook.com
+    conversations route with error #3, even when the caller correctly holds the linked Page token.
+    """
+    r = await clients.get("/catalog/endpoints/instagram.x.user-messages")
+    assert r.status_code == 200, r.text
+    ep = r.json()["endpoint"]
+    assert ep["path"] == "/{page_id}/conversations"
+    assert set(ep["input"]["pathParams"]) == {"page_id"}
+    assert "Instagram account id returns Meta error (#3)" in ep["input"]["note"]
+
+
 async def test_retired_rows_leave_discovery_but_keep_an_actionable_direct_lookup(clients: AsyncClient):
     """A cached endpoint id needs its migration story, while a new agent must never discover it."""
     retired = "tikhub.x.linkedin-web-search-jobs"
@@ -909,6 +938,17 @@ async def test_an_id_that_resembles_nothing_is_sent_to_search(clients: AsyncClie
 
 
 # ---- the GENERATOR, not just its output ---------------------------------------------------------
+def test_instagram_ingester_omits_page_token_messaging_routes():
+    """The next re-ingest must not restore the invalid Instagram-id messaging routes."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import INSTAGRAM_EDGES
+
+    routes = {(method, path) for _, method, path, _, _ in INSTAGRAM_EDGES}
+    assert ("GET", "/{ig_user_id}/conversations") not in routes
+    assert ("POST", "/{ig_user_id}/messages") not in routes
+
+
 def test_the_ingester_puts_a_POST_routes_arguments_in_the_BODY():
     """The checked-in YAML is machine-generated, so a fix that lives only in the file is undone by
     the next `catalog_ingest.py` run. These assert the GENERATOR: the tests above inspect the

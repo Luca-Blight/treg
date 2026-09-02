@@ -197,16 +197,40 @@ class OAuthProvider:
     discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
-    # Meta's Business Manager owns assets on the user's BEHALF: an agency member reaches a Page
-    # through business-level access with no personal role on it, so the primary listing answers []
-    # for exactly the accounts they manage all day. `discover_extra_path` is a second listing
-    # fetched the same way (same discover_key), whose rows each HOLD lists of primary-shaped rows
-    # at the dotted paths in `discover_extra_list_paths`. The flattened entries merge after the
-    # primary ones and the picker dedupes by id, so a directly-managed Page never doubles. A
-    # failing extra listing is swallowed: connections that consented before the scope it needs
-    # (business_management) simply lack it, and the primary listing has already answered.
+    # Some providers expose delegated assets through an agency or portfolio endpoint instead of
+    # the primary account listing. `discover_extra_path` is a second listing fetched with the same
+    # credential. Each row can hold primary-shaped resources at the dotted paths declared in
+    # `discover_extra_list_paths`. The picker merges and deduplicates both sources. A failed extra
+    # listing is ignored because an older grant can lack its scope while the primary result is valid.
     discover_extra_path: str = ""
     discover_extra_list_paths: tuple[str, ...] = ()
+
+    # Most OAuth providers call their API with the token returned by the token endpoint. A provider
+    # can instead declare a private lookup that derives a resource-scoped call credential after the
+    # user selects an asset. The result stays in the encrypted OAuth blob, and the generic binding
+    # injects `call_token_field`; neither the picker nor the caller sees the derived credential.
+    call_token_field: str = "access_token"
+    resource_token_path: str = ""
+    resource_token_id_field: str = "id"
+    resource_token_value_field: str = "access_token"
+    # Extra values that a derived credential needs at call or setup time. Each pair is
+    # (encrypted-blob key, dotted path in the matched discovery row). The connection workflow
+    # interprets these as opaque provider data; provider names and asset types stay in this registry.
+    resource_token_context_fields: tuple[tuple[str, str], ...] = ()
+    resource_token_extra_path: str = ""
+    resource_token_extra_list_paths: tuple[str, ...] = ()
+    # A provider can require one remote setup call after resource selection. The path and payload
+    # can use {resource_id} plus any names declared in resource_token_context_fields. This keeps the
+    # shared workflow independent of one provider's asset model and setup protocol.
+    resource_setup_method: str = ""
+    resource_setup_path: str = ""
+    resource_setup_scope: str = ""
+    resource_setup_payload_location: str = "query"  # query | form | json
+    resource_setup_payload: tuple[tuple[str, str], ...] = ()
+    resource_setup_token_header: str = "Authorization"
+    resource_setup_token_format: str = "Bearer {token}"
+    resource_setup_success_field: str = "success"  # blank means any 2xx response is success
+    resource_setup_success_value: object = True
 
     # Some vendors split ONE product across hosts: GA4 runs reports on analyticsdata but lists the
     # properties those reports need on analyticsadmin. The credential already covers both — Google
@@ -870,7 +894,7 @@ INSTAGRAM = OAuthProvider(
         "manage": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
             "pages_read_engagement", "business_management", "instagram_content_publish",
-            "instagram_manage_comments", "instagram_manage_messages",
+            "instagram_manage_comments", "instagram_manage_messages", "pages_messaging",
         ],
     },
     client_id_setting="meta_client_id",
@@ -900,6 +924,25 @@ INSTAGRAM = OAuthProvider(
         "client_pages{instagram_business_account{id,username}}"
     ),
     discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
+    # Meta exchanges the code for a USER token, but Instagram Graph calls are made as the Facebook
+    # Page linked to the selected professional account. Resolve that Page token server-side at pick
+    # time; the dashboard and calling agent only ever see the Instagram id and username.
+    call_token_field="page_access_token",
+    resource_token_path=(
+        "/me/accounts?fields=id,access_token,instagram_business_account{id}"
+    ),
+    resource_token_id_field="instagram_business_account.id",
+    resource_token_value_field="access_token",
+    resource_token_context_fields=(("page_id", "id"),),
+    resource_token_extra_path=(
+        "/me/businesses?fields=owned_pages{id,access_token,instagram_business_account{id}},"
+        "client_pages{id,access_token,instagram_business_account{id}}"
+    ),
+    resource_token_extra_list_paths=_META_BIZ_PAGE_LISTS,
+    resource_setup_method="POST",
+    resource_setup_path="/{page_id}/subscribed_apps",
+    resource_setup_scope="pages_messaging",
+    resource_setup_payload=(("subscribed_fields", "messages,messaging_postbacks"),),
     probe_path="/me?fields=id,name",
 )
 
