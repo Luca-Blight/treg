@@ -198,6 +198,11 @@ def test_a_cdn_block_page_is_an_edge_block_not_an_account_signal():
                       b'{"code":"noCreditsRemaining"}').kind == "balance"
     # An HTML 503 without the marker is the vendor down, not a block.
     assert S.classify("anyone", 503, {"server": "cloudflare", "content-type": "text/html"}, b"<html>") is None
+    # The CDN's problem-JSON block (error 1010, "browser's signature"): no marker header, not HTML.
+    cf_json = (b'{"type":"https://developers.cloudflare.com/support/troubleshooting/http-status-codes/'
+               b'cloudflare-1xxx-errors/error-1010/","title":"Error 1010: Access denied","status":403}')
+    sig = S.classify("anyone", 403, {"content-type": "application/problem+json"}, cf_json)
+    assert sig.kind == "edge_block" and not S.is_exhausting(sig)
 
 
 # ---- aggregator envelopes round-trip their fixtures --------------------------------------------

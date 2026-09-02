@@ -330,7 +330,8 @@ does not choose for the caller (charter): it names the options. The audit row is
 The call path's breaker (`domain.capacity.marks`) opens slowly and closes fast. After a tier-4
 answer ≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the
 vendor's status/headers/body. A `balance` or `quota` signature is a **strike**; the second strike
-within 10 min, with no 2xx in between, **locks** - the provider for a balance signature, only the
+within 10 min, at least 15 s after the first (a burst of concurrent calls hitting the same empty
+instant is one strike), with no 2xx in between, **locks** - the provider for a balance signature, only the
 endpoint for a quota one (allowances are per operation). While locked, `resolve` admits one real
 call per process per minute as a **probe** (`MarketplaceCall.probe_lock_id`, `probe` on the
 `tool_called` event); its 2xx clears exactly that lock (`settle._note_capacity_recovery`, conditional
@@ -340,7 +341,7 @@ the sweep never writes this namespace. Both writes run on their own short sessio
 settle closed the hold, never during flight, and are the dataplane writes this feature adds
 (`capacity_exhausted_mark` in `tests/test_call_architecture.py`). A burst 429 (`retry-after ≤ 60 s`)
 or an unknown one only logs; step D′ smooths those. An `edge_block` (the vendor's CDN answered, not
-the vendor) strikes nothing: one caller's request shape must not take the provider away from every
+the vendor: `cf-mitigated`, its HTML block page, or its 1xxx problem-JSON) strikes nothing: one caller's request shape must not take the provider away from every
 other team. The kind rides the `tool_called` event as `capacity_signal`. Tiers 1/2 resolve earlier
 and never consult the view: an org's own key running dry is the org's own answer, relayed
 unchanged. The vendor's 402 on THIS call is also relayed unchanged - the protection is for the

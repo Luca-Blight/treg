@@ -63,6 +63,7 @@ def _relay(status: int, body: bytes, headers=()):
 
 
 async def _lock_by_two_signals(clients: AsyncClient, monkeypatch, relay=None) -> Lock:
+    monkeypatch.setattr(capacity_marks, "STRIKE_MIN_GAP", timedelta(0))  # two calls, seconds apart
     monkeypatch.setattr(call_service, "relay", relay or _fake_relay(402, OUT))
     assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code in (402, 429)
     assert not (await _lock("tikhub") or await _lock(EP)).is_active(), "one strike never locks"
@@ -156,6 +157,7 @@ async def test_a_probe_that_fails_again_keeps_the_lock(clients: AsyncClient, pla
 
 
 async def test_a_vendor_500_or_caller_400_neither_strikes_nor_clears(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(capacity_marks, "STRIKE_MIN_GAP", timedelta(0))
     monkeypatch.setattr(call_service, "relay", _fake_relay(402, OUT))
     assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 402
     for status, body in ((500, b"down"), (400, b'{"detail":"bad aweme_id"}'), (429, b'{"detail":"slow down"}')):
@@ -176,9 +178,20 @@ async def test_quota_429_locks_the_endpoint_only_until_the_reset(clients: AsyncC
     assert capacity_view.is_exhausted("tikhub", EP) and not capacity_view.is_exhausted("tikhub")
 
 
+async def test_a_burst_of_concurrent_signals_is_one_strike(clients: AsyncClient, platform_on):
+    t0 = utcnow_naive()
+    kw = dict(endpoint_id=EP, kind="balance", resets_at=None)
+    for offset in (0, 1, 3, 8):  # parallel callers hitting the same empty instant
+        lock = await capacity_marks.strike("tikhub", now=t0 + timedelta(seconds=offset), **kw)
+        assert lock.strikes == 1 and not lock.is_active(t0 + timedelta(seconds=offset))
+    lock = await capacity_marks.strike("tikhub", now=t0 + timedelta(seconds=20), **kw)
+    assert lock.strikes == 2 and lock.is_active(t0 + timedelta(seconds=20)), "a second, later burst locks"
+
+
 async def test_a_lock_never_outlives_the_ceiling_whatever_the_vendor_said(clients: AsyncClient, platform_on):
     far = utcnow_naive() + timedelta(days=10)
-    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far,
+                                now=utcnow_naive() - timedelta(seconds=30))
     lock = await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
     assert lock.is_active() and lock.until - utcnow_naive() <= MAX_LOCK
 
@@ -225,7 +238,8 @@ async def test_a_probe_never_takes_an_archived_answer(clients: AsyncClient, plat
 
 
 async def test_clear_is_conditional_on_the_lock_id(clients: AsyncClient, platform_on):
-    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None,
+                                now=utcnow_naive() - timedelta(seconds=30))
     lock = await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
     assert lock.is_active()
     assert not await capacity_marks.clear("tikhub", lock_id="stale-probe")
