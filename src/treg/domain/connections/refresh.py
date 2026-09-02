@@ -111,6 +111,7 @@ def connection_view(secret: Secret) -> dict:
         "name": secret.name,
         "kind": secret.kind,
         "provider": secret.provider,
+        "authorization_method": secret.authorization_method or "default",
         "resource_name": secret.resource_name,
         # The single field a UI or agent should act on: this connection will stop working and
         # only a human re-consent can fix it.
@@ -118,6 +119,7 @@ def connection_view(secret: Secret) -> dict:
         "resource_ref": secret.resource_ref,
         "scopes": secret.granted_scopes.split() if secret.granted_scopes else [],
         "health": secret.health_status,
+        "health_detail": secret.health_detail,
         "refreshable": refreshable,
         "expiry_state": state,
         "expires_at": secret.expires_at.isoformat() if secret.expires_at else None,

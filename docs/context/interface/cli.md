@@ -12,6 +12,22 @@ related:
 
 # The `treg` CLI
 
+## Instagram grants
+
+`treg connections connect --provider instagram` starts direct Instagram Login, prints the consent
+URL, and polls the normal status endpoint. Page-only tools use `--capability page-tools`. Before
+that consent starts, `POST /oauth/start` returns the selected authorization method's registry
+description and the CLI prints it. The CLI contains no provider-specific guidance. Call errors
+return the exact command for the missing method.
+
+For a catalog endpoint that supports both grants, `treg call <endpoint>
+--authorization-method <method>` selects the grant, upstream host, route, and method-specific
+required inputs. The CLI accepts any method name; the API validates it against endpoint metadata.
+Omitting it uses the endpoint's first declared method.
+For a dual-method endpoint, omitting it first uses the sole connected grant when there is one;
+otherwise the ordered default is Instagram Login. Static catalog templates therefore omit the flag
+for dual-method endpoints, while dashboard-generated commands include the user's resolved choice.
+
 A thin client over the API in `src/treg/cli.py` — every command is one HTTP call, no logic of its own
 (stdlib `argparse`, reuses `httpx`). Entry point `main()` → `build_parser()` → dispatch to a `cmd_*`.
 Every command/subcommand carries a `description` + `help` on each argument + a copy-paste **Examples**

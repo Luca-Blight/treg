@@ -27,6 +27,10 @@ def all_apps(monkeypatch):
     for k in ("GOOGLE", "SLACK", "X", "TIKTOK"):
         monkeypatch.setenv(f"TREG_{k}_CLIENT_ID", f"{k.lower()}-cid")
         monkeypatch.setenv(f"TREG_{k}_CLIENT_SECRET", f"{k.lower()}-csec")
+    monkeypatch.setenv("TREG_META_CLIENT_ID", "meta-cid")
+    monkeypatch.setenv("TREG_META_CLIENT_SECRET", "meta-csec")
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_ID", "instagram-cid")
+    monkeypatch.setenv("TREG_INSTAGRAM_CLIENT_SECRET", "instagram-csec")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -267,14 +271,14 @@ async def test_linkedin_does_not_get_googles_consent_params(clients: AsyncClient
         get_settings.cache_clear()
 
 
-def test_meta_providers_share_one_app():
-    """Facebook and Instagram are one Meta app, deliberately.
-
-    App Review, business verification and Tech Provider status attach to the app, so a second
-    OAuth client isolates nothing and starts its approval from zero."""
-    assert P.FACEBOOK.client_id_setting == P.INSTAGRAM.client_id_setting == "meta_client_id"
-    assert P.FACEBOOK.client_secret_setting == P.INSTAGRAM.client_secret_setting == "meta_client_secret"
-    assert P.FACEBOOK.base_url == P.INSTAGRAM.base_url
+def test_instagram_direct_and_page_grants_use_explicit_app_profiles():
+    assert P.INSTAGRAM.client_id_setting == "instagram_client_id"
+    parsed = urlsplit(P.INSTAGRAM.base_url)
+    assert parsed.scheme == "https"
+    assert parsed.hostname == "graph.instagram.com"
+    page = P.INSTAGRAM.profile_for_authorization("facebook-page")
+    assert page.client_id_setting == P.FACEBOOK.client_id_setting == "meta_client_id"
+    assert page.base_url == P.FACEBOOK.base_url
 
 
 def test_meta_capabilities_are_cumulative():
@@ -298,7 +302,8 @@ def test_meta_messaging_stays_out_of_the_publish_tier():
     for provider in (P.FACEBOOK, P.INSTAGRAM):
         for cap in ("read", "post"):
             assert not two_way & set(provider.scopes[cap]), (provider.service, cap)
-    assert {"instagram_manage_messages", "pages_messaging"} <= set(P.INSTAGRAM.scopes["manage"])
+    assert "instagram_business_manage_messages" in P.INSTAGRAM.scopes["manage"]
+    assert {"instagram_manage_messages", "pages_messaging"} <= set(P.INSTAGRAM.scopes["page-tools"])
 
 
 def test_lead_retrieval_brings_its_required_rider():
@@ -308,18 +313,20 @@ def test_lead_retrieval_brings_its_required_rider():
     assert {"leads_retrieval", "pages_manage_ads"} <= manage
 
 
-def test_instagram_is_reached_through_a_page():
-    """An Instagram professional account has no listing endpoint of its own — it hangs off the
-    linked Page — so dropping pages_show_list silently empties the account picker."""
-    for cap in P.INSTAGRAM.scopes.values():
-        assert "pages_show_list" in cap
-    assert P.INSTAGRAM.discover_id_field == "instagram_business_account.id"
+def test_instagram_login_is_direct_and_page_discovery_is_optional():
+    for cap in ("read", "post", "manage"):
+        assert "pages_show_list" not in P.INSTAGRAM.scopes[cap]
+    assert P.INSTAGRAM.identity_required is True
+    page = P.INSTAGRAM.profile_for_authorization("facebook-page")
+    assert page.discover_id_field == "instagram_business_account.id"
+    assert "pages_show_list" in P.INSTAGRAM.scopes["page-tools"]
 
 
 def test_meta_asks_for_a_long_lived_token():
     """Meta's code exchange yields a ~1-2h token and no refresh_token. Without the second
     exchange every Meta connection dies the day it is made."""
-    assert P.FACEBOOK.long_lived_exchange and P.INSTAGRAM.long_lived_exchange
+    assert P.FACEBOOK.long_lived_exchange
+    assert P.INSTAGRAM.long_lived_exchange_style == "instagram"
     assert not P.TIKTOK.long_lived_exchange  # nothing else should have picked it up
 
 
@@ -335,9 +342,11 @@ def test_meta_page_discovery_can_walk_the_business_graph():
     portfolio, where the member has business-level access and no personal Page role. Drop
     business_management from either capability and that user consents cleanly, then gets an empty
     picker — the extra listing 400s and is (rightly) swallowed."""
-    for provider in (P.FACEBOOK, P.INSTAGRAM):
-        for cap in provider.scopes.values():
-            assert "business_management" in cap, provider.service
+    for cap in P.FACEBOOK.scopes.values():
+        assert "business_management" in cap
+    page = P.INSTAGRAM.profile_for_authorization("facebook-page")
+    assert "business_management" in P.INSTAGRAM.scopes["page-tools"]
+    for provider in (P.FACEBOOK, page):
         assert provider.discover_extra_path.startswith("/me/businesses"), provider.service
         assert provider.discover_extra_list_paths, provider.service
 

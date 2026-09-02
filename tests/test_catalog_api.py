@@ -355,8 +355,10 @@ async def test_instagram_message_send_is_try_ready_but_never_auto_verified(clien
     r = await clients.get("/catalog/endpoints/instagram.instagram.message.send")
     assert r.status_code == 200, r.text
     ep = r.json()["endpoint"]
-    assert ep["method"] == "POST" and ep["path"] == "/{page_id}/messages"
-    assert set(ep["input"]["pathParams"]) == {"page_id"}
+    assert ep["method"] == "POST" and ep["path"] == "/{ig_user_id}/messages"
+    assert ep["authorization_methods"] == ["instagram-login", "facebook-page"]
+    assert set(ep["input"]["pathParams"]) == {"ig_user_id", "page_id"}
+    assert ep["authorization_paths"]["facebook-page"].startswith("/{page_id}/messages")
     assert ep["input"]["bodyType"] == "json"
     assert set(ep["input"]["body"]) == {"recipient", "message"}
     assert "IGSID" in ep["input"]["body"]["recipient"]["note"]
@@ -364,18 +366,81 @@ async def test_instagram_message_send_is_try_ready_but_never_auto_verified(clien
     assert loaded["verified"] is None and not loaded["test_request"]
 
 
-async def test_instagram_conversations_use_the_linked_facebook_page_id(clients: AsyncClient):
-    """Facebook-login Instagram inbox sync is a Page conversation edge filtered to Instagram.
-
-    The Instagram account id identifies the profile but Meta rejects it on this graph.facebook.com
-    conversations route with error #3, even when the caller correctly holds the linked Page token.
-    """
+async def test_instagram_conversations_keep_direct_and_page_routes(clients: AsyncClient):
     r = await clients.get("/catalog/endpoints/instagram.x.user-messages")
     assert r.status_code == 200, r.text
     ep = r.json()["endpoint"]
-    assert ep["path"] == "/{page_id}/conversations"
-    assert set(ep["input"]["pathParams"]) == {"page_id"}
-    assert "Instagram account id returns Meta error (#3)" in ep["input"]["note"]
+    assert ep["path"] == "/{ig_user_id}/conversations"
+    assert set(ep["input"]["pathParams"]) == {"ig_user_id", "page_id"}
+    assert ep["authorization_paths"]["facebook-page"].startswith("/{page_id}/conversations")
+    assert "?" not in ep["authorization_paths"]["facebook-page"]
+    assert ep["input"]["queryParams"]["platform"]["required"] is True
+    assert ep["input"]["queryParams"]["platform"]["authorization_methods"] == ["facebook-page"]
+    assert "Existing Facebook-backed connections" in ep["input"]["note"]
+    assert ep["input"]["pathParams"]["ig_user_id"]["authorization_methods"] == ["instagram-login"]
+    assert ep["input"]["pathParams"]["page_id"]["authorization_methods"] == ["facebook-page"]
+    assert "--authorization-method" not in ep["call_template"]
+    assert "page_id=" not in ep["call_template"]
+    page_only = cs.load().by_id["instagram.x.hashtag-search"]
+    assert "--authorization-method facebook-page" in cs.call_template(page_only)
+
+
+def test_every_instagram_path_placeholder_has_a_declared_try_input():
+    """The UI, CLI and agents all learn path values from `input.pathParams`; runtime parsing the
+    braces independently is only the last guard, not a usable endpoint contract."""
+    endpoints = [ep for ep in cs.load().by_id.values() if ep["provider"] == "instagram"]
+    assert len(endpoints) == 32
+    for ep in endpoints:
+        paths = [ep.get("path") or "", *(ep.get("authorization_paths") or {}).values()]
+        placeholders = {name for path in paths for name in re.findall(r"{([A-Za-z0-9_]+)}", path)}
+        declared = set((((ep.get("input") or {}).get("pathParams")) or {}))
+        assert placeholders <= declared, ep["id"]
+    extended = [ep for ep in endpoints if ep["tier"] == "extended"]
+    assert len(extended) == 22
+    assert all(ep.get("input") for ep in extended)
+
+
+def test_instagram_extended_actions_declare_every_required_write_value():
+    cat = cs.load()
+    expected = {
+        "instagram.x.media-comment-create": ({"ig_media_id"}, {"message"}),
+        "instagram.x.comment-reply-create": ({"ig_comment_id"}, {"message"}),
+        "instagram.x.comment-hide": ({"ig_comment_id"}, {"hide"}),
+        "instagram.x.comment-delete": ({"ig_comment_id"}, set()),
+    }
+    for endpoint_id, (path_names, query_names) in expected.items():
+        inp = cat.by_id[endpoint_id]["input"]
+        assert set(inp.get("pathParams") or {}) == path_names
+        assert set(inp.get("queryParams") or {}) == query_names
+        assert all(spec.get("required") for spec in (inp.get("pathParams") or {}).values())
+        assert all(spec.get("required") for spec in (inp.get("queryParams") or {}).values())
+    hide = cat.by_id["instagram.x.comment-hide"]
+    assert hide["path"] == "/{ig_comment_id}"
+    assert hide["input"]["queryParams"]["hide"]["type"] == "boolean"
+
+
+def test_page_only_instagram_contracts_expose_required_meta_parameters():
+    catalog = cs.load()
+    product_search = catalog.by_id["instagram.x.catalog-product-search"]
+    assert set(product_search["input"]["queryParams"]) >= {"catalog_id", "q"}
+    assert product_search["input"]["queryParams"]["catalog_id"]["required"] is True
+
+    appeal = catalog.by_id["instagram.x.user-product-appeal"]
+    assert appeal["input"]["queryParams"]["product_id"]["required"] is True
+
+    discovery = catalog.by_id["instagram.x.user-business-discovery"]
+    assert discovery["path"] == "/{ig_user_id}"
+    assert discovery["input"]["queryParams"]["fields"]["required"] is True
+    assert "business_discovery.username(" in discovery["input"]["queryParams"]["fields"]["example"]
+    assert "--query 'fields=business_discovery.username(" in cs.call_template(discovery)
+
+
+def test_instagram_catalog_paths_do_not_embed_query_strings():
+    """The relay sends caller params separately, so static query values belong in `input`."""
+    endpoints = [ep for ep in cs.load().by_id.values() if ep["provider"] == "instagram"]
+    for ep in endpoints:
+        assert "?" not in ep["path"], ep["id"]
+        assert all("?" not in path for path in (ep.get("authorization_paths") or {}).values()), ep["id"]
 
 
 async def test_retired_rows_leave_discovery_but_keep_an_actionable_direct_lookup(clients: AsyncClient):

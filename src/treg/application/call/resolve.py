@@ -12,18 +12,23 @@ from urllib.parse import quote, urlsplit
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from ... import oauth_providers
+from ... import oauth, oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
 from ...domain.capacity.routes_view import view as overflow_routes_view
 from ...domain.capacity.view import view as capacity_view
 from ...domain.catalog import store as catalog_store
+from ...domain.connections import authorization as connection_authorization
+from ...domain.connections.refresh import expiry_state
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
 from ...infra.db import session_maker
 from ...models import CapabilityPin, Org, Secret, Tool
 from ..connect import _host_of, _provider_bindings
 from .types import ResolutionFailed, ResolvedTarget
+
+
+AUTHORIZATION_METHOD_HEADER = "X-Treg-Authorization-Method"
 
 
 @dataclass(frozen=True)
@@ -238,9 +243,34 @@ def _enforce_catalog_status(ep: dict) -> None:
     raise ResolutionFailed("catalog_retired", status_code=410, detail=detail)
 
 
-async def _marketplace_secret(service: str, org_id: int, db: AsyncSession) -> Secret | None:
+def _authorization_method(secret: Secret) -> str:
+    """Stored grant method, including the provider's declared legacy inference."""
+    provider = oauth_providers.get(secret.provider) if secret.provider else None
+    return (
+        provider.authorization_method_name(secret.authorization_method)
+        if provider else secret.authorization_method
+    )
+
+
+async def _marketplace_secret(
+    service: str, org_id: int, db: AsyncSession, methods: tuple[str, ...] = (),
+) -> Secret | None:
     """Tier 2's credential: an org secret tagged with this provider (registry connects), else one
     NAMED exactly for it (`treg secret add tikhub …`). Newest wins — a reconnect supersedes."""
+    if methods:
+        tagged_rows = (await db.execute(
+            select(Secret).where(Secret.org_id == org_id, Secret.provider == service)
+            .order_by(Secret.id.desc())
+        )).scalars().all()
+        # Rows are newest first. Preserve the first row for each method; assigning every row into
+        # a comprehension would let the oldest reconnect overwrite the newest one.
+        by_method: dict[str, Secret] = {}
+        for row in tagged_rows:
+            by_method.setdefault(_authorization_method(row), row)
+        for method in methods:
+            if method in by_method:
+                return by_method[method]
+        return None
     tagged = (await db.execute(
         select(Secret).where(Secret.org_id == org_id, Secret.provider == service)
         .order_by(Secret.id.desc())
@@ -715,11 +745,24 @@ def _marketplace_no_credential(
 _VALID_PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
 
 
-def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[str]]:
+def _marketplace_upstream(
+    ep: dict, provider, query_params, authorization_method: str = "",
+) -> tuple[str, set[str]]:
     """The full upstream URL for an endpoint-id call, with `{placeholder}` path params filled from
     the caller's query params (they are consumed — dropped from the relayed query). Missing
     required params fail HERE, before a credential is touched or money spent."""
-    path, consumed = ep["path"] or "/", set()
+    path = (ep.get("authorization_paths") or {}).get(authorization_method) or ep["path"] or "/"
+    inp = ep.get("input") or {}
+    for where in ("pathParams", "queryParams"):
+        for name, spec in (inp.get(where) or {}).items():
+            allowed = tuple((spec or {}).get("authorization_methods") or ())
+            if (authorization_method and allowed and authorization_method not in allowed
+                    and query_params.get(name) is not None):
+                raise ResolutionFailed(
+                    "catalog_parameter_invalid", status_code=400, detail=(
+                        f"{ep['id']} does not accept {name} with {authorization_method}; "
+                        f"choose {', '.join(allowed)} or remove {name}"))
+    consumed = set()
     for name in re.findall(r"{(\w+)}", path):
         value = query_params.get(name)
         if value is None:
@@ -733,9 +776,11 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
         rendered = value if _VALID_PERCENT_ESCAPE_RE.search(value) else quote(value, safe="")
         path = path.replace("{%s}" % name, rendered)
         consumed.add(name)
-    inp = ep.get("input") or {}
     required = [k for k, v in (inp.get("queryParams") or {}).items()
-                if isinstance(v, dict) and v.get("required") and query_params.get(k) is None]
+                if isinstance(v, dict) and v.get("required")
+                and (not v.get("authorization_methods")
+                     or authorization_method in v["authorization_methods"])
+                and query_params.get(k) is None]
     if required:
         raise ResolutionFailed(
             "catalog_parameter_invalid", status_code=400, detail=(
@@ -779,21 +824,119 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
         })
 
 
+async def _provider_tool_grant(
+    service: str, methods: tuple[str, ...], caller: Caller, db: AsyncSession,
+) -> tuple[Tool, Secret, str] | None:
+    """Resolve a named catalog endpoint by provider and grant identity, not only by host.
+
+    This is the generic fix for providers that share one upstream host. It stays in catalog-call
+    resolution; the faithful relay still receives one resolved tool and knows no provider rules.
+    """
+    tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
+    secrets = (await db.execute(select(Secret).where(
+        Secret.org_id == caller.org_id, Secret.provider == service,
+    ))).scalars().all()
+    secrets_by_id = {secret.id: secret for secret in secrets}
+    provider = oauth_providers.get(service)
+    connection_names = {
+        item.name: item.connection_name for item in (provider.authorization_methods if provider else ())
+    }
+    matches: list[tuple[int, bool, int, Tool, Secret, str]] = []
+    denied = False
+    for tool in tools:
+        for binding in tool.bindings or []:
+            sid = binding.get("secret_id")
+            if sid is None:
+                continue
+            secret = secrets_by_id.get(sid)
+            if secret is None:
+                continue
+            method = _authorization_method(secret)
+            if method not in methods:
+                continue
+            if not access_policy._tool_usable(caller, tool):
+                denied = True
+                continue
+            priority = methods.index(method)
+            exact = tool.name == connection_names.get(method, service)
+            matches.append((priority, not exact, -(secret.id or 0), tool, secret, method))
+    if not matches:
+        if denied:
+            raise ResolutionFailed(
+                "tool_access_denied", status_code=403,
+                detail=f"a {service} authorization exists, but you do not have access to its tool",
+            )
+        return None
+    matches.sort(key=lambda item: item[:3])
+    _, _, _, tool, secret, method = matches[0]
+    return tool, secret, method
+
+
+def _authorization_error(
+    ep: dict, method: str, *, code: str, explanation: str, scopes: list[str], authorization=None,
+) -> ResolutionFailed:
+    capability = (
+        authorization.connect_capability if authorization else ep.get("authorization_capability")
+    )
+    command = f"treg connections connect --provider {ep['provider']}"
+    if capability:
+        command += f" --capability {capability}"
+    return ResolutionFailed("authorization_required", status_code=428, detail={
+        "error": code,
+        "provider": ep["provider"],
+        "endpoint_id": ep["id"],
+        "required_authorization_method": method,
+        "required_capability": capability,
+        "required_scopes": scopes,
+        "message": explanation,
+        "cli_command": command,
+        "dashboard_action": {
+            "label": authorization.action_label if authorization else "Add account",
+            "url": "/app#connections",
+        },
+    })
+
+
+def _preflight_authorization(ep: dict, secret: Secret, method: str, authorization=None) -> None:
+    required = connection_authorization.required_scopes(ep, authorization)
+    state = expiry_state(secret.expires_at, oauth.secret_is_refreshable(secret))
+    if state == "expired":
+        raise _authorization_error(
+            ep, method, code="authorization_expired",
+            explanation=f"The {method} authorization has expired. A human must authorize it again.",
+            scopes=required, authorization=authorization,
+        )
+    missing = [scope for scope in required if scope not in secret.granted_scopes.split()]
+    if missing:
+        raise _authorization_error(
+            ep, method, code="authorization_scope_required",
+            explanation="The connected authorization does not include every permission that this tool requires.",
+            scopes=missing, authorization=authorization,
+        )
+    if ep.get("required_resource") and not secret.resource_ref:
+        raise _authorization_error(
+            ep, method, code="authorization_resource_required",
+            explanation=(
+                authorization.missing_message
+                if authorization and authorization.missing_message else
+                "No usable account is selected for this authorization."
+            ),
+            scopes=required, authorization=authorization,
+        )
+
+
 async def _resolve_marketplace_call(
     ep: dict, *, method: str, query: QueryValues, has_body: bool,
     read_body: Callable[[], Awaitable[bytes]], caller: Caller, db: AsyncSession,
     resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
+    authorization_method: str = "",
 ) -> MarketplaceCall:
-    """Walk the credential ladder for a catalog endpoint id → a `MarketplaceCall`.
+    """Resolve a catalog call, selecting an explicit OAuth grant before host matching.
 
-    The tool is either the org's own registered tool for that provider (tier 1 — passthrough
-    resolution, so ACL filtering and the provider-owned tiebreak apply unchanged) or a virtual,
-    never-persisted Tool named after the ENDPOINT (tiers 2 and 4) — so the audit trail records the
-    endpoint id, and a member's restricted tool list can never contain it (governance: restricted
-    members get no direct marketplace calls; `_require_tool_use` enforces that downstream).
-
-    NOTHING is reserved here. Resolution only PRICES the call; `call_tool` reserves after the deny
-    rules and caps have had their say, so a refused call never has to un-hold money."""
+    Endpoints without authorization metadata retain the normal tool → credential → platform
+    ladder. Annotated endpoints select by provider plus grant method. That generic identity avoids
+    ambiguous same-host tools without teaching the faithful relay about Instagram or Meta.
+    """
     await _enforce_capability_pin(ep, caller, db)
     _enforce_catalog_status(ep)
     service = ep["provider"]
@@ -806,39 +949,74 @@ async def _resolve_marketplace_call(
         raise ResolutionFailed(
             "method_mismatch", status_code=400,
             detail=f"{ep['id']} is {ep['method']} — add --method {ep['method']}")
-    upstream, consumed = _marketplace_upstream(ep, provider, query)
-    # The telemetry identity of this call, computed once. The body is read here (Starlette caches it,
-    # so the relay still streams the same bytes) only for its HASH — never stored, never logged.
+
+    try:
+        methods = connection_authorization.select_endpoint_methods(
+            ep, authorization_method,
+        )
+    except ValueError as exc:
+        raise ResolutionFailed(
+            "catalog_parameter_invalid", status_code=400, detail=str(exc),
+        ) from None
+    chosen_tool: Tool | None = None
+    chosen_secret: Secret | None = None
+    chosen_method = ""
+    if methods:
+        authorization = None
+        grant = await _provider_tool_grant(service, methods, caller, db)
+        if grant is not None:
+            chosen_tool, chosen_secret, chosen_method = grant
+        else:
+            chosen_secret = await _marketplace_secret(service, caller.org_id, db, methods)
+            if chosen_secret is not None:
+                chosen_method = _authorization_method(chosen_secret)
+        if chosen_secret is None:
+            required_method = methods[0]
+            authorization = connection_authorization.method_spec(provider, required_method)
+            raise _authorization_error(
+                ep, required_method, code="authorization_missing",
+                explanation=(
+                    authorization.missing_message if authorization and authorization.missing_message
+                    else f"This tool requires {provider.display_name} authorization."
+                ),
+                scopes=connection_authorization.required_scopes(ep, authorization),
+                authorization=authorization,
+            )
+        authorization = connection_authorization.method_spec(provider, chosen_method)
+        _preflight_authorization(ep, chosen_secret, chosen_method, authorization)
+        provider = provider.profile_for_authorization(chosen_method)
+
+    upstream, consumed = _marketplace_upstream(ep, provider, query, chosen_method)
     body = await read_body() if has_body else b""
     phash = _params_hash(ep["id"], query.multi_items(), body)
-    # The catalog's estimate travels on EVERY tier — informational on tiers 1/2 (the provider bills
-    # the org's own account; Activity shows "estimated") and the reserve amount on tier 4 only
-    # (`metered` gates the ledger, so this never charges a balance for an own-key call).
     cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
-    info_est, info_unit = _marketplace_pricing(
-        service, ep["id"], cv, query, body)
-    common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
-                  params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
-                  estimate_micro=info_est,
-                  # The per-ROW price, carried on every tier (settle only reads it on metered calls):
-                  # a `per_result` settle that can't count rows can only ever bill the estimate,
-                  # which is how 6,000 delivered Bright Data records once billed as one (2026-08-24).
-                  unit_micro=info_unit)
-    try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
-        target = await resolve_call(upstream, caller, db)
-        return MarketplaceCall(
-            tool=target.tool, tier="tool", **{**common, "upstream": target.upstream})
-    except ResolutionFailed as exc:
-        if exc.status_code != 404:  # 403 (ACL) / 409 (ambiguous) are real answers, not fall-through
-            raise
-    secret = await _marketplace_secret(service, caller.org_id, db)  # tier 2 — credential, no tool
+    info_est, info_unit = _marketplace_pricing(service, ep["id"], cv, query, body)
+    common = dict(
+        upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
+        params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
+        estimate_micro=info_est, unit_micro=info_unit,
+    )
+    if chosen_tool is not None:
+        return MarketplaceCall(tool=chosen_tool, tier="tool", **common)
+
+    if not methods:
+        try:
+            target = await resolve_call(upstream, caller, db)
+            return MarketplaceCall(
+                tool=target.tool, tier="tool", **{**common, "upstream": target.upstream})
+        except ResolutionFailed as exc:
+            if exc.status_code != 404:
+                raise
+
+    secret = chosen_secret or await _marketplace_secret(service, caller.org_id, db)
     if secret is not None:
-        virtual = Tool(  # NEVER added to the session — no registry pollution, by design
+        virtual = Tool(
             org_id=caller.org_id, name=ep["id"], owner=secret.owner,
             base_url=provider.base_url, host=_host_of(provider.base_url),
             bindings=_provider_bindings(provider, secret),
         )
         return MarketplaceCall(tool=virtual, tier="credential", **common)
+
     # tier 4 — treg's own key, metered against the org's balance. Shadowed by tiers 1 and 2 above:
     # an org that brought its own credential is billed by the provider, not by us, and must never be
     # silently switched onto our key (their quota, their rate limits, their data agreements).
@@ -892,6 +1070,7 @@ async def resolve_marketplace_target(
     read_body: Callable[[], Awaitable[bytes]],
     caller: Caller,
     resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
+    authorization_method: str = "",
 ) -> MarketplaceCall:
     # The exhausted view is refreshed here — before the resolution session opens, so at most one
     # connection is held at a time, and before any hold exists. Cached 60 s; a stale or empty view
@@ -909,6 +1088,7 @@ async def resolve_marketplace_target(
             caller=caller,
             db=db,
             resolve_call=resolve_call,
+            authorization_method=authorization_method,
         )
 
 

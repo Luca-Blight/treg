@@ -9,6 +9,7 @@ sources:
   - src/treg/caller_metadata.py
   - src/treg/client_identity.py
   - src/treg/application/auth.py
+  - src/treg/application/call/access.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
@@ -58,6 +59,22 @@ related:
 ---
 
 # The API
+
+## Instagram authorization strategy
+
+`POST /oauth/start` keeps the same request shape. `provider=instagram` defaults to direct
+Instagram Login. `capability=page-tools` selects the separate Facebook Page profile. The start
+response returns `state`, `consent_url`, `redirect_uri`, and `connect_guidance`. The guidance is the
+selected authorization method's registry description, so clients do not need provider-specific
+setup text. Connection rows now include `authorization_method`, its label, method-specific resource
+discovery metadata, and setup health.
+Catalog calls accept `X-Treg-Authorization-Method` to select one of an endpoint's declared methods;
+the header is an internal routing control and is stripped before the faithful upstream relay.
+
+Catalog calls can fail before relay with HTTP 428. Its `detail` object has a stable error code,
+provider, endpoint id, required method, capability and scopes, explanation, CLI command, and
+dashboard action. This distinguishes a missing grant, missing resource, missing scope, and expired
+grant. See [instagram-oauth](../architecture/instagram-oauth.md).
 
 `api.router` preserves public registration order while concern routers contribute ordered route blocks.
 `bootstrap.create_app()` assembles the combined route table into FastAPI roles.
@@ -562,7 +579,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   not even fetched: the captured evidence is admin-only in v1, and putting it on a team's own feed
   has to be a deliberate edit in two places rather than a column appearing by accident.
 - **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
-  `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
+  `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri` + registry-owned
+  `connect_guidance`; `oauth_callback`
   (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`
   polls. **Two modes** (`OAuthStartIn`): **BYO** (supply `client_id`/`client_secret`/`auth_uri`/
   `token_uri`/`scopes`) or **REGISTRY** (supply `provider` + optional `capability`) where treg fills

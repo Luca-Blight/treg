@@ -38,6 +38,13 @@ related:
 
 # The proxy (the whole product in one function)
 
+## Same-host provider grants
+
+Named catalog calls with authorization metadata resolve by endpoint provider and stored grant
+method before they compare upstream hosts. This prevents a Facebook tool and a Page-backed
+Instagram tool on `graph.facebook.com` from producing `target_ambiguous`. The selected tool and
+binding then enter the normal relay. The relay has no Meta or Instagram branch.
+
 The relay is `relay()` in `src/treg/infra/upstream/relay.py`.
 `application.call.resolve` resolves which tool or
 marketplace endpoint a request targets, and the call path loads its secrets; `relay()` injects and

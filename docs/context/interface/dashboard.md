@@ -24,6 +24,27 @@ related:
 
 # Web dashboard (Phase 1)
 
+## Instagram authorization state
+
+The primary **Add account** action opens one method picker for providers with several separate OAuth
+grants. For Instagram it selects **Instagram Login** by default and marks it recommended; the user
+can instead select **Facebook Page tools**, whose option explains that it requires an Instagram
+Professional account linked to a Facebook Page, then one **Continue** action starts the selected
+flow. Choosing Instagram Login then opens the existing least-privilege capability picker for
+**Read only**, **Read and publish**, or **Full access**; the single-capability Facebook Page grant
+continues directly. Providers with zero or one authorization method keep their existing
+one-click/capability flow. Reconnect stays pinned to the connection's stored method. Method labels
+come from `oauth_providers.listing()`; the shared template does not know method ids. The registry
+marks a provider configured when any declared method is configured, and the picker selects the
+recommended method only when that method is available.
+
+The provider page has no method-status alert: healthy and optional states live in the connection
+rows and permission cards, while alert styling remains reserved for real errors or setup gaps. Each
+row retains the shared production layout: connection name and account identity in the first column,
+generated tool name in the second, then health/capabilities and actions. Method-specific resource
+discovery is unchanged. A direct identity miss shows `setup required`; it does not show the
+connection as working and no direct tool exists.
+
 A single-file Vue 3 dashboard in `src/treg/web/index.html`, served **same-origin** by the API
 (`GET /app` → `FileResponse`, `dashboard()` in `routers.web`, via `_WEB_DIR`). Same origin = no CORS and it
 ships with the server (Render/Fly). Design language: **Ledger** (warm charcoal + clay accent,
@@ -347,7 +368,10 @@ provider account (Google Analytics, Search Console, Google Tag Manager, Google A
 TikTok, LinkedIn, YouTube, …) without touching the CLI. `loadConnections` fetches **`GET /oauth/providers`**
 (server route `oauth_providers_list` → `oauth_providers.listing()`, each row carrying `service`,
 `display_name`, `category`, `summary`, `capabilities`, `scope_detail`, `auth_kind`, `supports_discovery`,
-and a **`configured`** flag = whether *this* deployment holds the provider's client credentials) plus
+and a **`configured`** flag = whether *this* deployment can run at least one connect flow). Each
+authorization method also has its own `configured` flag. For a multi-method provider, the registry
+sets the provider flag when any one method is available, so a configured secondary grant cannot be
+hidden by an unavailable primary grant. The payload is loaded with
 **`GET /connections`** (`list_connections` — the org's existing grants).
 
 The list view opens on a **tab bar** (`.mk-tabs`, `mkTabs` computed): `All`, then **one tab per catalog
@@ -396,7 +420,9 @@ og meta, since the page is only meaningful to a signed-in member; client route `
 push `/app/marketplace/<service>` into history). It lists the connected accounts (each account = its own
 tool name so an agent can call a specific one), their health/expiry chips, and a **Permissions** panel
 (`mkGranted` marks which capabilities are already granted; `scope_detail` gives the exact upstream scopes
-on hover).
+on hover). A method may optionally provide `capability_intros` and `capability_details`; the shared
+renderer uses them for incremental-benefit copy and falls back to `scope_detail` for every ordinary
+capability. This lets one grant explain what it uniquely adds without provider-specific template logic.
 
 **Consent disclosure.** A provider row may carry a **`consent_notice`**, rendered as a `.mk-notice` panel
 in two places: under the summary on the integration page (beside Connect) and inside the `capAsk` modal,
@@ -644,17 +670,20 @@ not arbitrary public accounts", while `any_account` scraper rows read a muted `a
 sit the parameters block, the provider-wide facts (`epFacts`: the cost note, `limits` and the rate card,
 served once per provider in the response's `providers` map rather than copied onto 2,000 rows), the
 paste-ready **`treg call`** line the row carries as `call_template` with a Copy button, the docs link and
-the lazy example toggle. **Connection awareness** reuses the marketplace's own state: `catConnected` reads
-`connCount` (from `/connections`), a row with a connected provider carries a green rule down its leading
-edge (`.lrow.go td:first-child`), and the **Connect** button deep-links to the provider's existing
-integration page — shown only when `mkKnown(service)`, since the catalog can name a provider this
-deployment carries no client credentials for.
+the lazy example toggle. **Connection awareness** reuses `/connections`, but endpoint rows intersect
+their declared `authorization_methods` with each connection's stored `authorization_method`; having one
+grant for a provider therefore cannot mark an endpoint that requires a different grant as connected.
+Providers without multiple authorization methods retain the provider-level `catConnected` behavior.
+The endpoint-aware label names the sole required method when one exists, but the **Connect** action
+always navigates to the provider connection page; consent never starts unexpectedly inside the catalog
+ledger. It is shown only when `mkKnown(service)`, since the catalog can name a provider this deployment
+carries no client credentials for.
 
 **The runnable green.** `.chip.ok` is not styled anywhere in the file, so it renders as muted grey — which
 is how a ready capability came to look identical to an unavailable one. `.chip.go` (+ the haloed `.godot`)
 is the marketplace's single "you can call this right now" green, used in exactly three places: the
-platform card's `Connected` corner, a connected provider's `connected` chip, and a ledger row whose
-provider is connected, which carries the green as a rule down its leading edge (`.lrow.go td:first-child`)
+platform card's `Connected` corner, a compatible endpoint grant's `connected` chip, and a ledger row
+with a compatible grant, which carries the green as a rule down its leading edge (`.lrow.go td:first-child`)
 so it survives being skimmed. Everything unconnected stays muted.
 
 An expanded row leads with the endpoint's chips and summary, then splits into **two tabs**: **Request**
@@ -681,8 +710,11 @@ ghost beside it. The same `goByok` jump is offered from a platform page's provid
 provider only when the platform has exactly one) and from the Try-it drawer's "can't run this here"
 banner, which now carries a real **Connect** / **Bring your own key** button instead of prose alone. For an **OAuth** provider treg *can't* serve on
 its own key (calls act as your account), so the order flips: **Connect {provider}** is the ink-fill
-primary and Try-it is secondary. Once an account is connected the connect/own-key button is replaced in
-place by the green **`Connected`** chip. Everything here renders identically in a single row's expansion
+primary and Try-it is secondary. Once a compatible account method is connected the connect/own-key button
+is replaced in place by the green **`Connected`** chip. A missing method uses the registry's action label
+and missing-message, then routes the user to the provider connection page. The exact CLI connect command
+remains in the access response for CLI and agent consumers, but is not rendered in the Manual banner.
+Everything here renders identically in a single row's expansion
 and in a merged row's provider sub-row, because both paths share the one `.lep` block.
 
 **The Try-it drawer (`epTry`) is four tabs** (`epTryTab`, default **AI Agent**): **AI Agent** — the
@@ -696,6 +728,14 @@ requests; **API** — the `curl -X <method> {BASE}/call/<id>?<query>` passthroug
 that has a body;
 and **Manual** — the live test form (params + `❯ Run`, disabled with a reason when the access dry-run
 says this org can't call it) that the drawer used to be by itself.
+
+When an endpoint supports more than one authorization method, the drawer shows one explicit method
+selector. Changing it swaps the visible method-specific inputs and updates the AI Agent, CLI, API,
+and direct-call representations together. The selector label comes from the provider registry,
+not a method-id lookup in the template. Instagram Login is the first/default method on shared
+Instagram endpoints. The selector appears only when both grants are connected; one connected grant
+is selected automatically, while no connected grant keeps the recommended Instagram Login default
+and the ordinary catalog access guidance.
 
 **Example responses** load when their tab is FIRST opened (`setEpTab` → `loadExample`, guarded by
 `if(this.platEx[e.id]) return`), never with the page and never twice — a platform can carry hundreds of
@@ -714,6 +754,8 @@ background, border, radius, filled header bar), which otherwise reads as a stray
 `.prm` box and clips the first column against the table's own border. Navigation runs both ways: an integration page carries a
 **Covered in the catalog** chip row (`mkPlatforms`) into the platform pages, and each platform page
 header links back out to the providers that serve it (`platProviders`). `tests/test_dashboard_markup.py`
+pins this provider navigation to the platform response itself; it does not disappear while the
+separate OAuth connection registry is still loading. The same test
 locks the structure (top-level view, the row/detail `<template>` pair inside the `.ttable`, the
 `v-if`'d tab bar and its `platform` fallback, the derived tab list and category order, tiles wearing the
 platform's own logo with the generated-initial fallback, the `Platform` tab still carrying the provider

@@ -106,7 +106,8 @@ bound to a closed maintenance loop. Calling `maintenance.upgrade()` directly doe
   `google_ads_developer_token` (treg's token from OUR approved manager account, injected on every Ads
   call as a **platform binding** — see [proxy-model](../architecture/proxy-model.md)). The other
   providers each take a `<name>_client_id`/`_secret` pair: `linkedin_*`, `slack_*`, `x_*`, `tiktok_*`
-  (separate sandbox vs prod app), `meta_*` (ONE Meta app backs both facebook + instagram), and the
+  (separate sandbox vs prod app), `meta_*` (Facebook Pages, Meta Ads, and Instagram Page tools),
+  and `instagram_*` (the separate Instagram App ID and secret for direct Instagram Login), and the
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.

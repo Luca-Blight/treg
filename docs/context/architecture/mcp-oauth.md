@@ -23,6 +23,14 @@ related:
 
 # MCP
 
+## Provider authorization remediation
+
+Provider OAuth remains a human browser action. A catalog-call preflight can return a structured
+HTTP 428 body with the missing or expired grant, capability, scopes, exact CLI command, and safe
+dashboard action. The team MCP `call` tool and directory MCP `catalog_call_read` or
+`catalog_call_write` preserve that body. The agent can tell the human what to authorize and retry
+the same endpoint after consent. No MCP response includes a credential.
+
 Everything else in treg is reached by a CLI or an HTTP call. These are the doors an **assistant**
 comes through: ChatGPT, Claude, Claude Code, Cursor, or anything else that speaks the Model Context
 Protocol. Both use one deployment, database, and enforcement layer:
@@ -499,6 +507,10 @@ header. `curl {BASE}/install.sh | sh -s -- --token <key>` runs the whole thing â
 `treg mcp install` â€” in one paste.
 
 ## Caller tags over MCP
+
+Catalog-call tools also expose an optional `authorization_method`. MCP maps that explicit argument
+to treg's internal `X-Treg-Authorization-Method` routing header; caller-supplied headers cannot
+override it, and the header is not relayed to the provider.
 
 `X-Treg-Meta` (see [money](money.md)) is read off the MCP **transport** in `mcp.call()` and forwarded
 on the internal request, the same way `catalog_request` forwards `X-Forwarded-For`. It is deliberately

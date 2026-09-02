@@ -460,6 +460,14 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         "name": str(raw.get("name") or "").strip(),
         "summary": raw.get("summary") or "",
         "input": raw.get("input") or {},
+        # Provider-owned OAuth routes can support more than one explicit grant. Keep this generic
+        # metadata on the normalized row so resolution and every client read the same contract.
+        "authorization_method": str(raw.get("authorization_method") or ""),
+        "authorization_methods": list(raw.get("authorization_methods") or []),
+        "authorization_paths": dict(raw.get("authorization_paths") or {}),
+        "required_scopes": list(raw.get("required_scopes") or []),
+        "required_resource": str(raw.get("required_resource") or ""),
+        "token_type": str(raw.get("token_type") or ""),
         # the request the verifier actually made — a proven set of values, which is what makes
         # `call_template` a paste-ready line rather than a shape with placeholders in it
         "test_request": raw.get("test_request") or {},
@@ -537,6 +545,14 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         "tier": ep["tier"],
         # data | action | account | utility — the front-end hides account/utility behind an expander
         "kind": ep.get("kind") or DEFAULT_KIND,
+        **({
+            "authorization_method": ep.get("authorization_method") or None,
+            "authorization_methods": ep.get("authorization_methods") or [],
+            "authorization_paths": ep.get("authorization_paths") or {},
+            "required_scopes": ep.get("required_scopes") or [],
+            "required_resource": ep.get("required_resource") or None,
+            "token_type": ep.get("token_type") or None,
+        } if ep.get("authorization_methods") or ep.get("authorization_method") else {}),
         # the section of its platform page this row files under (see `_domain`)
         "domain": ep.get("domain") or DOMAIN_OTHER,
         # the whole point of a row is the call it stands for, so the line that makes it is part of
@@ -1058,13 +1074,15 @@ def query_values(ep: dict | None, name: str, value) -> list[str]:
     return [wire_value(item) for item in value if item is not None]
 
 
-def _required_examples(params) -> dict:
+def _required_examples(params, authorization_method: str = "") -> dict:
     """Required params only, valued by their documented example (else a typed placeholder). Optional
     params are omitted — the template is the SHORTEST call that works, not a parameter reference."""
     if not isinstance(params, dict):
         return {}
     return {k: _placeholder(v) for k, v in params.items()
-            if isinstance(v, dict) and v.get("required")}
+            if isinstance(v, dict) and v.get("required")
+            and (not v.get("authorization_methods")
+                 or authorization_method in v["authorization_methods"])}
 
 
 def call_template(ep: dict) -> str:
@@ -1079,14 +1097,23 @@ def call_template(ep: dict) -> str:
     """
     inp = ep.get("input") or {}
     test = ep.get("test_request") or {}
+    authorization_methods = tuple(ep.get("authorization_methods") or ())
+    authorization_method = str(ep.get("authorization_method") or "")
+    if not authorization_method and authorization_methods:
+        authorization_method = authorization_methods[0]
 
     parts = ["treg call", ep["id"]]
     if ep["method"] != "GET":
         parts += ["--method", ep["method"]]
+    # A static catalog template cannot know which grants this team already connected. Let the
+    # resolver choose the sole existing grant, or the ordered default when both/none exist. A
+    # single-method endpoint stays explicit because there is no alternate route to suppress.
+    if authorization_method and len(authorization_methods) <= 1:
+        parts += ["--authorization-method", authorization_method]
     # Path params first (the server folds them into the path), then query params proper.
-    for name, value in {**_required_examples(inp.get("pathParams")), **(test.get("pathParams") or {})}.items():
+    for name, value in {**_required_examples(inp.get("pathParams"), authorization_method), **(test.get("pathParams") or {})}.items():
         parts += ["--query", shlex.quote(f"{name}={wire_value(value)}")]
-    for name, value in {**_required_examples(inp.get("queryParams")), **(test.get("queryParams") or {})}.items():
+    for name, value in {**_required_examples(inp.get("queryParams"), authorization_method), **(test.get("queryParams") or {})}.items():
         for encoded in query_values(ep, name, value):
             # Quote the COMPLETE argv token, not just its value. `name=['US']` lost its inner
             # quotes after shell parsing and became either an unmatched glob (zsh) or `[US]`;
@@ -1094,7 +1121,8 @@ def call_template(ep: dict) -> str:
             # same request the structured MCP path sends.
             parts += ["--query", shlex.quote(f"{name}={encoded}")]
 
-    body = test.get("body") if test.get("body") is not None else (_required_examples(inp.get("body")) or None)
+    body = test.get("body") if test.get("body") is not None else (
+        _required_examples(inp.get("body"), authorization_method) or None)
     # `is not None`, not truthiness: `body: {}` is a real stored test request — a POST that takes no
     # arguments but still requires a JSON body — and dropping `--data '{}'` from the line hands the
     # reader a command that differs from the one that was tested, on handlers that reject an empty

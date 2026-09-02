@@ -53,6 +53,7 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "stream_interrupted": "upstream",
     "refresh_failed": "org_connection",
     "credential_missing": "org_connection",
+    "authorization_required": "org_connection",
     "method_mismatch": "caller",
 }
 

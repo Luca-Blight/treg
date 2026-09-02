@@ -376,6 +376,17 @@ addEventListener('load', function(){
   /* a switch-option card: knob + [title / caption], vertically centered on the title line */
   .cliopt{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer}
   .cliopt .tswitch{margin-top:1px} .cliopt b{font-size:12.5px;line-height:1.4} .cliopt .sub{font-size:11px;line-height:1.5;margin:0}
+  /* OAuth authorization-method picker. One logical provider can have several genuinely separate
+     grants; make that one choice behind Add account instead of scattering secondary actions around
+     the page. The native radio stays visible so the selection is unambiguous and keyboard-safe. */
+  .method-grid{display:grid;gap:9px;margin:14px 0 18px}
+  .method-card{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer;transition:border-color .12s,background .12s}
+  .method-card:hover{border-color:var(--accent)}
+  .method-card.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--bg)}
+  .method-card.off{opacity:.58;cursor:not-allowed}
+  .method-card input{margin:3px 0 0;accent-color:var(--accent);flex:none}
+  .method-copy{min-width:0;flex:1}.method-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .method-copy .sub{display:block;margin:4px 0 0;line-height:1.5}
   .scrim{position:fixed;inset:0;background:rgba(20,16,10,.55);display:grid;place-items:center;z-index:50}
   /* Inline spinner for waits on a live upstream (resource discovery), so a slow round-trip reads
      as "working" rather than "broken". */
@@ -422,6 +433,7 @@ addEventListener('load', function(){
   pre{margin:0;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:50vh}
   pre.code{white-space:pre;overflow-x:auto;word-break:normal;overflow-wrap:normal;line-height:1.55}
   .field{display:flex;gap:8px;margin:8px 0} .field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:8px 10px;font-family:var(--mono);font-size:13px} .field input,.field textarea{flex:1}
+  .field.auth-method-field{flex-direction:column;align-items:flex-start;gap:6px}.auth-method-field select{min-width:170px}
   .login{min-height:100vh;display:grid;place-items:center} .loginbox{width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;text-align:center}
   .phase2{opacity:.5} .hint{font-family:var(--mono);font-size:11px;color:var(--amber);border:1px dashed var(--amber);border-radius:6px;padding:2px 7px}
   a{color:var(--accent);text-decoration:none;cursor:pointer}
@@ -1621,7 +1633,6 @@ a:hover{text-decoration-color:var(--muted)}
           <div v-if="!mkProvider.configured" class="banner" style="margin-top:12px">
             This server holds no client credentials for {{mkProvider.display_name}}, so the connect flow can't run here.
           </div>
-
           <div class="tgroup">
             <div class="tgh">Connected accounts <span class="tgh-n">{{mkConns.length}}</span>
               <span class="tgh-hint">each account gets its own tool name, so an agent can call a specific one</span></div>
@@ -1634,7 +1645,7 @@ a:hover{text-decoration-color:var(--muted)}
                 <td class="tn">
                   <b>{{c.identity_label || c.name}}</b>
                   <span class="sub" style="display:block;font-size:11px;overflow-wrap:anywhere" :title="c.resource_ref">
-                    {{c.resource_name || c.resource_ref || (mkProvider.supports_discovery ? 'no '+mkProvider.resource_label+' chosen yet' : 'whole account')}}
+                    {{c.resource_name || c.resource_ref || (c.supports_discovery ? 'no '+(c.resource_label||'account')+' chosen yet' : 'whole account')}}
                   </span>
                 </td>
                 <td class="th">
@@ -1643,6 +1654,7 @@ a:hover{text-decoration-color:var(--muted)}
                 </td>
                 <td class="ta">
                   <span v-if="c.health==='ok'" class="chip ok" title="A real upstream call succeeded with this credential">working</span>
+                  <span v-else-if="c.health==='setup_required'" class="chip warn" :title="c.health_detail||'Account setup is required'">setup required</span>
                   <span v-else-if="c.health==='invalid'" class="chip warn" :title="c.last_error||'The last upstream call failed'">failing</span>
                   <span v-if="c.expiry_state==='expired'" class="chip warn" title="This credential has expired — reconnect">expired</span>
                   <span v-else-if="c.expiry_state==='expiring'" class="chip warn" :title="'Expires '+c.expires_at">expiring</span>
@@ -1653,9 +1665,9 @@ a:hover{text-decoration-color:var(--muted)}
                 <td class="tx" @click.stop>
                   <button v-if="(c.missing_capabilities||[]).length" class="btn sm" @click="startConnect(mkProvider, c)"
                           :title="'Ask for '+c.missing_capabilities.join(', ')+' as well'">Add {{c.missing_capabilities.join(' + ')}}</button>
-                  <button v-if="mkProvider.supports_discovery" class="btn sm" @click="openResources(c)"
-                          :title="'Choose which '+mkProvider.resource_label+' this account acts on'">Choose {{mkProvider.resource_label}}</button>
-                  <button class="btn sm" @click="startConnect(mkProvider, c)" title="Re-consent to refresh this account">Reconnect</button>
+                  <button v-if="c.supports_discovery" class="btn sm" @click="openResources(c)"
+                          :title="'Choose which '+(c.resource_label||'account')+' this connection uses'">Choose {{c.resource_label||'account'}}</button>
+                  <button class="btn sm" @click="reconnect(c)" title="Re-consent to refresh this account">Reconnect</button>
                   <button class="btn sm ico" :class="{danger:confirmDisc===c.id}" @click="disconnect(c)" :title="confirmDisc===c.id?'Click again to disconnect':'Disconnect'">✕</button>
                 </td>
               </tr>
@@ -1671,8 +1683,9 @@ a:hover{text-decoration-color:var(--muted)}
                   <span v-if="mkGranted.has(cap)" class="chip ok">granted</span>
                   <span v-else class="mk-quiet">not requested yet</span>
                 </div>
+                <p v-if="mkCapabilityIntro(cap)" class="mk-quiet" style="margin:8px 0 0">{{mkCapabilityIntro(cap)}}</p>
                 <ul class="mk-perm-l">
-                  <li v-for="d in (mkProvider.scope_detail||{})[cap]" :key="d.scope" :title="d.scope">
+                  <li v-for="d in mkCapabilityDetails(cap)" :key="d.scope||d.label" :title="d.scope||null">
                     <span class="mk-tick">✓</span>{{d.label}}
                   </li>
                 </ul>
@@ -1819,7 +1832,7 @@ a:hover{text-decoration-color:var(--muted)}
                           <span class="lsub-price" :title="costTitle(e.cost)">{{costShort(e.cost)}}</span>
                           <span v-if="e.verified" class="vmark" :title="'Called for real on '+e.verified">✓</span>
                           <span v-else class="xmark" title="Documented, but treg has not called it with a live key yet">·</span>
-                          <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>connected</span>
+                          <span v-if="catEndpointConnected(e)" class="chip go" title="You have a connected account with an authorization method that can call this"><span class="godot"></span>connected</span>
                           <span class="lsub-path mono"><span class="cat-m">{{e.method}}</span>{{e.path}}</span>
                         </button>
                         <div class="lep" v-if="r.kind!=='merged' || epOpen[e.id]">
@@ -1878,9 +1891,9 @@ a:hover{text-decoration-color:var(--muted)}
                                  — is open, and is the part worth reading before you sign up. -->
                             <button class="btn sm" :class="{primary:!mkOauth(e.provider)}" @click.stop="publicCatalog ? openSignin() : openEpTry(e)"
                                     :title="publicCatalog ? 'Create a free team to call this — $1.00 of credit, no card' : 'Call it now, or copy the agent / CLI / API way to run it'">▶ Try it</button>
-                            <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
+                            <span v-if="catEndpointConnected(e)" class="chip go" title="You have a connected account with an authorization method that can call this"><span class="godot"></span>Connected</span>
                             <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="publicCatalog ? openSignin() : openProvider(e.provider)"
-                                    :title="'Connect '+(e.provider_display||e.provider)+' — one-click OAuth, calls act as your account'">Connect {{e.provider_display||e.provider}}</button>
+                                    :title="endpointConnectLabel(e)+' — calls act as your account'">{{endpointConnectLabel(e)}}</button>
                             <!-- Lands on the Catalog's Platform tab focused on this provider — the
                                  whole key shelf in view, not a dead-end detail page — so the user
                                  sees where their key lives among the rest before they paste it. -->
@@ -3343,7 +3356,7 @@ product, including per-customer usage tracking and billing.</pre>
           ${{capAsk.provider.billed_rates.write_with_link_usd}} when the post links out).
           Connecting your own developer app instead is never metered.</p>
         <div class="ttable-wrap"><table class="ttable">
-          <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
+          <tr v-for="cap in capOptions(capAsk)" :key="cap">
             <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column
                  but here the help text shares the cell. Unwrapped, a long capability
                  description widens the table past the modal and .ttable-wrap's overflow:hidden
@@ -3354,6 +3367,34 @@ product, including per-customer usage tracking and billing.</pre>
           </tr>
         </table></div>
         <div style="margin-top:12px;text-align:right"><button class="btn sm" @click="capAsk=null">Cancel</button></div>
+      </div>
+    </div>
+
+    <div v-if="methodAsk" class="scrim" role="dialog" aria-modal="true" aria-labelledby="method-ask-title" @click.self="methodAsk=null">
+      <div class="modal" style="padding:16px;width:min(560px,94vw)">
+        <h3 id="method-ask-title" style="margin:0 0 6px">Connect {{methodAsk.provider.display_name}}</h3>
+        <p class="sub" style="margin:0">Choose how this account should connect. You can add the other method separately later.</p>
+        <div class="method-grid" role="radiogroup" :aria-label="'How to connect '+methodAsk.provider.display_name">
+          <label v-for="method in methodAsk.provider.authorization_methods" :key="method.name"
+                 :class="['method-card',{on:methodAsk.selected===method.name,off:!method.configured}]">
+            <input type="radio" name="authorization-method" :value="method.name" v-model="methodAsk.selected"
+                   :disabled="!method.configured"/>
+            <span class="method-copy">
+              <span class="method-title">
+                <b>{{method.display_name}}</b>
+                <span v-if="isRecommendedMethod(methodAsk.provider,method)" class="chip ok">Recommended</span>
+                <span v-if="!method.configured" class="chip warn">Not configured</span>
+              </span>
+              <span class="sub">{{method.description}}</span>
+              <span v-if="method.consent_notice && methodAsk.selected===method.name" class="sub">{{method.consent_notice}}</span>
+            </span>
+          </label>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn sm" @click="methodAsk=null">Cancel</button>
+          <button class="btn sm primary" :disabled="connBusy || !selectedMethod(methodAsk) || !selectedMethod(methodAsk).configured"
+                  @click="continueMethod()">Continue</button>
+        </div>
       </div>
     </div>
 
@@ -3802,12 +3843,19 @@ product, including per-customer usage tracking and billing.</pre>
     <div class="scrim" role="dialog" aria-modal="true" v-if="epTry" @click.self="epTry=null" style="place-items:stretch;justify-items:end">
       <div class="drawer"><div class="hd" style="padding:15px 18px;border-bottom:1px solid var(--line)"><b>Try “{{epTry.id}}”</b><button class="btn sm" @click="epTry=null" aria-label="Close">✕</button></div>
         <div class="bd" style="padding:16px 18px;overflow:auto">
-          <p class="explain"><span class="mono">{{epTry.method||'GET'}} {{epTry.path}}</span><br>{{epTry.summary}}</p>
+          <p class="explain"><span class="mono">{{epTry.method||'GET'}} {{epTryDisplayPath}}</span><br>{{epTry.summary}}</p>
           <p class="sub" v-if="epTryAccess" style="margin:0 0 12px">
             <template v-if="epTryAccess.tier==='platform'">⚡ {{epTryAccess.detail||'No key needed — served on treg\'s key, billed to the team balance.'}}</template>
             <template v-else-if="epTryAccess.tier==='tool'||epTryAccess.tier==='credential'">🔑 Served with your team's own {{epTry.provider_display||epTry.provider}} credential — billed by the provider, not the team balance.</template>
             <template v-else>{{epTryAccess.detail||'Not callable from this team yet.'}}</template>
           </p>
+
+          <div v-if="epTryShowAuthSelector" class="field auth-method-field" style="max-width:520px;margin-bottom:16px">
+            <label>Authorization</label>
+            <select v-model="epTryAuthMethod" @change="loadEpTryAccess">
+              <option v-for="m in epTryAuthMethods" :key="m" :value="m">{{authorizationMethodLabel(epTry.provider,m)}}</option>
+            </select>
+          </div>
 
           <div class="seg" style="margin-bottom:16px">
             <button :class="{on:epTryTab==='agent'}" @click="epTryTab='agent'">AI Agent</button>
@@ -3850,18 +3898,18 @@ treg login</pre></div>
                  dead Run button — point them at the tab that DOES work. -->
             <div v-if="epTryAccess && epTryAccess.tier!=='platform' && epTryAccess.tier!=='tool' && epTryAccess.tier!=='credential'"
                  class="banner" style="margin:0">
-              Can't run this here yet — {{mkOauth(epTry.provider) ? 'connect '+(epTry.provider_display||epTry.provider)+' first, then Run.' : 'this endpoint needs a key. Use the AI Agent / CLI / API tab, or bring your own.'}}
+              {{epTryAccess.missing_message || (mkOauth(epTry.provider) ? 'Can\'t run this here yet — connect '+(epTry.provider_display||epTry.provider)+' first, then Run.' : 'This endpoint needs a key. Use the AI Agent / CLI / API tab, or bring your own.')}}
               <div style="margin-top:10px">
-                <button v-if="mkOauth(epTry.provider)" class="btn sm primary" @click="openProvider(epTry.provider); epTry=null">Connect {{epTry.provider_display||epTry.provider}}</button>
+                <button v-if="mkOauth(epTry.provider)" class="btn sm primary" @click="openProvider(epTry.provider); epTry=null">{{epTryAccess.action_label||endpointConnectLabel(epTry)}}</button>
                 <button v-else-if="mkKnown(epTry.provider)" class="btn sm primary" @click="goByok(epTry.provider)">🔑 Bring your own key</button>
               </div>
             </div>
             <template v-else>
-              <div class="field" v-for="p in epTryParams" :key="p.name" style="max-width:520px">
+              <div class="field" v-for="p in epTryVisibleParams" :key="p.name" style="max-width:520px">
                 <label class="mono" style="min-width:140px">{{p.name}}<span v-if="p.required" style="color:var(--accent)"> *</span></label>
                 <input v-model="p.value" :placeholder="p.required?'required':'optional'"/>
               </div>
-              <p v-if="!epTryParams.length && (epTry.method||'GET')==='GET'" class="sub" style="margin:0 0 12px">No parameters — just run it.</p>
+              <p v-if="!epTryVisibleParams.length && (epTry.method||'GET')==='GET'" class="sub" style="margin:0 0 12px">No parameters — just run it.</p>
               <div v-if="(epTry.method||'GET')!=='GET' && epTryBody!==''" class="field" style="max-width:520px;align-items:flex-start">
                 <label style="min-width:140px">Body (JSON)</label>
                 <textarea v-model="epTryBody" rows="6" style="width:100%;font-family:var(--mono);font-size:12px"></textarea>
@@ -4005,13 +4053,14 @@ createApp({
       epTab:{},            // endpoint id → which pane of its detail is showing ('req' | 'res')
       platEx:{},           // endpoint id → {open, loading, err, text} for the lazily-fetched example
       platCopied:'',       // endpoint id whose `treg call` line was just copied
-      capAsk:null,  // the access question, asked when Connect is clicked
+      capAsk:null,  // the access question, asked when a one-method provider has several scope levels
+      methodAsk:null,  // separate grants behind one provider: one selected method, then Continue
       tokenAsk:null,  // bring-your-own-bot setup (Slack): a form, not a redirect
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       // marketplace endpoint Try-it drawer
-      epTry:null, epTryTab:'agent', epTryAccess:null, epTryParams:[], epTryBody:'', epTryResp:'', epTryStatus:null,
+      epTry:null, epTryTab:'agent', epTryAccess:null, epTryAccessByMethod:{}, epTryAuthMethod:'', epTryParams:[], epTryBody:'', epTryResp:'', epTryStatus:null,
       epTryMs:null, epTryCost:null, epTryBusy:false,
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
       newSkill:false, skillJson:'', skillBusy:false, skillErr:'', skillMode:'folder',
@@ -4158,13 +4207,13 @@ createApp({
     platRow(){ return this.plats.list.find(pl=>pl.slug===this.platSlug)||null; },
     platLabel(){ return (this.platData&&this.platData.platform&&this.platData.platform.label)
       || (this.platRow&&this.platRow.label) || this.platSlug || 'Platform'; },
-    platProviders(){  // providers with endpoints here, in catalog order; only ones treg can connect
+    platProviders(){  // providers with endpoints here, in catalog order
       const seen=[]; for(const g of (this.platData&&this.platData.capabilities||[])) for(const e of (g.endpoints||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
       for(const e of (this.platData&&this.platData.extended||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
-      // The filter keeps the row to providers treg can actually connect — a member-only fact, read
-      // from /connections. A public visitor has no session, so naming every provider that supplies
-      // this shelf is both all we can do and the thing that page is there to say.
-      return this.publicCatalog ? seen : seen.filter(s=>this.providers.some(p=>p.service===s)); },
+      // Navigation is a fact of THIS platform response, not of the separately-loaded connection
+      // registry. Depending on that async registry made the entire row flicker away locally. `treg`
+      // is the synthetic router, not a provider page a person can open.
+      return seen.filter(s=>s!=='treg'); },
     // ---- the ledger ----
     // Sections, their order and the merged/single split are all decided by the server (see
     // catalog_store.domain_rows) so the CLI, the API and this page can't disagree about what the
@@ -4216,7 +4265,7 @@ createApp({
             ? 'The cheapest of the '+eps.length+' providers on this row — open it for each one'
             : this.costTitle(eps[0].cost),
           verified: eps.some(e=>!!e.verified),
-          ready: eps.some(e=>this.catConnected(e.provider)),
+          ready: eps.some(e=>this.catEndpointConnected(e)),
           hay: (r.description+' '+r.domain+' '+(r.capability||'')+' '+eps.map(e=>
                  e.provider+' '+(e.provider_display||'')+' '+e.path+' '+e.summary).join(' ')).toLowerCase()});
       }
@@ -4399,15 +4448,25 @@ createApp({
     welcomeSetupMasked(){ const t=this.myToken?(this.startTokenShow?this.myToken:(this.myToken.slice(0,14)+'••••••••••••••••')):'<YOUR_TOKEN>';
       return this.welcomeSetupCmd+'\n\nwith team '+(this.activeSlugNow||'<team-slug>')+' token: '+t; },
     // Try-it drawer: the filled query string + the three "how to run it" recipes (agent / CLI / API)
-    epTryQuery(){ return (this.epTryParams||[]).filter(p=>p.value!=='' && p.value!=null)
+    epTryAuthMethods(){ if(!this.epTry) return [];
+      return [...new Set([this.epTry.authorization_method, ...(this.epTry.authorization_methods||[]),
+        ...Object.keys(this.epTry.authorization_paths||{})].filter(Boolean))]; },
+    epTryConnectedMethods(){ return this.epTryAuthMethods.filter(m=>{
+      const a=this.epTryAccessByMethod[m]; return a && (a.tier==='tool'||a.tier==='credential'); }); },
+    epTryShowAuthSelector(){ return this.epTryAuthMethods.length>1 && this.epTryConnectedMethods.length>1; },
+    epTryDisplayPath(){ if(!this.epTry) return '';
+      return (this.epTry.authorization_paths||{})[this.epTryAuthMethod]||this.epTry.path; },
+    epTryVisibleParams(){ return (this.epTryParams||[]).filter(p=>this.epTryParamAllowed(p)); },
+    epTryQuery(){ return this.epTryVisibleParams.filter(p=>p.value!=='' && p.value!=null)
       .map(p=>encodeURIComponent(p.name)+'='+encodeURIComponent(p.value)).join('&'); },
     epTryShellBody(){ return "'"+String(this.epTryBody).replace(/'/g,"'\"'\"'")+"'"; },
     epTryCliCall(){ if(!this.epTry) return '';
-      const args=(this.epTryParams||[]).filter(p=>p.value!=='' && p.value!=null)
+      const args=this.epTryVisibleParams.filter(p=>p.value!=='' && p.value!=null)
         .map(p=>`--query ${p.name}=${/\s/.test(String(p.value))?JSON.stringify(String(p.value)):p.value}`).join(' ');
       const method=(this.epTry.method||'GET').toUpperCase();
       let s=`treg call ${this.epTry.id}${args?' '+args:''}`;
       if(method!=='GET') s+=` --method ${method}`;
+      if(this.epTryAuthMethod) s+=` --authorization-method ${this.epTryAuthMethod}`;
       if(method!=='GET' && this.epTryBody.trim()) s+=` --data ${this.epTryShellBody}`;
       return s; },
     epTryCurl(){ if(!this.epTry) return '';
@@ -4415,6 +4474,7 @@ createApp({
       const tok=this.myToken||'$TREG_TOKEN', method=(this.epTry.method||'GET').toUpperCase();
       let s=`curl -X ${method} "${url}" \\\n  -H "X-Treg-Token: ${tok}"`;
       if(this.sessionMode && this.activeSlugNow) s+=` \\\n  -H "X-Treg-Org: ${this.activeSlugNow}"`;  // minted identity token needs the org header
+      if(this.epTryAuthMethod) s+=` \\\n  -H "X-Treg-Authorization-Method: ${this.epTryAuthMethod}"`;
       if(method!=='GET' && this.epTryBody.trim()) s+=` \\\n  -H "Content-Type: application/json" \\\n  --data ${this.epTryShellBody}`;
       return s; },
     // token + team embedded HERE ONLY (a copy-and-run-now context) — the setup line elsewhere stays clean
@@ -4422,7 +4482,8 @@ createApp({
       return `set up treg — ${this.proxy}/llms.txt with team ${S} token: ${T}`; },
     epTryAgentUse(){ if(!this.epTry) return '';
       const what=this.epTry.summary ? this.epTry.summary.replace(/\.$/,'') : this.epTry.id;
-      return `Use treg to call ${this.epTry.id} — ${what}.`; },
+      const auth=this.epTryAuthMethod ? ` Use authorization_method=${this.epTryAuthMethod}.` : '';
+      return `Use treg to call ${this.epTry.id} — ${what}.${auth}`; },
     tryExamples(){ return [
       {k:'trend',cat:'Trending videos pattern', logo:'tiktok',  prompt:'Use treg to pull today\'s trending TikTok videos (video links included)'},
       {k:'enr',  cat:'Get contact emails',      logo:'people', avatar:'https://pbs.twimg.com/profile_images/1131851609774985216/OcsssQ9J_400x400.png', prompt:'Use treg to find the work email of Peter Steinberger'},
@@ -5506,6 +5567,14 @@ createApp({
       }catch(e){ this.connErr=String(e.message||e); }
       this.loadPlatforms();  // fire-and-forget: the catalog must never hold up the connect UI
     },
+    authorizationMethodSpec(providerName, methodName){
+      const provider=(this.providers||[]).find(item=>item.service===providerName);
+      return provider && (provider.authorization_methods||[]).find(method=>method.name===methodName);
+    },
+    authorizationMethodLabel(providerName, methodName){
+      const method=this.authorizationMethodSpec(providerName,methodName);
+      return (method&&method.display_name)||methodName;
+    },
     async connectProvider(p, capability, conn){
       // Consent happens in a popup so the dashboard keeps its state; we poll for the result
       // rather than depending on the popup being able to talk back to us.
@@ -5526,7 +5595,7 @@ createApp({
             // provider has something to choose between, ask straight away rather than leaving the
             // user staring at a row that looks finished but isn't.
             const fresh=(this.connections||[]).find(c=>c.id===s.secret_id);
-            if(fresh && p.supports_discovery && !fresh.resource_ref) await this.openResources(fresh);
+            if(fresh && fresh.supports_discovery && !fresh.resource_ref) await this.openResources(fresh);
             return;
           }
           if(s.status==='error'){ this.connErr='Connect failed: '+(s.detail||'unknown'); this.connBusy=false; return; }
@@ -5548,9 +5617,27 @@ createApp({
       // credential, so nothing downstream has to be rewired.
       const p=this.providers.find(x=>x.service===c.provider);
       if(!p){ this.connErr='Unknown provider for this connection: '+c.provider; return; }
-      await this.connectProvider(p, (p.capabilities||['read'])[0]);
+      const method=(p.authorization_methods||[]).find(m=>m.name===c.authorization_method);
+      const options=method ? method.capabilities : (c.capabilities||p.capabilities||['read']);
+      const cap=(c.capabilities||[]).slice(-1)[0] || options.slice(-1)[0] || p.default_capability;
+      await this.connectProvider(p, cap, c);
+    },
+    capOptions(ask){
+      // Authorization-method capabilities are declared narrowest → broadest for scope
+      // containment. Present the choice broadest → narrowest, matching every existing provider.
+      if(ask && ask.method) return [...(ask.method.capabilities||[])].reverse();
+      if(!ask || !ask.conn) return (ask&&ask.provider.capabilities)||[];
+      const method=(ask.provider.authorization_methods||[]).find(m=>m.name===ask.conn.authorization_method);
+      return method ? method.capabilities : (ask.provider.capabilities||[]);
     },
     article(w){ return /^[aeiou]/i.test(w||'') ? 'an' : 'a'; },  // "an account", not "a account"
+    mkCapabilityMethod(cap){ return ((this.mkProvider&&this.mkProvider.authorization_methods)||[]).find(m=>
+      m.capability_details && (m.capability_details[cap]||[]).length); },
+    mkCapabilityIntro(cap){ const m=this.mkCapabilityMethod(cap); return (m&&m.capability_intros&&m.capability_intros[cap])||''; },
+    mkCapabilityDetails(cap){
+      const m=this.mkCapabilityMethod(cap), labels=m&&m.capability_details[cap];
+      return labels ? labels.map(label=>({scope:'',label})) : (((this.mkProvider&&this.mkProvider.scope_detail)||{})[cap]||[]);
+    },
     capLabel(cap){ return {read:'Read only', draft:'Read and draft', post:'Read and publish', write:'Read and write', manage:'Full access'}[cap] || cap; },
     capHelp(cap){ return {
       read:'Your agent can view data. It can never change anything.',
@@ -5565,13 +5652,35 @@ createApp({
       write:'Your agent can view data and also create, update or publish.',
       manage:'Your agent can view and manage everything in the account.',
     }[cap] || 'Requests the '+cap+' scopes.'; },
+    isRecommendedMethod(p, method){ return !!(method && (method.capabilities||[]).includes(p.default_capability)); },
+    selectedMethod(ask){ return ask && (ask.provider.authorization_methods||[]).find(m=>m.name===ask.selected); },
+    methodCapability(p, method){
+      const caps=(method&&method.capabilities)||[];
+      return caps.includes(p.default_capability) ? p.default_capability : (caps[caps.length-1]||p.default_capability);
+    },
     startConnect(p, conn){
       // A pasted-secret provider has no consent screen — the user brings their own bot token (Slack)
       // or API key (Apollo, TikHub, …), so setup is a form, not a redirect.
       if(p.auth_kind==='token' || p.auth_kind==='key') return void (this.tokenAsk={provider:p, token:'', err:'', busy:false, conn});
+      // Several separate grants are one Add-account decision. Providers with zero or one method
+      // keep the old one-click behavior, so LinkedIn and every existing single-method flow do not
+      // inherit an extra dialog. Reconnects also stay pinned to their stored method.
+      const methods=p.authorization_methods||[];
+      if(methods.length>1 && !conn){
+        const available=methods.filter(method=>method.configured);
+        const recommended=available.find(m=>this.isRecommendedMethod(p,m)) || available[0] || methods[0];
+        this.methodAsk={provider:p,selected:recommended.name}; return;
+      }
+      if(methods.length===1 && !conn) return this.connectProvider(p,this.methodCapability(p,methods[0]));
       // One capability means there's nothing to ask — don't put a dialog in the way.
       if((p.capabilities||[]).length<2) return this.connectProvider(p, p.default_capability, conn);
       this.capAsk={provider:p, conn};
+    },
+    async continueMethod(){
+      const ask=this.methodAsk, method=this.selectedMethod(ask); if(!method || !method.configured) return;
+      this.methodAsk=null;
+      if((method.capabilities||[]).length>1){ this.capAsk={provider:ask.provider,conn:null,method}; return; }
+      await this.connectProvider(ask.provider,this.methodCapability(ask.provider,method));
     },
     async submitToken(){
       const t=this.tokenAsk; if(!t.token.trim()) return;
@@ -5607,7 +5716,8 @@ createApp({
         const d=await this.api('/connections/'+c.id+'/resources');
         if(!this.resPick || this.resPick.id!==c.id) return;  // user closed it or opened another
         this.resPick={id:c.id, label:d.resource_label||label, plural:d.resource_plural||plural,
-                      rows:d.resources||[], selected:d.selected||'', loading:false, err:''};
+                      rows:d.resources||[], selected:d.selected||'', loading:false,
+                      err:d.setup_required?(d.setup_detail||'Account setup is required.'):''};
         // Discovery can change the row underneath us — it backfills a missing label and records
         // that the credential works — so pull the list again rather than leaving stale text on screen.
         this.loadConnections();
@@ -5817,6 +5927,22 @@ createApp({
               p.native ? 'billed as '+p.native+' / '+this.priceUnit(pf.type)+', converted at the catalog’s FX rate' : '',
               pf.note].filter(Boolean).join(' — '); },
     catConnected(service){ return !!this.connCount[service]; },
+    endpointAuthMethods(e){ return [...new Set([e&&e.authorization_method,
+      ...((e&&e.authorization_methods)||[]), ...Object.keys((e&&e.authorization_paths)||{})].filter(Boolean))]; },
+    endpointMethodSpec(e){
+      const methods=this.endpointAuthMethods(e); if(methods.length!==1) return null;
+      const p=this.providers.find(x=>x.service===e.provider);
+      return p && (p.authorization_methods||[]).find(m=>m.name===methods[0]);
+    },
+    catEndpointConnected(e){
+      const methods=this.endpointAuthMethods(e);
+      if(!methods.length) return this.catConnected(e.provider);
+      return (this.connections||[]).some(c=>c.provider===e.provider && methods.includes(c.authorization_method));
+    },
+    endpointConnectLabel(e){
+      const method=this.endpointMethodSpec(e);
+      return (method&&method.action_label)||('Connect '+(e.provider_display||e.provider));
+    },
     // Whether a REGISTRY connection to this provider is still metered. Connecting usually ends the
     // billing question — the account you connect is the licence — but a `metered` provider bills
     // treg's own app per use (X since Feb 2026), so those calls are debited from the team balance
@@ -5855,7 +5981,7 @@ createApp({
       return typeof c.usd==='number' ? c.usd : null; },
     // An OAuth endpoint you have already connected costs nothing MORE to call — the account is the
     // licence — so a connected own_account row is the free path, and usually the right answer.
-    capFree(e){ return this.catConnected(e.provider) && !this.catMetered(e.provider)
+    capFree(e){ return this.catEndpointConnected(e) && !this.catMetered(e.provider)
       && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
     capCheapest(eps){
       let best=null;
@@ -6179,13 +6305,14 @@ createApp({
     // ---- marketplace endpoint Try-it ----
     openEpTry(e){
       this.epTry=e; this.epTryTab='agent'; this.epTryResp=''; this.epTryStatus=null; this.epTryMs=null; this.epTryCost=null;
-      this.epTryAccess=null; this.epTryBusy=false;
+      this.epTryAccess=null; this.epTryAccessByMethod={}; this.epTryBusy=false;
+      this.epTryAuthMethod=e.authorization_method||((e.authorization_methods||[])[0])||'';
       const secs=this.paramSections(e);
       const tr=e.test_request||{};  // the live-verified request — the best possible prefill
       const trq={...(tr.queryParams||{}), ...(tr.pathParams||{})};
       const qp=[];  // query + path params (path placeholders are consumed from query server-side)
       for(const s of secs) if(s.key!=='body') for(const p of s.rows)
-        qp.push({name:p.name, required:!!p.required,
+        qp.push({name:p.name, required:!!p.required, authorization_methods:p.authorization_methods||[],
                  value: trq[p.name]!=null ? this.fmtExample(trq[p.name])
                         : (p.example!=null ? this.fmtExample(p.example) : '')});
       // test_request may carry params the input spec doesn't list — keep them, they made the call work
@@ -6202,13 +6329,43 @@ createApp({
       }
       this.epTryBody=body;
       // the authenticated dry-run: which ladder rung would serve this org, and at what price
-      this.api('/catalog/endpoints/'+e.id+'/access').then(a=>this.epTryAccess=a).catch(()=>{});
+      this.loadEpTryAccessPolicy();
+    },
+    epTryParamAllowed(p){ return !p.authorization_methods || !p.authorization_methods.length
+      || p.authorization_methods.includes(this.epTryAuthMethod); },
+    async loadEpTryAccessPolicy(){
+      const e=this.epTry; if(!e) return;
+      const methods=this.epTryAuthMethods;
+      if(!methods.length){ this.loadEpTryAccess(); return; }
+      const rows=await Promise.all(methods.map(async m=>{
+        try{ return [m, await this.api('/catalog/endpoints/'+e.id+'/access?authorization_method='+encodeURIComponent(m))]; }
+        catch(_){ return [m, null]; }
+      }));
+      if(this.epTry!==e) return;
+      this.epTryAccessByMethod=Object.fromEntries(rows);
+      const connected=this.epTryConnectedMethods;
+      if(connected.length===1) this.epTryAuthMethod=connected[0];
+      else this.epTryAuthMethod=e.authorization_method||methods[0]||'';
+      this.epTryAccess=this.epTryAccessByMethod[this.epTryAuthMethod]||null;
+    },
+    loadEpTryAccess(){
+      if(!this.epTry) return;
+      if(this.epTryAccessByMethod[this.epTryAuthMethod]){
+        this.epTryAccess=this.epTryAccessByMethod[this.epTryAuthMethod]; return;
+      }
+      const q=this.epTryAuthMethod?'?authorization_method='+encodeURIComponent(this.epTryAuthMethod):'';
+      this.epTryAccess=null;
+      this.api('/catalog/endpoints/'+this.epTry.id+'/access'+q).then(a=>{
+        this.epTryAccess=a;
+        if(this.epTryAuthMethod) this.epTryAccessByMethod={...this.epTryAccessByMethod,[this.epTryAuthMethod]:a};
+      }).catch(()=>{});
     },
     async runEpTry(){
       const e=this.epTry; if(!e) return; this.epTryBusy=true; const t0=performance.now();
       try{
-        const qs=this.epTryParams.filter(p=>String(p.value)!=='').map(p=>encodeURIComponent(p.name)+'='+encodeURIComponent(p.value)).join('&');
+        const qs=this.epTryVisibleParams.filter(p=>String(p.value)!=='').map(p=>encodeURIComponent(p.name)+'='+encodeURIComponent(p.value)).join('&');
         const opts={method:e.method||'GET', credentials:'include', headers:{...this.headers()}};
+        if(this.epTryAuthMethod) opts.headers['X-Treg-Authorization-Method']=this.epTryAuthMethod;
         if(opts.method!=='GET' && this.epTryBody.trim()){ opts.body=this.epTryBody; opts.headers['content-type']='application/json'; }
         const r=await fetch('/call/'+e.id+(qs?'?'+qs:''), opts);
         this.epTryStatus=r.status; this.epTryMs=Math.round(performance.now()-t0);
@@ -6250,7 +6407,7 @@ createApp({
       this.orgMenuStyle={position:'fixed', top:(r.bottom+6)+'px', left:r.left+'px'};
     },
     toggleOrgMenu(){ this.orgMenu=!this.orgMenu; if(this.orgMenu) this.placeOrgMenu(); },
-    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; this.share.on=false; },
+    closeOverlays(){ this.newTool=false; this.newSkill=false; this.showJoin=false; this.newOrg=false; this.addOrg=false; this.tryTool=null; this.copyTool=null; this.orgMenu=false; this.share.on=false; this.methodAsk=null; },
   },
   async mounted(){
     document.documentElement.dataset.theme=this.theme;
