@@ -78,7 +78,8 @@ consulted or affected by anything here.
 - **`marks.py`** - the call-path breaker, its own namespace `capacity:lock:<key>`; key = provider
   for a balance signature, endpoint id for a quota one. Strike, lock on the second strike within
   10 min with no 2xx between, admit one probe per process per minute, clear on the probe's 2xx
-  (conditional on the lock id), cap every lock at 6 h. See `architecture/proxy-model.md`.
+  (conditional on the lock id). A guessed hold lasts 1 h, a vendor-stated reset at most 6 h.
+  See `architecture/proxy-model.md`.
 - **`view.py`** - `LatestStateView`: the in-process copy of both namespaces, reloaded from
   ratestore on a 60 s TTL by an explicit `await load()`; `is_exhausted(provider, endpoint_id)`
   and friends are sync and I/O-free so `resolve` can read them without breaking its rule. A
@@ -175,7 +176,7 @@ away from everyone.
 `infra/upstream/limiter.py` (per-provider spacer, ≤ 2 s wait, in-process, no DB) and one bounded
 `retry-after` re-send for body-less GET/HEAD, documented in `architecture/proxy-model.md` § Burst
 smoothing. The provider's rate limit travels in the published latest state (`LatestState.rate_limit`,
-from `CapacityPolicy.rate_limit`; a call-path mark carries it forward), so the request path never reads
+from `CapacityPolicy.rate_limit`), so the request path never reads
 the policy table. `rate_pressure` alerting is step C.
 
 ## Overflow, the child cycle (step E) — off by default

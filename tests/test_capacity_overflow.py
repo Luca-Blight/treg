@@ -185,8 +185,8 @@ async def test_aggregator_402_releases_the_child_marks_it_unhealthy_and_answers_
     async with session_maker() as db:
         lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal"))
     assert lock.is_active()
-    # …and the next call skips the unhealthy aggregator and uses Monid
-    capacity_view.invalidate()
+    # …and the next call skips the unhealthy aggregator and uses Monid (no manual reload: the
+    # strike invalidated this process's view)
     monid_ok = {"runId": "r", "status": "COMPLETED", "output": VENDOR_BODY, "providerResponse": {"httpStatus": 200},
                 "billing": {"reportedCost": {"value": 2000, "unit": "MICRO_DOLLAR"}}}
     monkeypatch.setattr(O, "_send", _orthogonal([(200, monid_ok)], seen))

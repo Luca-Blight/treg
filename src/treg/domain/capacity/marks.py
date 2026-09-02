@@ -12,8 +12,8 @@ more relayed 402, not the call. Listed in `tests/test_call_architecture.py` as
 Open conservatively: a signature is a strike; the second strike within `STRIKE_WINDOW`, with no
 2xx in between, locks. Close eagerly: while locked, `probe_due` admits one real call per process
 per `PROBE_EVERY_S`; that call's 2xx clears the lock (conditionally on the lock id it was admitted
-under, so a late probe cannot erase a newer lock). Nothing else clears it except `until`, which is
-capped at `MAX_LOCK` whatever the vendor said.
+under, so a late probe cannot erase a newer lock). Nothing else clears it except `until`: a guessed
+hold lasts `DEFAULT_LOCK`, a vendor-stated reset at most `MAX_LOCK`.
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ from ...timeutil import utcnow_naive
 LOCK_NS = "capacity:lock"
 LOCK_TTL_S = 24 * 3600
 STRIKE_WINDOW = timedelta(minutes=10)
+DEFAULT_LOCK = timedelta(hours=1)
 MAX_LOCK = timedelta(hours=6)
 PROBE_EVERY_S = 60.0
 
@@ -85,7 +86,7 @@ async def strike(provider: str, *, endpoint_id: str | None, kind: str,
             first_at = now if fresh else prev.first_signal_at
             until = None
             if immediate or strikes >= 2:
-                until = min(resets_at or now + MAX_LOCK, now + MAX_LOCK)
+                until = min(resets_at or now + DEFAULT_LOCK, now + MAX_LOCK)
             lock = Lock(key, provider, secrets.token_hex(8), strikes, first_at, until, note[:200])
             await ratestore.kv_put(db, LOCK_NS, key, lock.to_json(), ttl_s=LOCK_TTL_S)
             await db.commit()

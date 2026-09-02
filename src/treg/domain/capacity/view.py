@@ -45,15 +45,13 @@ class LatestStateView:
         """The sweep's state; call `load()` first. Sync and I/O-free on purpose (resolve.py rule)."""
         return self._states.get(provider)
 
-    def lock(self, provider: str, endpoint_id: str | None = None) -> Lock | None:
-        """The call path's row for this call, pending or active: the endpoint's, else the provider's."""
-        if endpoint_id and (lock := self._locks.get(endpoint_id)) is not None:
-            return lock
-        return self._locks.get(provider)
+    def locks(self, provider: str, endpoint_id: str | None = None) -> list[Lock]:
+        """The call path's rows for this call, pending or active: the endpoint's and the provider's."""
+        keys = [k for k in (endpoint_id, provider) if k]
+        return [lock for k in keys if (lock := self._locks.get(k)) is not None]
 
     def active_lock(self, provider: str, endpoint_id: str | None = None) -> Lock | None:
-        lock = self.lock(provider, endpoint_id)
-        return lock if lock is not None and lock.is_active() else None
+        return next((lock for lock in self.locks(provider, endpoint_id) if lock.is_active()), None)
 
     def is_exhausted(self, provider: str, endpoint_id: str | None = None) -> bool:
         return self.exhausted_until(provider, endpoint_id) is not None

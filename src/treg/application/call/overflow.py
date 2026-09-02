@@ -281,6 +281,7 @@ async def _maybe_overflow_attempt(
             f"overflow:{aggregator}", endpoint_id=None, kind="balance", immediate=True,
             resets_at=utcnow_naive().replace(microsecond=0) + timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
             note=f"{why_agg}: {res.detail[:80]}")
+        capacity_view.invalidate()
         if mode == "on":
             spend_adjustment = _overflow_spend_adjustment(budget)
             await _platform_settle(

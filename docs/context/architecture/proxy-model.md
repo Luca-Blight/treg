@@ -327,7 +327,8 @@ within 10 min, with no 2xx in between, **locks** - the provider for a balance si
 endpoint for a quota one (allowances are per operation). While locked, `resolve` admits one real
 call per process per minute as a **probe** (`MarketplaceCall.probe_lock_id`, `probe` on the
 `tool_called` event); its 2xx clears exactly that lock (`settle._note_capacity_recovery`, conditional
-on the lock id), any other answer leaves it. No lock outlives 6 h, whatever `retry-after` said, and
+on the lock id), any other answer leaves it. A guessed hold lasts 1 h, a vendor-stated reset at
+most 6 h whatever `retry-after` said, and
 the sweep never writes this namespace. Both writes run on their own short session **after** the
 settle closed the hold, never during flight, and are the dataplane writes this feature adds
 (`capacity_exhausted_mark` in `tests/test_call_architecture.py`). A burst 429 (`retry-after ≤ 60 s`)

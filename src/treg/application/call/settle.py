@@ -553,19 +553,24 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
 
 
 async def _note_capacity_recovery(mk: MarketplaceCall) -> None:
-    """After a tier-4 2xx: clear pending strikes, or the lock this call was admitted through as a
-    probe. Reads the cached view first so the common case costs nothing; never raises."""
+    """After a tier-4 2xx: clear pending strikes on the endpoint and the provider, and the active
+    lock this call was admitted through as a probe. Reloads the view first (a no-op inside the
+    TTL) so a strike written while this call was in flight is not missed. Never raises."""
     if mk.tier != "platform":
         return
-    lock = capacity_view.lock(mk.provider, mk.endpoint_id)
-    if lock is None or (lock.is_active() and lock.lock_id != mk.probe_lock_id):
-        return
     try:
-        if await capacity_marks.clear(lock.key, lock_id=mk.probe_lock_id):
+        await capacity_view.load()
+        cleared = False
+        for lock in capacity_view.locks(mk.provider, mk.endpoint_id):
+            if lock.is_active() and lock.lock_id != mk.probe_lock_id:
+                continue
+            if await capacity_marks.clear(lock.key, lock_id=mk.probe_lock_id):
+                cleared = True
+                if lock.is_active():
+                    logging.getLogger("treg.capacity").warning(
+                        "platform account recovered: %s (probe on %s)", lock.key, mk.endpoint_id)
+        if cleared:
             capacity_view.invalidate()
-            if lock.is_active():
-                logging.getLogger("treg.capacity").warning(
-                    "platform account recovered: %s (probe on %s)", lock.key, mk.endpoint_id)
     except asyncio.CancelledError:
         raise
     except Exception:  # noqa: BLE001

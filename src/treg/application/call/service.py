@@ -799,7 +799,8 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             # run below unchanged — a cached hit is billed exactly like the live call it stands in
             # for, tagged `cached`; the founder's deferred pricing decision attaches to that tag.
             served = None
-            if mk is not None and mk.metered and archive.serving():
+            # A probe must reach the vendor: an archived answer proves nothing about capacity.
+            if mk is not None and mk.metered and mk.probe_lock_id is None and archive.serving():
                 try:
                     served = await archive.lookup(
                         method=request.method, endpoint_id=mk.endpoint_id,

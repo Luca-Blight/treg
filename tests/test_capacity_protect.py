@@ -11,13 +11,14 @@ from datetime import timedelta
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit, ratestore
+from treg import archive, audit, ratestore
+from treg.config import get_settings
 from treg.application.call import service as call_service
 from treg.application.call import settle as call_settle
 from treg.application.call.types import CallFailure, UpstreamResponse
 from treg.infra.db import session_maker
 from treg.domain.capacity import marks as capacity_marks
-from treg.domain.capacity.marks import LOCK_NS, MAX_LOCK, Lock
+from treg.domain.capacity.marks import DEFAULT_LOCK, LOCK_NS, MAX_LOCK, Lock
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view
@@ -180,6 +181,47 @@ async def test_a_lock_never_outlives_the_ceiling_whatever_the_vendor_said(client
     await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
     lock = await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=far)
     assert lock.is_active() and lock.until - utcnow_naive() <= MAX_LOCK
+
+
+async def test_a_guessed_hold_lasts_an_hour(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    assert timedelta(minutes=59) < lock.until - utcnow_naive() <= DEFAULT_LOCK
+
+
+async def test_a_pending_endpoint_strike_does_not_hide_a_provider_lock(clients: AsyncClient, platform_on, monkeypatch):
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="quota", resets_at=None)  # one, pending
+    await _lock_by_two_signals(clients, monkeypatch)  # provider-wide, active
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"never":"reached"}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 503
+
+
+async def test_a_2xx_clears_a_strike_the_cached_view_has_not_seen(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200  # the view is loaded, no lock
+    # another call's settle strikes while this one is in flight: it writes, then invalidates
+    await capacity_marks.strike("tikhub", endpoint_id=EP, kind="balance", resets_at=None)
+    capacity_view.invalidate()
+    assert (await _lock("tikhub")).strikes == 1 and capacity_view.locks("tikhub", EP) == []
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert await _lock("tikhub") is None, "the success counts even though this process's view was stale"
+
+
+async def test_a_probe_never_takes_an_archived_answer(clients: AsyncClient, platform_on, monkeypatch):
+    lock = await _lock_by_two_signals(clients, monkeypatch)
+    monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+    lookups = []
+
+    async def lookup(**kw):
+        lookups.append(kw)
+        return None
+    monkeypatch.setattr(archive, "lookup", lookup)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"ok":true}'))
+    capacity_marks._last_probe.clear()
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert lookups == [], "a probe must reach the vendor"
+    assert await _lock(lock.key) is None
+    assert (await clients.get(f"/call/{EP}?aweme_id=7")).status_code == 200
+    assert len(lookups) == 1, "an ordinary call consults the archive again"
 
 
 async def test_clear_is_conditional_on_the_lock_id(clients: AsyncClient, platform_on):
