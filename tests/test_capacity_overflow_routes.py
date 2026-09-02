@@ -180,6 +180,55 @@ def test_signature_table_classifies_balance_quota_and_burst():
     assert S.is_exhausting(S.classify("findymail", 402, {}, b"x")) and not S.is_exhausting(None)
 
 
+# Apollo API reference, "422 Unprocessable Entity": the body an empty credit pool gets (live 2026-09-01).
+APOLLO_OUT_OF_CREDITS = b'{"error": "Insufficient credits. Please upgrade your plan."}'
+# The SAME status for a caller's mistake — must never read as our account running dry.
+APOLLO_VALIDATION = b'{"error": "Please provide at least one of: first_name, last_name, email"}'
+
+
+def test_apollo_says_out_of_credits_with_a_422():
+    sig = S.classify("apollo", 422, None, APOLLO_OUT_OF_CREDITS)
+    assert sig.kind == "balance" and S.is_exhausting(sig) and sig.resets_at is None
+    assert S.classify("apollo", 422, None, APOLLO_VALIDATION) is None
+    # Rows are per provider: a 422 is a validation status almost everywhere else.
+    assert S.classify("hunter", 422, None, APOLLO_OUT_OF_CREDITS).kind == "unrecorded"
+
+
+def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
+    """The next Apollo: a 4xx no row matched whose body still names credits/quota/balance. It is
+    logged and counted (`capacity_signal=unrecorded`) and does nothing else."""
+    sig = S.classify("someone", 403, None, b'{"message":"Your quota has been exceeded"}')
+    assert sig.kind == "unrecorded" and sig.detail == "quota" and not S.is_exhausting(sig)
+    # a phrase recorded for ONE vendor arms the tripwire for every other
+    assert S.classify("someone", 400, None, b"Not enough credits").kind == "unrecorded"
+    assert S.classify("someone", 422, None, b'{"error":"insufficient parameters: first_name"}') is None
+    assert S.classify("someone", 401, None, b'{"error":"insufficient credits"}') is None, "401 is the key"
+    assert S.classify("someone", 404, None, b'{"error":"no balance found for id"}') is None
+    assert S.classify("someone", 500, None, b'{"error":"balance service down"}') is None
+
+
+# Platform providers whose out-of-credit answer nobody has recorded in `_TABLE` yet. An acknowledged
+# gap, not a claim the vendor never runs dry: their 4xx trips `unrecorded` instead.
+_UNRECORDED_SIGNATURE = {
+    "apify", "aviato", "branddev", "brightdata", "coingecko", "coresignal", "crustdata", "dataforseo",
+    "diffbot", "exa", "fiber_ai", "finnhub", "icypeas", "influencersclub", "justoneapi", "marketstack",
+    "moz", "oceanio", "pdl", "scrapecreators", "seranking", "serpapi", "serpstat", "spyfu", "tiingo",
+    "tikhub", "tomba", "twelvedata",
+}
+
+
+def test_every_platform_provider_has_a_recorded_or_acknowledged_signature():
+    """The guard. A provider gains a `platform_key_*` slot → record how it says "out of credits"
+    (a row in `_TABLE`) or add it above knowingly. Silence is how Apollo's 422 went unseen."""
+    from treg.domain.capacity.collectors import all_platform_providers
+    slots = set(all_platform_providers())
+    recorded = {p for p, *_ in S._TABLE if p != "*"}
+    missing = slots - recorded - _UNRECORDED_SIGNATURE
+    assert not missing, f"record how these say 'out of credits' or acknowledge them: {sorted(missing)}"
+    stale = (_UNRECORDED_SIGNATURE & recorded) | (_UNRECORDED_SIGNATURE - slots)
+    assert not stale, f"acknowledged providers that are now recorded or gone: {sorted(stale)}"
+
+
 _CF_PAGE = (b"<!DOCTYPE html><html><head><title>Access denied | api.example.com used Cloudflare "
             b"to restrict access</title></head><body>Error 1010</body></html>")
 

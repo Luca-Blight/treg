@@ -24,6 +24,7 @@ from treg.domain.capacity.view import view as capacity_view
 from treg.models import Hold, LedgerEntry, OverflowRoute, OverflowSpend
 from treg.timeutil import utcnow_naive
 
+from test_capacity_overflow_routes import APOLLO_OUT_OF_CREDITS, APOLLO_VALIDATION
 from test_marketplace_call import EP, EP_MICRO, EP_PATH, _balance, _fake_relay, platform_on  # noqa: F401
 
 VENDOR_BODY = {"data": {"comments": [{"id": "1", "text": "hashed"}], "cursor": 20}}
@@ -39,11 +40,12 @@ def overflow_on(monkeypatch, platform_on):
     get_settings.cache_clear()
 
 
-async def _route(aggregator="orthogonal", price_micro=3_000, enabled=True):
+async def _route(aggregator="orthogonal", price_micro=3_000, enabled=True, *, endpoint_id=EP, provider="tikhub",
+                 method="GET", path=EP_PATH, ratio=3.0):
     async with session_maker() as db:
-        db.add(OverflowRoute(endpoint_id=EP, aggregator=aggregator, provider="tikhub", method="GET", path=EP_PATH,
-                             agg_slug="tikhub", agg_path=EP_PATH, agg_price_micro=price_micro, agg_unit="call",
-                             ratio=3.0, enabled=enabled, last_verified_at=utcnow_naive()))
+        db.add(OverflowRoute(endpoint_id=endpoint_id, aggregator=aggregator, provider=provider, method=method, path=path,
+                             agg_slug=provider, agg_path=path, agg_price_micro=price_micro, agg_unit="call",
+                             ratio=ratio, enabled=enabled, last_verified_at=utcnow_naive()))
         await db.commit()
     routes_view.invalidate()
     capacity_view.invalidate()
@@ -455,3 +457,43 @@ def test_cli_org_overflow_parses(monkeypatch):
         pytest.skip("no exposed parser builder")
     args = parser.parse_args(["org", "overflow", "off"])
     assert args.state == "off" and args.fn is not None
+
+
+# --- Apollo: "out of credits" is a 422, not a 402 (ops/capacity.md, 2026-09-01) --------------
+
+APOLLO_EP = "apollo.people.enrich"           # POST /people/match, 1 credit = $0.026 per hit
+APOLLO_PATH = "/people/match"
+APOLLO_PERSON = {"person": {"id": "p1", "name": "hashed", "email": "hashed"}, "request_id": 1}
+
+
+async def test_apollo_out_of_credits_422_on_tier4_overflows_through_orthogonal(clients: AsyncClient, overflow_on, monkeypatch):
+    await _route(endpoint_id=APOLLO_EP, provider="apollo", method="POST", path=APOLLO_PATH, price_micro=10_000, ratio=0.38)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
+    seen = []
+    envelope = {"success": True, "data": APOLLO_PERSON, "priceCents": 1.0, "requestId": "run_a",
+                "billing": {"chargedPriceCents": 1.0}}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+    before = await _balance(clients)
+    r = await clients.post(f"/call/{APOLLO_EP}", json={"email": "hashed@example.com"})
+    assert r.status_code == 200, r.text
+    assert r.json() == APOLLO_PERSON and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal"
+    assert r.headers["X-Treg-Cost-Micro"] == "10000" and before - await _balance(clients) == 10_000
+    assert len(seen) == 1 and seen[0].json["api"] == "apollo" and seen[0].json["path"] == APOLLO_PATH
+    assert seen[0].json["body"] == {"email": "hashed@example.com"}, "the caller's own request, relayed"
+    assert await _holds() == []
+    await audit.drain()
+    mine = [x for x in (await clients.get("/calls")).json() if x["tool_name"] == APOLLO_EP]
+    assert {x.get("credential_tier") for x in mine} == {"platform", "platform-overflow"}
+    async with session_maker() as db:
+        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "apollo"))
+    assert state.health == "exhausted", "the 422 was read as OUR account running dry, not the caller's mistake"
+
+
+async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):
+    await _route(endpoint_id=APOLLO_EP, provider="apollo", method="POST", path=APOLLO_PATH, price_micro=10_000, ratio=0.38)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_VALIDATION))
+    seen = []
+    monkeypatch.setattr(O, "_send", _orthogonal([], seen))
+    r = await clients.post(f"/call/{APOLLO_EP}", json={})
+    assert r.status_code == 422 and r.content == APOLLO_VALIDATION and seen == [], "relayed verbatim, no aggregator contacted"
+    assert "X-Treg-Served-Via" not in r.headers

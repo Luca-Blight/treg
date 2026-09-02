@@ -534,6 +534,10 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
             logging.getLogger("treg.capacity").warning(
                 "edge block on %s (%s): the vendor's CDN answered, not the vendor",
                 mk.provider, mk.endpoint_id)
+        elif signal.kind == "unrecorded":  # a vendor phrase the table lacks: for a person to record
+            logging.getLogger("treg.capacity").warning(
+                "unrecorded capacity-looking %d from %s on %s: body says %r",
+                status_code, mk.provider, mk.endpoint_id, signal.detail)
         else:
             logging.getLogger("treg.capacity").info(
                 "rate signal on %s: %s retry_after=%s", mk.provider, signal.kind, signal.retry_after_s)

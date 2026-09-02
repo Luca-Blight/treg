@@ -329,10 +329,14 @@ does not choose for the caller (charter): it names the options. The audit row is
 The signal comes from the call path itself as well as from the worker's sweep: after a tier-4 answer
 ≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the vendor's
 status/headers/body. A `balance` or `quota` signature (findymail "Not enough credits", lusha's "Daily"
-429, hunter's "per billing period" 429, any bare 402, …) writes the exhausted mark through
+429, hunter's "per billing period" 429, Apollo's 422 "Insufficient credits", any bare 402, …) writes the exhausted mark through
 `domain.capacity.marks.mark_exhausted` — its own short session, **after** the settle closed the hold,
 never during flight — and the next call is refused without waiting for a sweep. A burst 429
-(`retry-after ≤ 60 s`) or an unknown one only logs; step D′ smooths those. An `edge_block` (the
+(`retry-after ≤ 60 s`) or an unknown one only logs; step D′ smooths those. An `unrecorded` one — a
+4xx no row matched whose body still names credits/quota/balance — logs `unrecorded capacity-looking
+…` with the phrase and rides `tool_called` as `capacity_signal=unrecorded`, nothing else: the
+tripwire for a vendor whose out-of-credit answer is not in the table yet, which is how Apollo's 422
+went unseen on 2026-09-01. An `edge_block` (the
 vendor's CDN answered, not the vendor) marks nothing: one caller's request shape must not take the
 provider away from every other team. The kind is returned and rides the `tool_called` event as
 `capacity_signal`. That mark is the single

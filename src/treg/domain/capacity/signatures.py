@@ -10,6 +10,9 @@ one thing everywhere. Pure functions over (provider, status, headers, body).
   unknown  — a 429 we cannot classify → logged for classification (treated as burst: never refuse)
   edge_block - the vendor's CDN refused the request's shape before the vendor's code saw it → NEVER
              exhausted, only recorded (so a chart can attribute it to a UA family)
+  unrecorded — a 4xx no row matched whose body still names credits/quota/balance → NEVER exhausted,
+             only logged/counted: the tripwire for a vendor whose out-of-credit answer is not in
+             the table yet (how Apollo's 422 went unseen for eleven hours, 2026-09-01)
   None     — not a capacity signal at all (caller-caused 4xx, 5xx, success)
 """
 
@@ -36,8 +39,19 @@ _TABLE: list[tuple[str, int, str, str]] = [
     ("lusha", 429, r"daily", "quota"),
     ("hunter", 429, r"per billing period", "quota"),
     ("apollo", 429, r"per (day|month)|daily|monthly", "quota"),
+    # Apollo: an empty credit pool is a 422 {"error": "Insufficient credits. Please upgrade your
+    # plan."} (ops/capacity.md, 2026-09-01). A 422 without the phrase is the caller's validation error.
+    ("apollo", 422, r"insufficient credits", "balance"),
     ("*", 402, r"", "balance"),
 ]
+
+# The `unrecorded` tripwire: every phrase the table already knows for SOME vendor (recording one
+# vendor's wording arms the tripwire for every other) plus the generic nouns. Nouns only — a bare
+# "insufficient" would flag "insufficient parameters", a caller error.
+_UNRECORDED = re.compile("|".join(
+    [p.lower() for _, _, p, _ in _TABLE if p]
+    + [r"insufficient (credits?|balance|funds)", r"out of credits?", r"quota", r"balance",
+       r"payment required", r"upgrade your plan"]))
 
 
 @dataclass(frozen=True)
@@ -114,6 +128,10 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
         if wait is not None:  # the provider named a long wait: a period allowance, not a burst
             return Signal("quota", now + timedelta(seconds=wait), None, detail=text[:120])
         return Signal("unknown", None, None, detail=text[:120])
+    if 400 <= status < 500 and status not in (401, 404):  # 401 is the key, 404 the resource
+        m = _UNRECORDED.search(text_l)
+        if m:  # detail is the PHRASE, never the body: a vendor's error often echoes the request back
+            return Signal("unrecorded", None, None, detail=m.group(0))
     return None
 
 

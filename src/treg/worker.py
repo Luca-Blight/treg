@@ -167,7 +167,12 @@ async def _overflow_verify(args) -> int:
             print(f"{'ok ' if v.passed else 'FAIL'} {r.endpoint_id} via {r.aggregator} "
                   f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
     print(f"verified {passed}, failed {failed}, skipped {skipped}")
-    return 1 if failed else 0
+    # A failed ROUTE is a result (its row is disabled with the reason); only a run that verified
+    # NOTHING — no keys, empty table, aggregator down — is a failed run (ops/capacity.md).
+    if passed == 0:
+        print("overflow verify: nothing verified — check aggregator keys and route table", file=sys.stderr)
+        return 1
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
