@@ -19,6 +19,7 @@ from treg.config import get_settings
 from treg.infra.db import session_maker
 from treg.domain.capacity.policy import LatestState
 from treg.domain.capacity.routes_view import view as routes_view
+from treg.domain.capacity.marks import LOCK_NS, Lock
 from treg.domain.capacity.sweep import STATE_NS
 from treg.domain.capacity.view import view as capacity_view
 from treg.models import Hold, LedgerEntry, OverflowRoute, OverflowSpend
@@ -182,8 +183,8 @@ async def test_aggregator_402_releases_the_child_marks_it_unhealthy_and_answers_
     assert await _balance(clients) == before and await _holds() == []
     assert len(seen) == 1, "one hop: the second aggregator is never contacted"
     async with session_maker() as db:
-        state = LatestState.from_json(await ratestore.kv_get(db, STATE_NS, "overflow:orthogonal"))
-    assert state.is_exhausted()
+        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal"))
+    assert lock.is_active()
     # …and the next call skips the unhealthy aggregator and uses Monid
     capacity_view.invalidate()
     monid_ok = {"runId": "r", "status": "COMPLETED", "output": VENDOR_BODY, "providerResponse": {"httpStatus": 200},

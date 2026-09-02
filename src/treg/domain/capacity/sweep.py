@@ -5,7 +5,8 @@ publish the latest state per provider to ratestore (`capacity:state:<provider>`)
 dataplane's `view` reads on a TTL. Worker profile only: needs the platform keys in the env and makes
 outbound calls, so it is never lifespan work of the server (refactor plan §2.2).
 
-Observe-only in step B: no alerts, no marks the call path acts on. Money is never touched here.
+Publishes `capacity:state:*` only; the call path's locks (`marks.py`, `capacity:lock:*`) are never
+written here. Money is never touched here.
 """
 
 from __future__ import annotations

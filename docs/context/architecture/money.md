@@ -795,9 +795,10 @@ obligations) is what gets bought rather than built.
 
 ## Not money: the capacity mark
 
-`application.call.settle._note_capacity_signal` writes a ratestore row (`capacity:state:<provider>`)
-after a tier-4 balance/quota signature. It touches no balance, hold or ledger row — it is a hint for the
-NEXT caller's resolution — and is listed in the dataplane write allowlist on its own
+`application.call.settle._note_capacity_signal` writes a ratestore row (`capacity:lock:<key>`)
+after a tier-4 balance/quota signature, and `_note_capacity_recovery` removes it after a probe's
+2xx. Neither touches a balance, hold or ledger row - the lock is a hint for the NEXT caller's
+resolution - and both are listed in the dataplane write allowlist on their own
 (`capacity_exhausted_mark`), not under the money entries. See `ops/capacity.md`.
 
 ## Overflow money

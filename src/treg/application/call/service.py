@@ -52,6 +52,7 @@ from . import route as routed
 from .settle import (
     _buffer_response,
     _finish_cancelled_call as finish_cancelled_call,
+    _note_capacity_recovery,
     _note_capacity_signal,
     _peek_stream_head,
     _platform_settle,
@@ -589,7 +590,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             props |= {"provider": mk.provider, "endpoint_id": mk.endpoint_id,
                       "tier": mk.tier, "metered": mk.metered, "cost_type": mk.cost_type,
                       "charged_micro": charged_micro, "observed_micro": observed_micro,
-                      "capacity_signal": capacity_signal}
+                      "capacity_signal": capacity_signal, "probe": mk.probe_lock_id is not None}
         else:
             props["provider"] = urlsplit(upstream_url).hostname or ""
         analytics.capture(audit_email, "tool_called", props, groups={"team": audit_slug})
@@ -689,7 +690,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             raise (outcome.failure if outcome is not None and outcome.failure is not None
                    else _provider_capacity_unavailable(
                        _catalog_endpoint_for(mk.endpoint_id) or {"id": mk.endpoint_id},
-                       mk.provider, capacity_view.get(mk.provider)))
+                       mk.provider, capacity_view.exhausted_until(mk.provider, mk.endpoint_id)))
         response, body, charged = outcome.response, outcome.body, outcome.charged_micro
         if idem_key:
             try:
@@ -943,6 +944,12 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             try:
                 capacity_signal = await _note_capacity_signal(
                     mk, response.status, httpx.Headers(response.raw_headers), body)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
+        elif response.status < 300:
+            try:
+                await _note_capacity_recovery(mk)
             except asyncio.CancelledError:
                 await _finish_cancelled_call(request, mk, call_ref, response)
                 raise

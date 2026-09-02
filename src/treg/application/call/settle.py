@@ -14,6 +14,7 @@ from ... import adsconv
 from ...domain.capacity import marks as capacity_marks
 from ...domain.capacity import overflow_spend as overflow_spend_ledger
 from ...domain.capacity import signatures as capacity_signatures
+from ...domain.capacity.view import view as capacity_view
 from ...domain import money as ledger
 from ...domain.catalog import store as catalog_store
 from ...infra.db import session_maker
@@ -512,11 +513,11 @@ async def _finish_cancelled_call(
     await cleanup
 async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, body: bytes) -> str | None:
     """After a tier-4 answer: did the provider just tell us OUR account is out? A confirmed balance/
-    quota signature (domain.capacity.signatures) marks the provider exhausted in ratestore so the next
-    call is refused before a hold exists. Burst/unknown 429s only log (D′ smooths them). Runs after
-    the settle, on its own short session, and never raises. Platform tier only: an org's own key
-    running dry is the org's business, and an oauth-billed connect has no shared account to mark.
-    Returns the signal kind for the audit funnel."""
+    quota signature (domain.capacity.signatures) is a strike on the breaker (domain.capacity.marks);
+    the second strike locks the provider so the next call is refused before a hold exists.
+    Burst/unknown 429s only log (D′ smooths them). Runs after the settle, on its own short session,
+    and never raises. Platform tier only: an org's own key running dry is the org's business, and an
+    oauth-billed connect has no shared account to mark. Returns the signal kind for the audit funnel."""
     if mk.tier != "platform" or status_code < 400:
         return None
     signal = None
@@ -525,11 +526,18 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
         if signal is None:
             return None
         if capacity_signatures.is_exhausting(signal):
-            await capacity_marks.mark_exhausted(
-                mk.provider, until=signal.resets_at,
+            lock = await capacity_marks.strike(
+                mk.provider, endpoint_id=mk.endpoint_id, kind=signal.kind,
+                resets_at=signal.resets_at,
                 note=f"{signal.kind} signature on {mk.endpoint_id}: {signal.detail[:80]}")
-            logging.getLogger("treg.capacity").warning(
-                "platform account exhausted: %s (%s on %s)", mk.provider, signal.kind, mk.endpoint_id)
+            capacity_view.invalidate()
+            if lock is not None and lock.is_active():
+                logging.getLogger("treg.capacity").warning(
+                    "platform account locked: %s until %s (%s on %s)",
+                    lock.key, lock.until, signal.kind, mk.endpoint_id)
+            else:
+                logging.getLogger("treg.capacity").info(
+                    "capacity strike on %s (%s on %s)", mk.provider, signal.kind, mk.endpoint_id)
         elif signal.kind == "edge_block":  # not our account: no mark, but worth a warning
             logging.getLogger("treg.capacity").warning(
                 "edge block on %s (%s): the vendor's CDN answered, not the vendor",
@@ -542,6 +550,26 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
     except Exception:  # noqa: BLE001 — the caller already has the provider's answer; a mark is a hint
         logging.getLogger("treg.capacity").warning("capacity signal handling failed", exc_info=True)
     return signal.kind if signal is not None else None
+
+
+async def _note_capacity_recovery(mk: MarketplaceCall) -> None:
+    """After a tier-4 2xx: clear pending strikes, or the lock this call was admitted through as a
+    probe. Reads the cached view first so the common case costs nothing; never raises."""
+    if mk.tier != "platform":
+        return
+    lock = capacity_view.lock(mk.provider, mk.endpoint_id)
+    if lock is None or (lock.is_active() and lock.lock_id != mk.probe_lock_id):
+        return
+    try:
+        if await capacity_marks.clear(lock.key, lock_id=mk.probe_lock_id):
+            capacity_view.invalidate()
+            if lock.is_active():
+                logging.getLogger("treg.capacity").warning(
+                    "platform account recovered: %s (probe on %s)", lock.key, mk.endpoint_id)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001
+        logging.getLogger("treg.capacity").warning("capacity recovery handling failed", exc_info=True)
 
 
 async def _record_first_call(org_id: int) -> None:
