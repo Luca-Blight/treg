@@ -18,6 +18,7 @@ org that opted out (step F), or a route the worker has not enabled.
 
 from __future__ import annotations
 
+from datetime import timedelta
 import asyncio
 import json
 import logging
@@ -276,9 +277,11 @@ async def _maybe_overflow_attempt(
     # --- decide ---
     if res.failure in ("aggregator_auth", "aggregator_balance", "malformed") or res.upstream_status == 402:
         why_agg = res.failure or "upstream 402 through the aggregator"
-        await capacity_marks.mark_exhausted(f"overflow:{aggregator}", until=utcnow_naive().replace(microsecond=0)
-                                            + __import__("datetime").timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
-                                            note=f"{why_agg}: {res.detail[:80]}")
+        await capacity_marks.strike(
+            f"overflow:{aggregator}", endpoint_id=None, kind="balance", immediate=True,
+            resets_at=utcnow_naive().replace(microsecond=0) + timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
+            note=f"{why_agg}: {res.detail[:80]}")
+        capacity_view.invalidate()
         if mode == "on":
             spend_adjustment = _overflow_spend_adjustment(budget)
             await _platform_settle(

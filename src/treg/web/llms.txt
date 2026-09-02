@@ -225,6 +225,7 @@ Money notes for agents:
   provider is out right now (not your balance, nothing charged). The body names `resets_at`
   when known and `alternatives` — other providers for the same capability; pick one, or use
   your own key for the provider (never affected). treg does not switch providers for you.
+  treg re-checks the provider about once a minute, so a retry after a minute can succeed.
 - `treg balance` shows the prepaid balance and recent charges; the dashboard Activity page
   shows the exact settled cost of every call.
 

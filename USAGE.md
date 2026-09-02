@@ -177,7 +177,8 @@ treg's keys, so a runaway agent has a bounded blast radius.
 If treg's **own** account for a provider is out, a metered call is refused with HTTP **503**
 `provider_capacity_unavailable` before anything is reserved — nothing is charged, the body names
 `resets_at` when known and `alternatives` (other providers for the same capability). Your own key
-for the provider is never affected, and treg does not switch providers on your behalf.
+for the provider is never affected, and treg does not switch providers on your behalf. treg
+re-checks the provider about once a minute, so a retry after a minute can succeed.
 
 Where the deployment has the overflow relay on, treg may instead serve the **same endpoint** through a
 treg-owned aggregator account — same request, same response shape, the relay's real price (0% markup),

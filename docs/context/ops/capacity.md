@@ -73,13 +73,17 @@ consulted or affected by anything here.
 - **`sweep.py`** — `run_sweep(db)`: import policies → collect all providers in parallel (DB idle
   while the network is in flight) → one `CapacitySnapshot` per provider → publish each
   `LatestState` to ratestore as `capacity:state:<provider>` (24 h TTL) → one commit. A note that
-  looks like a credential is withheld before it is stored. Observe-only: no alerts, no marks the
-  call path acts on.
-- **`view.py`** — `LatestStateView`: the in-process copy of the published state, reloaded from
-  ratestore on a 60 s TTL by an explicit `await load()`; `get()`/`is_exhausted()` are sync and
-  I/O-free so `resolve._platform_offer` can read them later without breaking its rule. Invalidation
-  story (refactor plan §2.2): time-based only — every replica sees a mark within one TTL. **Nothing
-  on the call path reads it yet** (that is step D).
+  looks like a credential is withheld before it is stored. It never touches the call path's locks
+  (`capacity:lock:*`): the meter it reads may not be the allowance that ran out.
+- **`marks.py`** - the call-path breaker, its own namespace `capacity:lock:<key>`; key = provider
+  for a balance signature, endpoint id for a quota one. Strike, lock on the second strike within
+  10 min with no 2xx between, admit one probe per process per minute, clear on the probe's 2xx
+  (conditional on the lock id). A guessed hold lasts 1 h, a vendor-stated reset at most 6 h.
+  See `architecture/proxy-model.md`.
+- **`view.py`** - `LatestStateView`: the in-process copy of both namespaces, reloaded from
+  ratestore on a 60 s TTL by an explicit `await load()`; `is_exhausted(provider, endpoint_id)`
+  and friends are sync and I/O-free so `resolve` can read them without breaking its rule. A
+  writer calls `invalidate()`; other replicas see the change within one TTL.
 
 ## Where it runs — `treg-worker`
 
@@ -155,18 +159,24 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
 
 ## Protect, part one (step D) — refuse before reserve
 
-The call path now reads the view and writes one mark (`marks.py`); the mechanics and the
-typed `provider_capacity` 503 are documented in `architecture/proxy-model.md` § Platform capacity
-and `interface/api.md`. In one line: exhausted provider → 503 before any hold, with alternatives
-named; a balance/quota signature on treg's key → exhausted mark in ratestore for the next caller;
-burst 429s only logged until D′. Tiers 1/2 untouched.
+The call path reads the view and runs the breaker (`marks.py`); the mechanics and the typed
+`provider_capacity` 503 are documented in `architecture/proxy-model.md` § Platform capacity and
+`interface/api.md`. In one line: locked provider or endpoint → 503 before any hold, with
+alternatives named, one probe a minute excepted; two balance/quota signatures in a row on treg's
+key → lock; the probe's 2xx → open. Burst 429s are smoothed (D′). Tiers 1/2 untouched.
+
+The breaker is deliberately slow to open and quick to close: a false lock costs every caller a
+503 (or, with an overflow route, the aggregator's price) for as long as it lasts, while a missed
+one costs one relayed vendor error. A vendor with auto top-up whose balance hovers near zero
+answers a genuine quota 429 once in thousands of calls; one strike must not take the provider
+away from everyone.
 
 ## Protect, part two (step D′) — burst smoothing
 
 `infra/upstream/limiter.py` (per-provider spacer, ≤ 2 s wait, in-process, no DB) and one bounded
 `retry-after` re-send for body-less GET/HEAD, documented in `architecture/proxy-model.md` § Burst
 smoothing. The provider's rate limit travels in the published latest state (`LatestState.rate_limit`,
-from `CapacityPolicy.rate_limit`; a call-path mark carries it forward), so the request path never reads
+from `CapacityPolicy.rate_limit`), so the request path never reads
 the policy table. `rate_pressure` alerting is step C.
 
 ## Overflow, the child cycle (step E) — off by default

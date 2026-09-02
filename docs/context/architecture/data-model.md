@@ -217,9 +217,9 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 - **`CapacityPolicy` / `CapacitySnapshot`** — what each treg-owned vendor account (tier 4) meters and
   how it is funded, and the append-only observations of what it has left. Written by the worker's
   `treg-worker capacity sweep` only, never by the call path; the sweep also publishes a per-provider
-  latest state into `Ephemeral` under `capacity:state:<provider>`, which the dataplane will read on a
-  TTL from plan step D. Numbers only — never a credential. See `ops/capacity.md`. Alembic revision
-  `0005` creates these two tables.
+  latest state into `Ephemeral` under `capacity:state:<provider>`, which the dataplane reads on a
+  TTL beside its own breaker locks (`capacity:lock:<key>`, written by the call path only). Numbers
+  only - never a credential. See `ops/capacity.md`. Alembic revision `0005` creates these two tables.
 - **`OverflowRoute`** — one `(endpoint_id, aggregator)` pair: the same vendor endpoint served through a
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
   DERIVED `enabled`. Filled by `treg-worker overflow sync` only (Alembic `0006`); read-only for the call

@@ -15,6 +15,7 @@ from sqlmodel import select
 from ... import oauth, oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
+from ...domain.capacity import marks as capacity_marks
 from ...domain.capacity.routes_view import view as overflow_routes_view
 from ...domain.capacity.view import view as capacity_view
 from ...domain.catalog import store as catalog_store
@@ -309,6 +310,9 @@ class MarketplaceCall:
     # treg's own account is marked exhausted AND an overflow route is enabled: skip the direct
     # attempt (no hold, no vendor 402) and go straight to the child cycle (plan §4 ladder).
     skip_direct: bool = False
+    # Admitted through an active capacity lock as its probe (domain.capacity.marks): a 2xx clears
+    # exactly that lock.
+    probe_lock_id: str | None = None
 
     @property
     def metered(self) -> bool:
@@ -1022,34 +1026,45 @@ async def _resolve_marketplace_call(
     # silently switched onto our key (their quota, their rate limits, their data agreements).
     cost = _platform_offer(ep, provider, caller.org)
     skip_direct = False
-    if cost is not None and capacity_view.is_exhausted(service):
-        # treg's own account for this provider is known to be out (a confirmed balance/quota
-        # signature, or the sweep). Never relay a call we know will 402: with an enabled overflow
-        # route the ladder skips straight to the child cycle (plan §4); otherwise refuse BEFORE
-        # reserve with a typed 503 naming when and what else (§4.2).
-        if (get_settings().overflow_mode == "on" and not caller.org.platform_overflow_disabled
+    probe_lock_id = None
+    if cost is not None and capacity_view.is_exhausted(service, ep["id"]):
+        # treg's own account for this call is known to be out (the call-path lock, or the sweep).
+        # A lock admits one probe a minute so a recovered account is noticed. Otherwise never
+        # relay a call we know will 402: with an enabled overflow route the ladder skips straight
+        # to the child cycle (plan §4); else refuse BEFORE reserve with a typed 503 naming when
+        # and what else (§4.2).
+        lock = capacity_view.active_lock(service, ep["id"])
+        if lock is not None and capacity_marks.probe_due(lock.key):
+            probe_lock_id = lock.lock_id
+        elif (get_settings().overflow_mode == "on" and not caller.org.platform_overflow_disabled
                 and overflow_routes_view.for_endpoint(ep["id"])):
             skip_direct = True
         else:
-            raise _provider_capacity_unavailable(ep, service, capacity_view.get(service))
+            raise _provider_capacity_unavailable(
+                ep, service, capacity_view.exhausted_until(service, ep["id"]),
+                probing=lock is not None)
     if cost is not None:
         virtual = Tool(
             org_id=caller.org_id, name=ep["id"], owner=caller.email,
             base_url=provider.base_url, host=_host_of(provider.base_url),
             bindings=_platform_bindings(provider),
         )
-        return MarketplaceCall(tool=virtual, tier="platform", skip_direct=skip_direct, **{
+        return MarketplaceCall(tool=virtual, tier="platform", skip_direct=skip_direct,
+                               probe_lock_id=probe_lock_id, **{
             **common, "cost_type": str(cost.get("type") or "per_call"),
             "estimate_micro": info_est, "unit_micro": info_unit})
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
 
 
-def _provider_capacity_unavailable(ep: dict, service: str, state) -> ResolutionFailed:
+def _provider_capacity_unavailable(ep: dict, service: str, resets, *,
+                                   probing: bool = False) -> ResolutionFailed:
     """The typed floor (plan §4.5): no charge, `resets_at` when known, and the same-capability
     alternatives — treg names them and leaves the choice to the caller (charter: no failover)."""
-    resets = getattr(state, "exhausted_until", None)
     lines = [f"treg's own {service} account is out of capacity right now — {ep['id']} can't be "
              f"served on treg's key" + (f" until about {resets:%Y-%m-%d %H:%M} UTC" if resets else "")]
+    if probing:
+        lines.append("  treg retries the vendor about once a minute and lifts this as soon as it "
+                     "answers, so a retry later may succeed")
     lines.append(f"  use your own key: treg secret add {service} --env-var "
                  f"{service.upper().replace('-', '_')}_API_KEY  (own keys are never affected)")
     lines.extend(_capability_alternatives(ep))

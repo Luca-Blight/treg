@@ -318,28 +318,33 @@ unchanged. The parent only assembles `{output, raw, _treg}` and owns the idempot
 ## Platform capacity: refuse before reserve (plan step D)
 
 Tier 4 spends treg's own vendor account, and that account can be empty. `_resolve_marketplace_call`
-asks two questions after `_platform_offer` says yes: is the provider marked **exhausted** in the
-in-process capacity view (`domain.capacity.view`, loaded from ratestore `capacity:state:<provider>` on a
-60 s TTL by `resolve_marketplace_target` before its session opens)? If so it raises
+asks, after `_platform_offer` says yes: is this call **exhausted** in the in-process capacity view
+(`domain.capacity.view`, loaded from ratestore on a 60 s TTL by `resolve_marketplace_target` before
+its session opens)? Two sources say so: the sweep's `capacity:state:<provider>` (a balance API that
+read zero) and the call path's own lock `capacity:lock:<key>` (below). If so it raises
 `CallFailure("provider_capacity", 503, blame="treg")` — **before any hold exists** — whose body carries
 `resets_at` when known and the same-capability alternatives from `_capability_alternatives`. treg still
 does not choose for the caller (charter): it names the options. The audit row is `refused_by="capacity"`,
 `X-Treg-Error: 1`, cost 0. A stale, empty or "ok" view never refuses; only a confirmed signal does.
 
-The signal comes from the call path itself as well as from the worker's sweep: after a tier-4 answer
-≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the vendor's
-status/headers/body. A `balance` or `quota` signature (findymail "Not enough credits", lusha's "Daily"
-429, hunter's "per billing period" 429, any bare 402, …) writes the exhausted mark through
-`domain.capacity.marks.mark_exhausted` — its own short session, **after** the settle closed the hold,
-never during flight — and the next call is refused without waiting for a sweep. A burst 429
-(`retry-after ≤ 60 s`) or an unknown one only logs; step D′ smooths those. An `edge_block` (the
-vendor's CDN answered, not the vendor) marks nothing: one caller's request shape must not take the
-provider away from every other team. The kind is returned and rides the `tool_called` event as
-`capacity_signal`. That mark is the single
-dataplane write this feature adds (`capacity_exhausted_mark` in `tests/test_call_architecture.py`).
-Tiers 1/2 resolve earlier and never consult the view: an org's own key running dry is the org's own
-answer, relayed unchanged. The vendor's 402 on THIS call is also relayed unchanged — the protection is
-for the next caller.
+The call path's breaker (`domain.capacity.marks`) opens slowly and closes fast. After a tier-4
+answer ≥ 400, `settle._note_capacity_signal` runs `domain.capacity.signatures.classify` on the
+vendor's status/headers/body. A `balance` or `quota` signature is a **strike**; the second strike
+within 10 min, with no 2xx in between, **locks** - the provider for a balance signature, only the
+endpoint for a quota one (allowances are per operation). While locked, `resolve` admits one real
+call per process per minute as a **probe** (`MarketplaceCall.probe_lock_id`, `probe` on the
+`tool_called` event); its 2xx clears exactly that lock (`settle._note_capacity_recovery`, conditional
+on the lock id), any other answer leaves it. A guessed hold lasts 1 h, a vendor-stated reset at
+most 6 h whatever `retry-after` said, and
+the sweep never writes this namespace. Both writes run on their own short session **after** the
+settle closed the hold, never during flight, and are the dataplane writes this feature adds
+(`capacity_exhausted_mark` in `tests/test_call_architecture.py`). A burst 429 (`retry-after ≤ 60 s`)
+or an unknown one only logs; step D′ smooths those. An `edge_block` (the vendor's CDN answered, not
+the vendor) strikes nothing: one caller's request shape must not take the provider away from every
+other team. The kind rides the `tool_called` event as `capacity_signal`. Tiers 1/2 resolve earlier
+and never consult the view: an org's own key running dry is the org's own answer, relayed
+unchanged. The vendor's 402 on THIS call is also relayed unchanged - the protection is for the
+next caller.
 
 ## Burst smoothing on treg's own keys (plan step D′)
 
