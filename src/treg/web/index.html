@@ -2750,10 +2750,14 @@ a:hover{text-decoration-color:var(--muted)}
           </div>
 
           <template v-if="actTab==='feed'">
-          <p class="sub">Every proxy call and server CLI run in this org.</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <p class="sub" style="margin:0;flex:1">{{actOkOnly?'Successful calls and runs in this org.':'Every proxy call and server CLI run in this org.'}}</p>
+            <button v-if="activityRows.length" class="btn sm" @click="actOkOnly=!actOkOnly" :title="actOkOnly?'Include failed and refused calls':'Hide failed and refused calls'">{{actOkOnly?'Show all ('+activityRows.length+')':'Successes only'}}</button>
+          </div>
           <table><tr><th>When</th><th>Who</th><th v-if="anyTagged">Tagged</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
-            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id" :class="{'act-row':a.kind==='call'}" @click="a.kind==='call'&&openCall(a)" :title="a.kind==='call'?(a.has_result?'Show request and response':'Show call details'):''"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span><span v-if="a.has_result" class="act-view">result ›</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
+            <tr v-for="a in activityShown" :key="a.kind+'-'+a.id" :class="{'act-row':a.kind==='call'}" @click="a.kind==='call'&&openCall(a)" :title="a.kind==='call'?(a.has_result?'Show request and response':'Show call details'):''"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span><span v-if="a.has_result" class="act-view">result ›</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
           <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
+          <p v-else-if="!loading && !activityShown.length" class="sub">No successful calls yet — <a href="#" @click.prevent="actOkOnly=false">show all {{activityRows.length}}</a>.</p>
           </template>
 
           <template v-if="canAdmin && actTab==='usage'">
@@ -4099,6 +4103,7 @@ createApp({
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
       // marketplace endpoint Try-it drawer
       callView:null, callViewFull:false, callCopied:'',  // Activity → one call's request/response drawer
+      actOkOnly:true,  // Activity feed: successes only by default; the toggle shows failed/refused too
       epTry:null, epTryTab:'agent', epTryAccess:null, epTryAccessByMethod:{}, epTryAuthMethod:'', epTryParams:[], epTryBody:'', epTryResp:'', epTryStatus:null,
       epTryMs:null, epTryCost:null, epTryBusy:false,
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
@@ -4368,6 +4373,7 @@ createApp({
       const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, client:r.client, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
     },
+    activityShown(){ return this.actOkOnly ? this.activityRows.filter(a=>a.ok) : this.activityRows; },
     callBodyTruncated(){ const t=this.callView&&this.callView.response&&this.callView.response.body_text; return !!t && !this.callViewFull && t.length>262144; },
     callBodyShown(){  // pretty-print JSON when it parses; cap the rendered text at 256 KB unless asked for all of it
       const t=this.callView&&this.callView.response&&this.callView.response.body_text; if(!t) return '';

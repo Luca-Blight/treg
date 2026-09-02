@@ -316,6 +316,9 @@ Server side (`domain.identity.access`): `require_identity` (who, from token OR s
 - **Activity** — one time-sorted feed (`activityRows`) merging `GET /calls` (proxy calls) + `GET /runs`
   (CLI executions). Local runs now arrive via `/runs` (tagged `where`), so the calls feed **excludes**
   `local_run` rows to avoid double-counting, and each run row shows a **local/server** chip.
+  The feed shows **successes only by default** (`actOkOnly`, `activityShown` filters on `ok`);
+  a "Show all (N)" / "Successes only" button toggles failed and refused rows in, and the empty
+  state offers the same switch when every recent call failed.
   A call row is clickable (`openCall` → `callView`, a right-side drawer in the `epTry` pattern)
   and loads `GET /calls/{id}/result`: the request line (method + vendor URL before injection),
   the response (status · media type · size · fetch time, JSON pretty-printed by `pretty`, a Copy
