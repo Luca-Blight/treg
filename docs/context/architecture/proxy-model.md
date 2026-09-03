@@ -267,7 +267,14 @@ produced the status (`treg_refused` / `gateway_failed` / `vendor_error` / `ok`),
 refusals never sum into a vendor's line; `refused_by`, `call_ref` (the join key to `callrecord`),
 `cached`, `smoothed`, `hit`, `response_bytes`, `capacity_signal` (the signature table's kind, catalog
 calls only) and the caller's `user_agent` / `ua_family`, which is what the vendor's edge saw because
-relay forwards it verbatim. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
+relay forwards it verbatim. **One event per request, and it says what the caller got:** when overflow
+rescues a call, the parent's event is held back (`_audit(..., defer_analytics=True)`) until the child
+cycle's verdict, and the event that goes out is the child's - the served status, `outcome=ok`,
+`tier=platform-overflow`, `served_via=overflow:<aggregator>`, the aggregator's price - never a
+`refused_by=capacity` 503 or the vendor's 4xx for a request that was answered (one night's dashboard
+counted 2,012 rescued calls among 4,455 "refusals"). Both attempts keep their DB rows on the same
+`call_ref`. When overflow does not rescue, the parent's event goes out as it was. Methods allowed:
+GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
 
 **Resolution + error hardening:** the URL-passthrough prefix match respects a **path-segment boundary**
 (`norm == base` or `base + "/"`), so `.../v1` no longer matches `.../v10/...` and inject the wrong

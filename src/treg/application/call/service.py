@@ -545,11 +545,30 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
     audit_org_id, audit_email, audit_tool = caller.org_id, caller.email, tool.name
     audit_slug = caller.org.slug  # PostHog group key — must match the browser's posthog.group('team', slug)
 
+    def _capture(props: dict) -> None:
+        analytics.capture(audit_email, "tool_called", props, groups={"team": audit_slug})
+
+    def _overflow_event(props: dict, outcome, charged: int) -> dict:
+        """What a caller rescued by overflow actually experienced: the child's answer at the
+        aggregator's price, tier platform-overflow. The direct attempt keeps its own DB row (the
+        child has one too, on the same call_ref); the dashboard sees ONE event per request, and
+        not a refusal for a request that was answered (2,012 of one night's 4,455 "refusals" were)."""
+        status = outcome.response.status
+        return props | {"status_code": status, "outcome": _outcome(status, None, answered=True),
+                        "refused_by": None, "tier": "platform-overflow",
+                        "served_via": f"overflow:{outcome.aggregator}", "charged_micro": charged,
+                        "observed_micro": outcome.observed_micro if outcome.observed_micro is not None else charged,
+                        "response_bytes": len(outcome.body)}
+
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None,
                refused_by: str | None = None, hit: bool | None = None,
                error_request: str | None = None, error_response: str | None = None,
-               capacity_signal: str | None = None, answered: bool = True) -> None:
+               capacity_signal: str | None = None, answered: bool = True,
+               defer_analytics: bool = False) -> dict | None:
+        """Records the audit row now. The PostHog mirror goes out now too, unless
+        `defer_analytics`: then the props come back for the caller to `_capture` once it knows
+        whether overflow turned this attempt into an answer."""
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
@@ -602,7 +621,10 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                       "capacity_signal": capacity_signal, "probe": mk.probe_lock_id is not None}
         else:
             props["provider"] = urlsplit(upstream_url).hostname or ""
-        analytics.capture(audit_email, "tool_called", props, groups={"team": audit_slug})
+        if defer_analytics:
+            return props
+        _capture(props)
+        return None
 
     # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
     # exact seeded stripe tool (fingerprint-matched; see sandbox.is_live_tool) relays to the real
@@ -682,8 +704,9 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         # attempt, no parent hold — straight to the child cycle (plan §4 ladder, tier 4b). The DB
         # phase ends here; the child places its own hold and the aggregator answers with none open.
         await db.commit()
-        _audit(503, charged_micro=0, refused_by="capacity",
-               error_response="treg: own account exhausted — served via overflow" )
+        pending = _audit(503, charged_micro=0, refused_by="capacity",
+                         error_response="treg: own account exhausted — served via overflow",
+                         defer_analytics=True)
         try:
             outcome = await overflow_cycle.maybe_overflow(
                 mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=402,
@@ -691,9 +714,11 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 query_items=request.query_params.multi_items(), caller_body=caller_body,
                 client=upstream_client, audit_client=_client_name(request), force_trigger="exhausted")
         except asyncio.CancelledError:
+            _capture(pending)
             await _finish_cancelled_call(request, mk, call_ref)
             raise
         if outcome is None or not outcome.served or outcome.response is None:
+            _capture(pending)  # a refusal after all
             request.state.call_cost_micro = 0
             from .resolve import _provider_capacity_unavailable
             raise (outcome.failure if outcome is not None and outcome.failure is not None
@@ -701,6 +726,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                        _catalog_endpoint_for(mk.endpoint_id) or {"id": mk.endpoint_id},
                        mk.provider, capacity_view.exhausted_until(mk.provider, mk.endpoint_id)))
         response, body, charged = outcome.response, outcome.body, outcome.charged_micro
+        _capture(_overflow_event(pending, outcome, charged))
         if idem_key:
             try:
                 await _store_idempotent(idem_key, caller, status_code=response.status, body=body,
@@ -979,14 +1005,16 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                     tool, caller_body, _renderings)
                 err_response = _error_response_evidence(
                     response.raw_headers, body, _renderings)
-        _audit(response.status, observed_micro=observed, charged_micro=charged,
-               duration_ms=duration_ms, response_bytes=len(body), hit=_hit_verdict(mk, response.status, body),
-               capacity_signal=capacity_signal, error_request=err_request, error_response=err_response)
+        may_overflow = response.status >= 400 and mk.tier == "platform"
+        pending = _audit(response.status, observed_micro=observed, charged_micro=charged,
+                         duration_ms=duration_ms, response_bytes=len(body), hit=_hit_verdict(mk, response.status, body),
+                         capacity_signal=capacity_signal, error_request=err_request, error_response=err_response,
+                         defer_analytics=may_overflow)
         served_via = ""
-        if response.status >= 400 and mk.tier == "platform":
+        if may_overflow:
             # Overflow (plan §4.3): the primary attempt is settled ($0) and audited above; a child
             # cycle may now serve the SAME endpoint through an aggregator. Off by default; shadow
-            # mode returns the vendor's answer regardless.
+            # mode returns the vendor's answer regardless. The event waits for the verdict.
             try:
                 outcome = await overflow_cycle.maybe_overflow(
                     mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=response.status,
@@ -994,18 +1022,24 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                     query_items=request.query_params.multi_items(), caller_body=caller_body,
                     client=upstream_client, audit_client=_client_name(request))
             except asyncio.CancelledError:
+                _capture(pending)
                 await _finish_cancelled_call(request, mk, call_ref, response)
                 raise
             except CallFailure as exc:  # the child's own 402 (insufficient balance for the child hold)
+                _capture(pending)
                 request.state.call_cost_micro = 0
                 raise
             if outcome is not None and outcome.failure is not None:
+                _capture(pending)
                 request.state.call_cost_micro = 0
                 raise outcome.failure
             if outcome is not None and outcome.served and outcome.response is not None:
                 await response.close()
                 response, body, charged = outcome.response, outcome.body, outcome.charged_micro
                 served_via = f"overflow:{outcome.aggregator}"
+                _capture(_overflow_event(pending, outcome, charged))
+            else:
+                _capture(pending)  # the vendor's own answer stands
         if idem_key:
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the
