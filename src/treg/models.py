@@ -227,7 +227,12 @@ class CallRecord(SQLModel, table=True):
     # biggest table in the database — without this it is two full scans per panel poll (measured
     # 78s on prod at 425k archive keys, 2026-09-03). Partial because hits are a sliver of rows.
     __table_args__ = (Index("ix_callrecord_cached_true", "cached",
-                            postgresql_where=text("cached"), sqlite_where=text("cached")),)
+                            postgresql_where=text("cached"), sqlite_where=text("cached")),
+                      # The panel's per-endpoint event feed: "this endpoint's newest 30 calls".
+                      # Without the pair, the planner walked the WHOLE table backward via the
+                      # primary key, testing endpoint_id row by row — measured 7.5s per click on
+                      # prod (2026-09-03). With it, the same question is a 30-row index read.
+                      Index("ix_callrecord_endpoint_id_id", "endpoint_id", "id"),)
 
     id: int | None = Field(default=None, primary_key=True)
     org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
