@@ -626,6 +626,20 @@
   @media (prefers-reduced-motion: reduce) {
     .caret { animation: none; }
   }
+  /* ---- sign-in modal: stays on this page, no hop to the dashboard's landing ---- */
+  .scrim { position: fixed; inset: 0; background: rgba(26,26,26,.55); display: none; place-items: center; z-index: 200; padding: 20px; backdrop-filter: blur(6px); }
+  .scrim.open { display: grid; }
+  .smodal { width: min(400px, 94vw); background: #fff; border-radius: 20px; padding: 30px 28px; text-align: center; position: relative; box-shadow: 0 30px 90px -38px rgba(20,18,12,.4); }
+  .smodal .cls { position: absolute; top: 12px; right: 15px; background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
+  .smodal .cls:hover { color: var(--ink); }
+  .smodal h3 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 4px 0 6px; letter-spacing: -.015em; }
+  .smodal p { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 18px; }
+  .smodal .pill { width: 100%; justify-content: center; margin-top: 9px; box-sizing: border-box; }
+  .smodal .div { display: flex; align-items: center; gap: 10px; margin: 16px 0 6px; color: var(--muted); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; }
+  .smodal .div::before, .smodal .div::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .smodal input { width: 100%; margin-top: 9px; background: var(--card); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: 11px 13px; font-family: var(--mono); font-size: 13px; outline: none; box-sizing: border-box; }
+  .smodal input:focus { border-color: var(--ink); }
+  .smodal .err { color: #C0392B; font-size: 11.5px; margin-top: 10px; min-height: 14px; }
 </style>
 </head>
 <body>
@@ -634,7 +648,8 @@
   <span class="wordmark"><img class="wm-grok" data-icon="grokbot" alt=""> Grok Bot <span style="color:var(--muted);font-weight:400">×</span> <a href="/" style="display:inline-flex;align-items:center;gap:10px;color:inherit;text-decoration:none" aria-label="treg home"><svg class="wm-treg" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#101010"/><rect x="111" y="111" width="140.5" height="140.5" rx="20" fill="#fff"/><rect x="260.5" y="260.5" width="140.5" height="140.5" rx="20" fill="#fff"/></svg> treg</a></span>
   <span style="display:flex;gap:8px">
     <span class="nav-links"><a href="#bench">#1 in benchmark</a><a href="#pricing">Pricing</a><a href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> Open source</a><a href="https://x.com/treg_ai" target="_blank" rel="noopener" aria-label="treg on X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z"/></svg></a><a href="https://discord.gg/6mQYYfFMAn" target="_blank" rel="noopener" aria-label="treg on Discord"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z"/></svg></a></span>
-    <a class="pill dark" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
+    <a class="pill dark" href="/app?ref=grokbot" id="ctaNav">Setup treg</a>
+    <a class="pill" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
   </span>
 </nav>
 
@@ -643,7 +658,8 @@
   <h1>Connect <img class="h1-logo" data-icon="grokbot" alt=""> Grok Bot<br>to <svg class="h1-logo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#101010"/><rect x="111" y="111" width="140.5" height="140.5" rx="20" fill="#fff"/><rect x="260.5" y="260.5" width="140.5" height="140.5" rx="20" fill="#fff"/></svg> any data &amp; tools.</h1>
   <p class="sub">Install one plugin and your Bot can <strong>search, enrich, and verify contacts</strong> across Apollo, People&nbsp;Data&nbsp;Labs, Exa, Hunter — 60 providers, side by side. It fills the sheet and drafts the emails. You approve.</p>
   <div class="ctas">
-    <a class="pill dark" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
+    <a class="pill dark" href="/app?ref=grokbot" id="ctaHero">Setup treg</a>
+    <a class="pill" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
   </div>
 </header>
 
@@ -973,7 +989,8 @@
 <section class="cta-final">
   <h2>Connect your Bot to anything.</h2>
   <div class="ctas">
-    <a class="pill dark" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
+    <a class="pill dark" href="/app?ref=grokbot" id="ctaFinal">Setup treg</a>
+    <a class="pill" href="https://x.ai/bot/plugin/55647425" target="_blank" rel="noopener">Install plugin</a>
   </div>
   <div class="also-on">
     <span>Also available on</span>
@@ -998,6 +1015,89 @@
   </div>
   <div class="sf-legal">© 2026 treg · A treg concept page — Grok Bot is a product of xAI; not affiliated with or endorsed by xAI.</div>
 </footer>
+
+<!-- sign-in modal: shown when a Setup CTA is clicked while signed out -->
+<div class="scrim" id="signin-scrim">
+  <div class="smodal" role="dialog" aria-label="Sign in">
+    <button class="cls" id="signinClose" aria-label="Close">✕</button>
+    <h3>Sign in to treg</h3>
+    <p>first sign-in creates your account · $1.00 free</p>
+    <a class="pill dark" href="/auth/github" style="text-decoration:none">Continue with GitHub</a>
+    <a class="pill" href="/auth/google" style="text-decoration:none">Continue with Google</a>
+    <div class="div">or email a code</div>
+    <div id="em-step1">
+      <input id="em-input" type="email" placeholder="you@work.com"/>
+      <button class="pill" id="em-btn1">Email me a sign-in code</button>
+    </div>
+    <div id="em-step2" style="display:none">
+      <input id="em-code" inputmode="numeric" placeholder="6-digit code"/>
+      <button class="pill dark" id="em-btn2">Sign in</button>
+    </div>
+    <div class="err" id="em-err"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ---------- Setup CTAs: signed in → the app; signed out → the sign-in modal, right here ---------- */
+  /* The dashboard's first-run welcome preselects Grok Bot when it finds this stash (index.html
+     `_welcomeAgentFromRef`); set before any sign-in hop so OAuth round-trips keep it. */
+  function stashRef() { try { localStorage.setItem('treg-ref', 'grokbot'); } catch (e) {} }
+  var scrim = document.getElementById('signin-scrim');
+  function openSignin() { stashRef(); scrim.classList.add('open'); document.getElementById('em-input').focus(); }
+  function closeSignin() { scrim.classList.remove('open'); }
+  document.getElementById('signinClose').addEventListener('click', closeSignin);
+  scrim.addEventListener('click', function (e) { if (e.target === scrim) closeSignin(); });
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSignin(); });
+  ['ctaNav', 'ctaHero', 'ctaFinal'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', function (e) {
+      stashRef();
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; /* let new-tab clicks be */
+      e.preventDefault();
+      fetch('/auth/me', { credentials: 'same-origin' }).then(function (r) {
+        if (r.ok) location.href = '/app'; else openSignin();
+      }).catch(openSignin);
+    });
+  });
+  document.getElementById('em-btn1').addEventListener('click', emailStart);
+  document.getElementById('em-input').addEventListener('keyup', function (e) { if (e.key === 'Enter') emailStart(); });
+  document.getElementById('em-btn2').addEventListener('click', emailVerify);
+  document.getElementById('em-code').addEventListener('keyup', function (e) { if (e.key === 'Enter') emailVerify(); });
+  function emailStart() {
+    var em = document.getElementById('em-input').value.trim();
+    var err = document.getElementById('em-err');
+    if (!em) { err.textContent = 'Enter your email address.'; return; }
+    document.getElementById('em-btn1').textContent = 'Sending…'; err.textContent = '';
+    fetch('/auth/email/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: em }) })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok) throw new Error(d.detail || 'could not send the code');
+          return d;
+        });
+      })
+      .then(function (d) {
+        document.getElementById('em-step1').style.display = 'none';
+        document.getElementById('em-step2').style.display = 'block';
+        if (d.dev_code) { document.getElementById('em-code').value = d.dev_code; err.style.color = 'var(--green)'; err.textContent = 'dev mode — your code: ' + d.dev_code; }
+        else { err.style.color = ''; }
+        document.getElementById('em-code').focus();
+      })
+      .catch(function (e2) { err.textContent = e2.message; document.getElementById('em-btn1').textContent = 'Email me a sign-in code'; });
+  }
+  function emailVerify() {
+    var em = document.getElementById('em-input').value.trim();
+    var code = document.getElementById('em-code').value.trim();
+    var err = document.getElementById('em-err');
+    if (!code) return;
+    document.getElementById('em-btn2').textContent = 'Verifying…'; err.textContent = '';
+    fetch('/auth/email/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: em, code: code }) })
+      .then(function (r) { if (!r.ok) return r.json().catch(function () { return {}; }).then(function (d) { throw new Error(d.detail || "that code didn't work"); }); location.href = '/app'; })
+      .catch(function (e2) { err.textContent = e2.message; document.getElementById('em-btn2').textContent = 'Sign in'; });
+  }
+})();
+</script>
 
 <script>
 (function () {

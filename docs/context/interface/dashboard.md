@@ -305,8 +305,9 @@ Server side (`domain.identity.access`): `require_identity` (who, from token OR s
   labeled **"Your vault"** — Jason's explicit naming call, overriding the no-"vault" vocabulary rule) —
   two numbered **step cards** (`.start-card`):
   **① Set up your \<agent\>** — an agent dropdown (`startAgentOpen`, shares `welcome.agent` +
-  `welcomeAgents`/`welcomeMoreAgents` with the first-run modal; "Docs" links `/tutorial`) above the
-  per-agent setup line (`welcomeSetupCmd` = `buildAgentPrompt` — `set up treg — <proxy>/llms.txt with token <T>, team <slug>`; the long multi-step agent prompt is retired, llms.txt itself now carries the setup flow, the do-not-stop authorization framing and the star ask, and its money rules no longer demand per-call price confirmation) and, combined into the
+  `welcomeAgents`/`welcomeMoreAgents` with the first-run modal; "Docs" links `/tutorial`; the pick is
+  remembered in `localStorage` `treg-agent`) above an **"install the treg plugin"** link for agents whose
+  entry carries a `plugin` URL (Grok Bot) and the per-agent setup line (`welcomeSetupCmd` = `buildAgentPrompt` — `set up treg — <proxy>/llms.txt with token <T>, team <slug>`; the long multi-step agent prompt is retired, llms.txt itself now carries the setup flow, the do-not-stop authorization framing and the star ask, and its money rules no longer demand per-call price confirmation) and, combined into the
   same card, **Your API key** (`myToken`, masked with a `startTokenShow` reveal + copy — the key
   already exists, so there is no "create key" step). **② Try it out** — four copyable example
   prompts (`tryExamples`, category-labeled `.try-card`s: Social/Trends/SEO/Enrichment — concrete
@@ -341,10 +342,12 @@ Server side (`domain.identity.access`): `require_identity` (who, from token OR s
   shows a **mandatory "name your team" welcome** (`welcome.*`; team name pre-suggested from the email
   domain via `_suggestTeamName`). Step 0 is NOT dismissable — no skip, survives Escape/backdrop — the only
   action is `welcomeCreate` (`POST /orgs`, marks onboarded). Three more steps follow **inside the same
-  modal**: an **agent picker** (`welcome.step===1` — OpenClaw / Hermes Agent / Claude.ai / Claude Code /
-  Codex, plus a "More" expander with opencode / pi / Cursor / Gemini CLI / Other; LobeHub icons via
-  unpkg, theme-aware light/dark variants through `agentIcon`) with Skip/Next; the **setup block**
-  (`step===2` — "In your agent's chat, send:", the setup line + team/token as one unit —
+  modal**: an **agent picker** (`welcome.step===1` — OpenClaw / Grok Bot / Hermes Agent / Claude.ai /
+  Claude Code / Codex, plus a "More" expander with opencode / pi / Cursor / Gemini CLI / Other; LobeHub icons via
+  unpkg, theme-aware light/dark variants through `agentIcon`, except Grok Bot's bundled
+  `/logos/agents/grokbot.png`; `/app?ref=<agent-id>` from a landing preselects the card) with Skip/Next; the **setup block**
+  (`step===2` — "In your agent's chat, send:", the setup line + team/token as one unit; for a `plugin`
+  agent (Grok Bot) an "Install the treg plugin" link precedes it as step 1 and the line becomes step 2 —
   `welcomeSetupFull` copies with the real token, `welcomeSetupMasked` displays it masked behind a
   Show/Hide-key toggle) with Back/Next; and **"Try it out"** (`step===3`, wider modal — a "waiting for your agent" status line (pulsing
   `.wc-waitdot`, no 🎉), the `tryExamples` copy cards and the `tryOauth` connect chips, footer **"Skip"**

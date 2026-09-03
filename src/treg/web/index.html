@@ -2684,7 +2684,11 @@ a:hover{text-decoration-color:var(--muted)}
             </div>
             <div class="start-bd">
               <p class="sub" style="display:flex;align-items:center;gap:8px;margin:0 0 14px"><img v-if="welcomeAgent.icon" :src="agentIcon(welcomeAgent.icon)" alt="" style="width:17px;height:17px" onerror="this.style.visibility='hidden'"/>Setting up treg for <b style="color:var(--ink)">{{welcomeAgent.name}}</b></p>
-              <p style="font-family:var(--sans);font-size:14px;margin:0 0 10px">In your agent's chat, send:</p>
+              <template v-if="welcomeAgent.plugin">
+                <p style="font-family:var(--sans);font-size:14px;margin:0 0 10px">First, install the treg plugin:</p>
+                <a class="btn" :href="welcomeAgent.plugin" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:16px" @click="track('onboarding_plugin_install_clicked',{agent:welcome.agent,from:'start'})"><img :src="agentIcon(welcomeAgent.icon)" alt="" style="width:16px;height:16px"/>Install plugin in {{welcomeAgent.name}} ↗</a>
+              </template>
+              <p style="font-family:var(--sans);font-size:14px;margin:0 0 10px">{{welcomeAgent.plugin ? "Then, in your Bot's chat, send:" : "In your agent's chat, send:"}}</p>
               <div class="lc-codewrap"><button class="lc-cp" @click="copyStart(welcomeSetupCmd,'gsc')">{{startCopied==='gsc'?'✓ copied':'copy'}}</button><pre>{{welcomeSetupCmd}}</pre></div>
               <template v-if="myToken">
                 <div class="lbl" style="margin-top:22px">Your API key</div>
@@ -3400,10 +3404,15 @@ product, including per-customer usage tracking and billing.</pre>
           </template>
           <template v-else-if="welcome.step===2">
             <p class="sub" style="display:flex;align-items:center;gap:8px;margin:0 0 16px"><img v-if="welcomeAgent.icon" :src="agentIcon(welcomeAgent.icon)" alt="" style="width:18px;height:18px" onerror="this.style.visibility='hidden'"/>Setting up treg for <b style="color:var(--ink)">{{welcomeAgent.name}}</b></p>
-            <h2 style="margin:0 0 14px;font-size:19px">In your agent's chat, send:</h2>
+            <template v-if="welcomeAgent.plugin">
+              <h2 style="margin:0 0 10px;font-size:19px">1. Install the treg plugin</h2>
+              <a class="btn" :href="welcomeAgent.plugin" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:18px" @click="track('onboarding_plugin_install_clicked',{agent:welcome.agent})"><img :src="agentIcon(welcomeAgent.icon)" alt="" style="width:16px;height:16px"/>Install plugin in {{welcomeAgent.name}} ↗</a>
+              <h2 style="margin:0 0 14px;font-size:19px">2. In your Bot's chat, send:</h2>
+            </template>
+            <h2 v-else style="margin:0 0 14px;font-size:19px">In your agent's chat, send:</h2>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart(welcomeSetupFull,'wc')">{{startCopied==='wc'?'✓ copied':'copy'}}</button><pre style="white-space:pre-wrap;word-break:break-all">{{welcomeSetupMasked}}</pre></div>
             <a v-if="myToken" href="#" class="sub" style="font-size:12px;display:inline-block;margin-top:6px" @click.prevent="startTokenShow=!startTokenShow">{{startTokenShow?'Hide':'Show'}} key</a>
-            <p class="sub" style="font-size:12px;margin:12px 0 0">Your agent reads that file and signs in with your team &amp; token — it installs the CLI and starts calling tools.</p>
+            <p class="sub" style="font-size:12px;margin:12px 0 0">{{welcomeAgent.plugin ? 'Your Bot reads that file and signs in with your team & token — then it can call every tool in the catalog.' : 'Your agent reads that file and signs in with your team & token — it installs the CLI and starts calling tools.'}}</p>
             <div class="wc-foot">
               <a href="#" class="sub" @click.prevent="welcome.step=1">← Back</a>
               <button class="btn primary" @click="welcome.step=3">Next →</button>
@@ -4216,6 +4225,7 @@ createApp({
     // first-run welcome: the agent picker (step 1) and the per-agent setup line (step 2)
     welcomeAgents(){ return [
       {id:'openclaw', name:'OpenClaw', icon:'openclaw-color'},
+      {id:'grokbot', name:'Grok Bot', icon:'/logos/agents/grokbot.png', plugin:'https://x.ai/bot/plugin/55647425'},  // bundled mark (no lobehub icon for the Bot product); `plugin` = the install step shown before the setup line
       {id:'hermes', name:'Hermes Agent', icon:'hermesagent'},
       {id:'claudeai', name:'Claude.ai', icon:'claude-color'},
       {id:'claude-code', name:'Claude Code', icon:'claudecode-color'},
@@ -4421,6 +4431,7 @@ createApp({
     newTool(v){ this.focusOverlay(v); }, newSkill(v){ this.focusOverlay(v); }, newOrg(v){ this.focusOverlay(v); },
     showJoin(v){ this.focusOverlay(v); }, addOrg(v){ this.focusOverlay(v); }, copyTool(v){ this.focusOverlay(v); },
     tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); }, reqAsk(v){ this.focusOverlay(v); },
+    'welcome.agent'(v){ try{ localStorage.setItem('treg-agent', v); }catch(e){} },  // see _restoreAgent
   },
   methods:{
     focusOverlay(open){ if(!open) return; this.$nextTick(()=>{ const el=document.querySelector('.scrim input,.scrim textarea,.scrim button,.drawer input,.drawer button'); el&&el.focus(); }); },
@@ -5081,12 +5092,18 @@ createApp({
       // Invited here? Show an ACCEPT-INVITE page (join those teams) instead of forcing them to create a
       // throwaway team of their own (confusing: they'd end up with two). Decline → create-team.
       if(this.pendingInvites.length){ this.openInviteChoice(); return; }
-      this.welcome.name=this._suggestTeamName(); this.welcome.on=true; },
+      this.welcome.name=this._suggestTeamName(); this._welcomeAgentFromRef(); this.welcome.on=true; },
+    _welcomeAgentFromRef(){  // /grokbot's "Setup treg" CTA → the welcome already has Grok Bot picked; any other ref is ignored
+      let r=null; try{ r=localStorage.getItem('treg-ref'); localStorage.removeItem('treg-ref'); }catch(e){}
+      if(r && this.welcomeAgents.concat(this.welcomeMoreAgents).some(a=>a.id===r)) this.welcome.agent=r; },
+    _restoreAgent(){  // the picked agent survives a reload, so Getting started keeps showing the right setup steps
+      let r=null; try{ r=localStorage.getItem('treg-agent'); }catch(e){}
+      if(r && this.welcomeAgents.concat(this.welcomeMoreAgents).some(a=>a.id===r)) this.welcome.agent=r; },
     openInviteChoice(){  // seed the multi-select: ALL pending invites checked by default
       this.inviteErr=''; this.inviteSel={}; this.pendingInvites.forEach(i=>{ this.inviteSel[i.id]=true; });
       this.inviteChoice=true; },
     declineInvite(){ this.inviteChoice=false; this.inviteLinkOrg=null;
-      if(this.inviteFirstRun){ this.welcome.name=this._suggestTeamName(); this.welcome.on=true; } },  // first-run: "create my own team instead"; otherwise just close
+      if(this.inviteFirstRun){ this.welcome.name=this._suggestTeamName(); this._welcomeAgentFromRef(); this.welcome.on=true; } },  // first-run: "create my own team instead"; otherwise just close
     async acceptSelectedInvites(){  // accept every checked invite, then drop into the linked (or first) team
       const picked=this.selectedInvites; if(!picked.length) return;
       this.inviteBusy=true; this.inviteErr='';
@@ -5128,10 +5145,12 @@ createApp({
       finally{ this.welcome.busy=false; } },
     welcomeFinish(){ this.track('onboarding_finished',{agent:this.welcome.agent, step:this.welcome.step}); this.welcome.on=false; this.go('start');
       this.orgMsg='Team created. Send your agent the setup line any time — it lives on Getting started.'; },
-    agentIcon(icon){ return 'https://unpkg.com/@lobehub/icons-static-png@latest/'+(this.theme==='dark'?'dark':'light')+'/'+icon+'.png'; },
+    agentIcon(icon){ if(icon.startsWith('/')) return icon;  // bundled under /logos — same mark in both themes
+      return 'https://unpkg.com/@lobehub/icons-static-png@latest/'+(this.theme==='dark'?'dark':'light')+'/'+icon+'.png'; },
     // For logos that sit ON a .btn.primary: its background is the theme's INVERSE, so the icon
     // variant has to flip too or a dark glyph lands on a dark button.
-    agentIconInv(icon){ return 'https://unpkg.com/@lobehub/icons-static-png@latest/'+(this.theme==='dark'?'light':'dark')+'/'+icon+'.png'; },
+    agentIconInv(icon){ if(icon.startsWith('/')) return icon;
+      return 'https://unpkg.com/@lobehub/icons-static-png@latest/'+(this.theme==='dark'?'light':'dark')+'/'+icon+'.png'; },
     // Product analytics — only when this deployment opted in (meta.posthog_key present); self-hosters send nothing.
     initAnalytics(){
       // /sitetrack.js (loaded at the bottom of this page, before Vue mounts) normally initialises
@@ -6103,6 +6122,7 @@ createApp({
     const qs = new URLSearchParams(location.search);
     const linkOrg = qs.get('invite_org'), inv = qs.get('invite'), ref = qs.get('ref'), oauthSignin = qs.get('signin')==='oauth';
     this.oauthSignin=oauthSignin;
+    if(ref){ try{ localStorage.setItem('treg-ref', ref); }catch(e){} }  // survives the sign-in reload so the welcome can preselect the agent the landing was about (see maybeOnboard)
     if(linkOrg || inv || qs.get('invite_expired') || ref || oauthSignin){ history.replaceState(null,'',location.pathname+location.hash); }  // strip one-shot params so reload/share doesn't replay them
     if(linkOrg){ this.inviteLinkOrg=parseInt(linkOrg,10)||null; }
     // A shared detail deep link (/app/skills/<x>, /app/tools/<x>) — from the URL itself, or stashed
@@ -6120,6 +6140,7 @@ createApp({
         route=this.routeFromPath(stashed); mkRoute=this.mkFromPath(stashed);
         if(route||mkRoute) history.replaceState(null,'',stashed);
       } }
+    this._restoreAgent();
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
     if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; this.icHash=me.intercom_user_hash||''; await this.loadAll(); this.analyticsIdentify(); this.initIntercom();
       // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and

@@ -140,11 +140,18 @@ The old docked "Getting started" stepper (`onb.*` state, `.onb-panel`/`.onb-push
 now is a **four-step welcome modal**: boot reads `onboarded` from `/auth/me`; `maybeOnboard()` opens it
 only for a non-onboarded session with **no team yet**. Step 0 names the team (`welcomeCreate` → `POST /orgs`,
 marks onboarded via `/onboard/skip`); step 1 asks **which agent you're using** (picker with LobeHub icons,
-skippable); step 2 shows the per-agent **setup block** — the setup line and the team+token as ONE
+skippable; **Grok Bot** is a card too, with a bundled mark at `/logos/agents/grokbot.png` — `agentIcon`
+uses an absolute path verbatim); step 2 shows the per-agent **setup block** — for an agent whose entry
+carries a `plugin` URL (Grok Bot → the x.ai plugin page) an **"1. Install the treg plugin"** link comes
+first and the setup line is step 2 — the setup line and the team+token as ONE
 copyable unit (`welcomeSetupFull` copies the real token; `welcomeSetupMasked` renders it masked with a
 Show/Hide-key toggle, `startTokenShow`); step 3 is **"Try it out"** — a "waiting for your agent" status (pulsing `.wc-waitdot`, no 🎉), the
 same `tryExamples` copy cards AND the `tryOauth` connect chips as the Getting-started page, footer
-**"Skip"** (`welcomeFinish`) + **"Browse all catalog →"** (`go('connections')`). Finishing (or skipping) lands on **`#start`** (Getting started) — also the default
+**"Skip"** (`welcomeFinish`) + **"Browse all catalog →"** (`go('connections')`). A use-case landing's CTA
+(`/app?ref=grokbot` from `/grokbot`'s "Setup treg") **preselects that agent**: the `ref` param is stashed in
+`localStorage` (`treg-ref`) because sign-in reloads the page, and `_welcomeAgentFromRef` consumes it when the
+welcome opens (unknown refs are ignored). The picked agent itself persists as `treg-agent` (a `welcome.agent`
+watcher; `_restoreAgent` at boot) so Getting started keeps showing the same steps after a reload. Finishing (or skipping) lands on **`#start`** (Getting started) — also the default
 view for ANY signed-in arrival at `/app` with no deep link or hash. `/onboard/seed-tool` and
 `/onboard/accept-teammate` no longer have a dashboard caller (the CLI/demo paths don't use them either);
 **"Remove demo"** (`resetDemo` → `/onboard/reset`) remains in Help. A clay **`demo` chip** marks a demo org.
