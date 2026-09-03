@@ -112,7 +112,7 @@ async def _overflow_verify(args) -> int:
         rows = (await db.execute(select(OverflowRoute))).scalars().all()
     todo = [r for r in rows if args.all or r.enabled or r.last_verified_at]
     keys = {"orthogonal": s.overflow_key_orthogonal, "monid": s.overflow_key_monid}
-    passed = failed = skipped = 0
+    passed = failed = skipped = unreachable = 0
     # One SHORT transaction per route. The first prod run (2026-08-28) kept a single session open
     # across every network round-trip: each `db.get` autoflushed the previous row's UPDATE, the row
     # locks piled up for minutes, and db.py's 5 s lock_timeout — there to keep the worker from
@@ -158,19 +158,24 @@ async def _overflow_verify(args) -> int:
                 if v.passed:
                     row.last_verified_at = v.verified_at or utcnow_naive()
                     passed += 1
+                elif V.aggregator_failed(v):
+                    # Our key or the aggregator itself, not this route: leave the row as it is.
+                    unreachable += 1
                 else:
                     failed += 1
                     if row.enabled:
                         row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
                 row.updated_at = utcnow_naive()
                 await db.commit()
-            print(f"{'ok ' if v.passed else 'FAIL'} {r.endpoint_id} via {r.aggregator} "
+            tag = "ok " if v.passed else "AGG " if V.aggregator_failed(v) else "FAIL"
+            print(f"{tag} {r.endpoint_id} via {r.aggregator} "
                   f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
-    print(f"verified {passed}, failed {failed}, skipped {skipped}")
-    # A failed ROUTE is a result (its row is disabled with the reason); only a run that verified
-    # NOTHING — no keys, empty table, aggregator down — is a failed run (ops/capacity.md).
-    if passed == 0:
-        print("overflow verify: nothing verified — check aggregator keys and route table", file=sys.stderr)
+    print(f"verified {passed}, failed {failed}, skipped {skipped}, aggregator errors {unreachable}")
+    # A failed ROUTE is a result (its row is disabled with the reason). A failed RUN is one that
+    # could not verify: an aggregator refused our key / ran dry / was unreachable, or nothing was
+    # attempted at all (ops/capacity.md).
+    if unreachable or passed + failed == 0:
+        print("overflow verify: run failed - check aggregator keys, balances and the route table", file=sys.stderr)
         return 1
     return 0
 

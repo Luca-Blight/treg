@@ -182,7 +182,7 @@ def test_signature_table_classifies_balance_quota_and_burst():
 
 # Apollo API reference, "422 Unprocessable Entity": the body an empty credit pool gets (live 2026-09-01).
 APOLLO_OUT_OF_CREDITS = b'{"error": "Insufficient credits. Please upgrade your plan."}'
-# The SAME status for a caller's mistake — must never read as our account running dry.
+# The SAME status for a caller's mistake - must never read as our account running dry.
 APOLLO_VALIDATION = b'{"error": "Please provide at least one of: first_name, last_name, email"}'
 
 
@@ -198,10 +198,19 @@ def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
     """The next Apollo: a 4xx no row matched whose body still names credits/quota/balance. It is
     logged and counted (`capacity_signal=unrecorded`) and does nothing else."""
     sig = S.classify("someone", 403, None, b'{"message":"Your quota has been exceeded"}')
-    assert sig.kind == "unrecorded" and sig.detail == "quota" and not S.is_exhausting(sig)
+    assert sig.kind == "unrecorded" and sig.detail == "quota has been exceeded" and not S.is_exhausting(sig)
     # a phrase recorded for ONE vendor arms the tripwire for every other
     assert S.classify("someone", 400, None, b"Not enough credits").kind == "unrecorded"
     assert S.classify("someone", 422, None, b'{"error":"insufficient parameters: first_name"}') is None
+    # echoes of a caller's own request: period words, path names, half-words
+    assert S.classify("coingecko", 400, None, b'{"error":"invalid interval: daily"}') is None
+    assert S.classify("exa", 400, None, b"unbalanced quotes in query") is None
+    assert S.classify("tikhub", 400, None, b"unterminated quotation mark") is None
+    assert S.classify("twelvedata", 400, None, b"/balance_sheet: symbol parameter is missing") is None
+    # a rowless vendor saying it with a 429 and no retry-after trips the same wire, not `unknown`
+    sig = S.classify("serpstat", 429, None, b'{"error":"Your monthly quota has been exhausted"}')
+    assert sig.kind == "unrecorded" and sig.detail == "quota has been exhausted"
+    assert S.classify("scrapecreators", 429, None, b"slow down").kind == "unknown"
     assert S.classify("someone", 401, None, b'{"error":"insufficient credits"}') is None, "401 is the key"
     assert S.classify("someone", 404, None, b'{"error":"no balance found for id"}') is None
     assert S.classify("someone", 500, None, b'{"error":"balance service down"}') is None

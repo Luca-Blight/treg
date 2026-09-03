@@ -490,6 +490,39 @@ async def test_apollo_out_of_credits_422_on_tier4_overflows_through_orthogonal(c
     assert lock.strikes == 1 and not lock.is_active(), "the 422 was read as OUR account running dry: a strike, not the caller's mistake"
 
 
+APOLLO_SEARCH = "apollo.companies.search"      # POST /mixed_companies/search, per_call: a 4xx is normally billable
+APOLLO_SEARCH_PATH = "/mixed_companies/search"
+
+
+async def test_apollo_out_of_credits_on_a_per_call_endpoint_is_never_billed_to_the_caller(clients: AsyncClient, platform_on, monkeypatch):
+    """`per_call` bills a 422 as the caller's input error. Not this one: the table says it is OUR
+    account, so the hold is released, and the caller pays nothing for treg's empty pool."""
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
+    before = await _balance(clients)
+    r = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
+    assert r.status_code == 422 and r.content == APOLLO_OUT_OF_CREDITS
+    assert await _balance(clients) == before and await _holds() == []
+    entries = [e for e in await _rows(LedgerEntry) if e.kind != "grant"]
+    assert sorted(e.kind for e in entries) == ["release", "reserve"]
+    assert next(e for e in entries if e.kind == "release").meta.get("reason") == "capacity_balance"
+
+
+async def test_apollo_out_of_credits_on_a_per_call_endpoint_pays_the_aggregator_once(clients: AsyncClient, overflow_on, monkeypatch):
+    await _route(endpoint_id=APOLLO_SEARCH, provider="apollo", method="POST", path=APOLLO_SEARCH_PATH, price_micro=10_000, ratio=0.38)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
+    seen = []
+    envelope = {"success": True, "data": {"organizations": [{"id": "o1"}]}, "priceCents": 1.0, "requestId": "run_b",
+                "billing": {"chargedPriceCents": 1.0}}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+    before = await _balance(clients)
+    r = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
+    assert r.status_code == 200 and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal"
+    assert before - await _balance(clients) == 10_000, "the aggregator's price once; the parent 422 was released, not settled"
+    parent = r.headers["X-Treg-Call-Id"]
+    kinds = sorted((e.kind, e.call_id or "") for e in await _rows(LedgerEntry) if e.kind != "grant")
+    assert kinds == sorted([("reserve", parent), ("release", parent), ("reserve", f"{parent}:overflow"), ("settle", f"{parent}:overflow")])
+
+
 async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):
     await _route(endpoint_id=APOLLO_EP, provider="apollo", method="POST", path=APOLLO_PATH, price_micro=10_000, ratio=0.38)
     monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_VALIDATION))

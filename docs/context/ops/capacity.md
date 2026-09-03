@@ -144,7 +144,7 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   credits"), recorded after 2026-09-01: eleven hours of `people.enrich` 422s with overflow on and
   not one attempt, because no row matched. Two guards against the next such vendor: `unrecorded`,
   a signal kind for a 4xx no row matched whose body still names credits/quota/balance (pattern =
-  the table's own phrases plus generic nouns) — never a mark, only a log line and
+  the table's own phrases plus generic nouns) - never a mark, only a log line and
   `capacity_signal=unrecorded` on `tool_called`; and the coverage guard in
   `tests/test_capacity_overflow_routes.py`, which fails when a `platform_key_*` provider has neither
   a table row nor an acknowledged gap. `edge_block` is the odd one out: the vendor's CDN refused the
@@ -164,14 +164,15 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   with the reason. `--max-usd` (default 2¢) is a per-route price cap, not a run budget: pricier
   routes are skipped, as are routes whose endpoint has no `test_request`. Without `--all` only
   enabled or previously-stamped rows are visited, so a never-verified pair never enters the rota;
-  run it with `--all`. Verify only STAMPS — `overflow sync` is what re-derives `enabled` from the
+  run it with `--all`. Verify only STAMPS - `overflow sync` is what re-derives `enabled` from the
   stamps, so **every verify is followed by a sync**; a route disabled by one failed verify is only
   re-enabled by that sync. A failed route is a result, not a failed run: the command exits 0 after
   completing (it used to exit 1 whenever any route failed, which made every Render run read
-  "failed"); it exits 1 only when it verified NOTHING (no route attempted, or every attempt
-  failed — keys revoked, aggregator down), so a schedule's failure notification still means
-  something. Spends real money; needs the aggregator keys in the env — a Render job, never the
-  dataplane. How it is scheduled and run by hand is in `ops/deploy.md` § Worker commands.
+  "failed"); it exits 1 for a failed RUN - an aggregator refused our key, ran dry or was
+  unreachable (`verify.aggregator_failed`; those routes are left as they are, never disabled), or
+  nothing was attempted at all - so a schedule's failure notification still means something.
+  Spends real money; needs the aggregator keys in the env - a Render job, never the dataplane.
+  How it is scheduled and run by hand is in `ops/deploy.md` § Worker commands.
 
 ## Protect, part one (step D) — refuse before reserve
 

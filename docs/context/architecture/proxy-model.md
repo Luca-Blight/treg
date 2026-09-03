@@ -345,7 +345,7 @@ other team. The kind rides the `tool_called` event as `capacity_signal`. Tiers 1
 and never consult the view: an org's own key running dry is the org's own answer, relayed
 unchanged. The vendor's 402 on THIS call is also relayed unchanged - the protection is for the
 next caller.
-An `unrecorded` signal — a 4xx no row matched whose body still names credits/quota/balance —
+An `unrecorded` signal - a 4xx no row matched whose body still names credits/quota/balance -
 is neither a strike nor a mark: it logs `unrecorded capacity-looking …` with the phrase and rides
 `tool_called` as `capacity_signal=unrecorded`, the tripwire for a vendor whose out-of-credit answer is
 not in the table yet (how Apollo's 422 went unseen on 2026-09-01).

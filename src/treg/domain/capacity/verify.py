@@ -52,6 +52,14 @@ class Verification:
         return bool(self.same_shape) and self.relay_status is not None and 200 <= self.relay_status < 300
 
 
+AGGREGATOR_FAILURES = ("aggregator_auth", "aggregator_balance", "relay unreachable")
+"""`note` prefixes that blame our key, the aggregator's account or its host - never this route."""
+
+
+def aggregator_failed(v: Verification) -> bool:
+    return v.note.startswith(AGGREGATOR_FAILURES)
+
+
 async def relay_once(client: httpx.AsyncClient, route, key: str, query: dict, body: bytes | None,
                      path_params: dict | None = None, *, max_polls: int = 20, poll_wait_s: float = 1.5):
     """One aggregator run, following an async run to its end. Returns the parsed result."""

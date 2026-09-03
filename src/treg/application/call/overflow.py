@@ -79,7 +79,7 @@ def _trigger(mk: MarketplaceCall, status: int, headers, body: bytes) -> str | No
     signal = capacity_signatures.classify(mk.provider, status, headers, body[:4096])
     if signal is None:
         return None
-    if signal.kind in ("balance", "quota"):
+    if capacity_signatures.is_exhausting(signal):
         return signal.kind
     if signal.kind == "burst":
         return "burst"
