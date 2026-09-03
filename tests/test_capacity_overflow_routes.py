@@ -195,6 +195,17 @@ def test_apollo_says_out_of_credits_with_a_422():
     assert S.classify("hunter", 422, None, APOLLO_OUT_OF_CREDITS).kind == "unrecorded"
 
 
+def test_every_recorded_phrase_arms_the_tripwire():
+    """Recording one vendor's wording must arm the tripwire for every other: each literal body
+    phrase in `_TABLE` (the 429 rows carry period words, not capacity phrases) is in CAPACITY_PHRASES."""
+    import re as _re
+    for provider, status, pattern, kind in S._TABLE:
+        if not pattern or status == 429 or _re.escape(pattern) != pattern:
+            continue  # empty (the bare 402 row), a period word, or a regex we cannot use as a body
+        sig = S.classify("someone-else", 400, None, pattern.encode())
+        assert sig is not None and sig.kind == "unrecorded", f"{provider}'s phrase {pattern!r} does not arm the tripwire"
+
+
 def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
     """The next Apollo: a 4xx no row matched whose body still names credits/quota/balance. It is
     logged and counted (`capacity_signal=unrecorded`) and does nothing else."""
@@ -385,29 +396,24 @@ def test_verdict_disables_only_a_route_that_is_actually_wrong():
     """The verifier must never switch off the routes that exist to cover OUR key running dry, nor
     every route behind an aggregator that is having a bad morning."""
     assert V.verdict(_verification()) == "passed"
-    # our own account dry (the 2026-09-01 state), or no vendor key at all: nothing to compare with
-    assert V.verdict(_verification(direct_status=422, same_shape=None, verified_at=None,
-                                   note="direct dry, relay 200, no comparison")) == "inconclusive"
-    assert V.verdict(_verification(direct_status=401, same_shape=None, verified_at=None,
-                                   note="direct 401, relay 200, no comparison")) == "inconclusive"
-    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
-                                   note="relay ok, direct not attempted")) == "inconclusive"
-    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
-                                   note="direct unreachable: ConnectTimeout: x")) == "inconclusive"
-    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None,
-                                   note="pending: RUNNING")) == "inconclusive"
-    # the aggregator's side: key, account, host, envelope
-    for note in ("aggregator_auth: key rejected", "aggregator_balance: empty", "malformed: orthogonal: not JSON",
-                 "relay unreachable: ReadTimeout: x", "vendor_dry: quota: per day"):
+    # nothing to compare with: our own account dry (the 2026-09-01 state), a 401, no vendor key,
+    # the vendor host down, a stale test_request that fails both legs, an async run still pending
+    assert V.verdict(_verification(direct_status=422, same_shape=None, verified_at=None, direct_dry=True)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=401, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, relay_status=400, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=401, relay_status=400, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=422, relay_status=404, same_shape=None, verified_at=None, direct_dry=True)) == "inconclusive"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None, failure="pending")) == "inconclusive"
+    # the aggregator's side: key, account, host, envelope, its vendor pool
+    for failure in ("aggregator_auth", "aggregator_balance", "malformed", "unreachable", "vendor_dry"):
         assert V.verdict(_verification(direct_status=None, relay_status=None, same_shape=None, verified_at=None,
-                                       note=note)) == "aggregator", note
-    # this route is wrong
-    assert V.verdict(_verification(same_shape=False, verified_at=None,
-                                   note="direct 200, relay 200, shape differs")) == "failed"
-    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None,
-                                   note="contract: Required parameters are missing")) == "failed"
-    assert V.verdict(_verification(relay_status=500, same_shape=None, verified_at=None,
-                                   note="direct 200, relay 500, shape differs")) == "failed"
+                                       failure=failure)) == "aggregator", failure
+    # this route is shown wrong: the direct leg proves the request, the relay does not match it
+    assert V.verdict(_verification(same_shape=False, verified_at=None)) == "failed"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None, failure="contract")) == "failed"
+    assert V.verdict(_verification(relay_status=500, same_shape=None, verified_at=None)) == "failed"
+    assert V.verdict(_verification(relay_status=404, same_shape=None, verified_at=None)) == "failed"
 
 
 async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure():
@@ -424,7 +430,7 @@ async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure()
         v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
                                  test_request={"body": {"email": "x@y.z"}}, direct_headers={})
     assert not v.passed and v.direct_status == 422 and v.relay_status == 200
-    assert v.note.startswith("direct dry"), "our account, in Apollo's dialect - the worker still stamps this"
+    assert v.direct_dry and v.relay_ok, "our account, in Apollo's dialect - the worker still stamps this"
     assert V.verdict(v) == "inconclusive", "the route still works; it is our account that is dry"
 
 
@@ -442,7 +448,7 @@ async def test_verify_route_reads_a_relayed_out_of_credits_answer_as_the_aggrega
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
                                  test_request={"body": {"email": "x@y.z"}}, direct_headers={})
-    assert v.relay_status == 422 and v.note.startswith("vendor_dry: balance")
+    assert v.relay_status == 422 and v.failure == "vendor_dry" and v.note.startswith("vendor_dry: balance")
     assert V.verdict(v) == "aggregator", "Orthogonal's Apollo account is empty; the route is not wrong"
 
 

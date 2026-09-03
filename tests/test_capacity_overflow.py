@@ -544,6 +544,12 @@ async def test_aggregator_relaying_the_vendors_own_out_of_credits_dialect_is_the
         whole = await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal")
     assert lock.is_active(), "the aggregator's own Apollo account is dry: skip it for a while"
     assert whole is None, "for Apollo only - hunter and lusha still overflow through Orthogonal"
+    # ...and the next Apollo call honours the mark: Orthogonal is not contacted, the only route
+    # is out, so the vendor's own (unbilled) answer stands
+    again = []
+    monkeypatch.setattr(O, "_send", _orthogonal([], again))
+    r2 = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
+    assert r2.status_code == 422 and again == [] and "X-Treg-Served-Via" not in r2.headers
 
 
 async def test_a_vendors_period_quota_through_the_aggregator_is_that_vendors_answer_not_an_aggregator_outage(

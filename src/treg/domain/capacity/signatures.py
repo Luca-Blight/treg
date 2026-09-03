@@ -46,17 +46,20 @@ _TABLE: list[tuple[str, int, str, str]] = [
     ("*", 402, r"", "balance"),
 ]
 
-# The `unrecorded` tripwire: every BODY phrase the table already knows for some vendor (recording
-# one vendor's wording arms the tripwire for every other; the 429 rows' "daily"/"monthly" are
-# period words, not capacity words, and stay out) plus word-bounded generic nouns. A bare
-# "insufficient", "quota" or "balance" would flag "insufficient parameters", "quotation mark" and
-# "unbalanced quotes" - a caller's error echoed back.
-_UNRECORDED = re.compile(r"\b(?:" + "|".join(dict.fromkeys(
-    [f"(?:{p})" for _, st, p, _ in _TABLE if p and st != 429]  # grouped: a row's own `|` stays its own
-    + [r"insufficient (?:credits?|balance|funds)", r"out of credits?",
-       r"credits? (?:exhausted|remaining|left)",
-       r"(?:account |api |credit )?(?:balance|quota)(?: (?:has been|is|was))? (?:exceeded|reached|exhausted|limit)",
-       r"upgrade your plan"])) + r")\b", re.IGNORECASE)
+# The `unrecorded` tripwire's vocabulary, hand-kept: every capacity PHRASE the table records for
+# some vendor (recording one vendor's wording arms the tripwire for every other) plus the generic
+# nouns. Period words from the 429 rows ("daily", "monthly", "per day") are NOT capacity words and
+# stay out; a bare "insufficient", "quota" or "balance" would flag "insufficient parameters",
+# "quotation mark" and "unbalanced quotes" - a caller's error echoed back. The test
+# `test_every_recorded_phrase_arms_the_tripwire` keeps this list and the table in step.
+CAPACITY_PHRASES = (
+    r"not enough credits", r"insufficient[ _]credits", r"nocreditsremaining", r"payment required",
+    r"reached your credit limit", r"exceeded the monthly request limit",
+    r"insufficient (?:credits?|balance|funds)", r"out of credits?", r"credits? (?:exhausted|remaining|left)",
+    r"(?:account |api |credit )?(?:balance|quota)(?: (?:has been|is|was))? (?:exceeded|reached|exhausted|limit)",
+    r"upgrade your plan",
+)
+_UNRECORDED = re.compile(r"\b(?:" + "|".join(f"(?:{p})" for p in CAPACITY_PHRASES) + r")\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)

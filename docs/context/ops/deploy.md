@@ -358,7 +358,8 @@ first as a cron service (`treg-capacity-sweep`, hourly), with the DB URL, Fernet
 **Running the overflow routine by hand** (until a Blueprint schedules verify → sync): two one-off
 jobs on the verify cron service, in order - `render jobs create <cron-id> --start-command
 "treg-worker overflow verify --all"`, then the same with `overflow sync` - and read the
-`verified/failed/skipped` line of the first and the `enabled` count of the second. Verify only
+`verified N, failed N, inconclusive N, aggregator errors N, skipped N` line of the first and the
+`enabled` count of the second. Verify only
 stamps; sync is what opens routes.
 
 Aggregator keys

@@ -159,7 +159,10 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   verifier leaves the route alone; `VENDOR_DRY`, folded in by `with_vendor_verdict` from the
   signature table - the one place a relayed body is read - is the aggregator's account for THIS
   vendor (a relayed 402, Apollo's 422, a period 429): the call path marks
-  `overflow:<aggregator>:<provider>` only, so one vendor's cap never takes the others offline;
+  `overflow:<aggregator>:<provider>` only, so one vendor's cap never takes the others offline.
+  Deliberately not the direct path's strike ladder: the mark is immediate and a flat 15 min, because
+  a relayed body carries no headers to tell a burst from a cap and the caller has already paid the
+  aggregator's round trip;
   `contract` = its stricter schema, no vendor call, no charge; `pending` = a Monid async run to
   poll). Fixtures are recorded bodies (PII hashed) in `tests/fixtures/aggregators/`; every fixture
   round-trips. Keys are passed in by the caller and never read, logged or stored here.
@@ -175,16 +178,20 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   completing (it used to exit 1 whenever any route failed, which made every Render run read
   "failed"). `verify.verdict` is the one place that decides what a verification means: `passed`
   stamps; `failed` (contract refusal, relay non-2xx, a 2xx of a different shape) disables with the
-  reason; `aggregator` (`AGGREGATOR_SIDE` + `vendor_dry` + `relay unreachable`: our key, its
-  account, the vendor's own out-of-credit answer relayed through it, its host or envelope) leaves
-  the row untouched; `inconclusive` (relay 2xx but nothing sound to compare with - no vendor key,
-  the direct call unreachable or non-2xx, or an async run still pending) never disables. One
-  inconclusive still STAMPS: `direct dry`, our own account refusing in its recorded dialect - the
-  relay served, the shape cannot be checked for OUR reason, and an unstamped route would be decayed
-  by the next sync precisely while our account is dry. No key or a 401 does not stamp. The run exits 1 when
-  our key or the aggregator's balance was refused on any route, when every attempt was lost to
-  the aggregator's side, or when nothing was attempted - so a schedule's failure notification
-  means something and one timeout does not trip it.
+  reason, and only when the direct leg proved the request (a direct 2xx beside a relay non-2xx or
+  a different shape, or a contract refusal); `aggregator` (`AGGREGATOR_SIDE`, `vendor_dry`,
+  unreachable: our key, its account, the vendor's own out-of-credit answer relayed through it, its
+  host or envelope) leaves the row untouched; `inconclusive` (no direct 2xx to compare with - no
+  key, 401, our own account dry, a stale test_request failing both legs - or a run still pending)
+  never disables. One inconclusive still STAMPS: `direct_dry` with a relay 2xx, our own account
+  refusing in its recorded dialect - the relay served, the shape cannot be checked for OUR reason,
+  and an unstamped route would be decayed by the next sync precisely while our account is dry.
+  The verdict is pure over `Verification`'s typed fields (`failure`, `direct_dry`, statuses); the
+  note is for people. The run exits 1 when OUR key or OUR prepaid balance was refused on any
+  route, when every attempt was lost to the aggregator's side, or when nothing was attempted - so
+  a schedule's failure notification means something and one timeout does not trip it. A vendor
+  pool dry on the aggregator's side (`vendor_dry`) is theirs to refill: it counts under
+  "aggregator errors" in the summary line and never fails the run by itself.
   Spends real money; needs the aggregator keys in the env - a Render job, never the dataplane.
   How it is scheduled and run by hand is in `ops/deploy.md` § Worker commands.
 

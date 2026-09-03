@@ -407,11 +407,12 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
-    if billable and status_code >= 400 and mk.tier in ("platform", "platform-overflow"):
+    if billable and status_code >= 400 and mk.tier == "platform":
         # A 4xx the status set calls the caller's fault may still be OUR account running dry in a
         # vendor's own dialect (Apollo's 422 "Insufficient credits"). Ask the signature table before
         # charging: billing it would take the caller's money for treg's empty account, and once
-        # overflow serves the same request through an aggregator they would pay twice.
+        # overflow serves the same request through an aggregator they would pay twice. (The
+        # overflow child never reaches here with such a body: `with_vendor_verdict` diverts it.)
         signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
         if capacity_signatures.is_exhausting(signal):
             billable, reason = False, f"capacity_{signal.kind}"
