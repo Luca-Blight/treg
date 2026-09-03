@@ -415,11 +415,24 @@ async def admin_archive_keys(
         select(AK).where(AK.endpoint_id == endpoint_id)
         .order_by(AK.last_requested_at.desc().nulls_last(), AK.fetched_at.desc())
         .limit(limit))).scalars().all()
+    # ONE columns-only query for every key's recent versions — the previous shape ran a query
+    # per key AND selected whole rows, dragging every stored BODY out of the database just to
+    # report whether one exists (12 bodies × up to 100 keys × the panel's fan-out = the
+    # 2026-09-03 pool-pressure repeat). `body IS NOT NULL` reads the row header, never the bytes.
+    key_ids = [k.id for k in keys]
+    vrows = (await db.execute(
+        select(AS.key_id, AS.version, AS.origin, AS.size_bytes, AS.fetched_at,
+               AS.body_of, AS.body.is_not(None))
+        .where(AS.key_id.in_(key_ids))
+        .order_by(AS.key_id, AS.version.desc()).limit(12 * max(1, len(key_ids))))).all()
+    vers_by_key: dict[int, list] = {}
+    for kid, version, origin, size_bytes, fetched_at, body_of, has_body in vrows:
+        bucket = vers_by_key.setdefault(kid, [])
+        if len(bucket) < 12:
+            bucket.append((version, origin, size_bytes, fetched_at, body_of, has_body))
     out_keys = []
     for k in keys:
-        vers = (await db.execute(
-            select(AS).where(AS.key_id == k.id).order_by(AS.version.desc()).limit(12)
-        )).scalars().all()
+        vers = vers_by_key.get(k.id, [])
         out_keys.append({
             "key_hash": k.key_hash, "ttl_s": k.ttl_s, "policy": k.policy,
             "stable": k.stable_seen, "changed": k.change_seen,
@@ -429,10 +442,10 @@ async def admin_archive_keys(
             "volatile_paths": k.volatile_paths or [],
             "question": f"{k.req_method} {k.req_url}"[:200] if k.req_url else "",
             "versions": [{
-                "version": v.version, "origin": v.origin, "size_bytes": v.size_bytes,
-                "stored": "body" if v.body is not None else ("ref" if v.body_of else "hash"),
-                "fetched_at": v.fetched_at.isoformat(),
-            } for v in reversed(vers)],
+                "version": version, "origin": origin, "size_bytes": size_bytes,
+                "stored": "body" if has_body else ("ref" if body_of else "hash"),
+                "fetched_at": fetched_at.isoformat(),
+            } for version, origin, size_bytes, fetched_at, body_of, has_body in reversed(vers)],
         })
     events = (await db.execute(
         select(CallRecord).where(CallRecord.endpoint_id == endpoint_id)

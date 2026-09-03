@@ -380,7 +380,17 @@
   async function select(ep) {
     selected = ep;
     document.querySelectorAll("#eptable tr[data-ep]").forEach(r => r.classList.toggle("sel", r.dataset.ep === ep));
-    try { renderKeys(await api("/admin/archive/keys?endpoint_id=" + encodeURIComponent(ep))); }
+    try {
+      const kd = await api("/admin/archive/keys?endpoint_id=" + encodeURIComponent(ep));
+      renderKeys(kd);
+      const cell = document.getElementById("ttl-" + ep);
+      if (cell) {
+        const ttls = kd.keys.map(x => x.ttl_s).filter(x => x > 0);
+        cell.textContent = ttls.length ? (ttls.length > 1 && Math.min(...ttls) !== Math.max(...ttls)
+          ? fmtS(Math.min(...ttls)) + " – " + fmtS(Math.max(...ttls)) : fmtS(ttls[0])) : "—";
+        cell.dataset.learned = "1";
+      }
+    }
     catch (e) { $("i-body").innerHTML = '<div class="empty">could not load keys: ' + e.message + '</div>'; }
   }
 
@@ -388,17 +398,12 @@
     try {
       const d = await api("/admin/archive");
       renderReport(d);
-      // fill learned-TTL cells from the keys endpoint lazily for judged endpoints only
+      // Learned-TTL cells fill ONLY for the endpoint you click (from the inspector's own load).
+      // The old behavior fired one keys request per row — 50 near-simultaneous heavy calls per
+      // page open, which crowded the production pool (2026-09-03). A dash means "click to learn".
       for (const e of d.endpoints) {
         const cell = document.getElementById("ttl-" + e.endpoint_id);
-        if (!cell) continue;
-        if (e.policy !== "transient" && e.policy !== "archive") { cell.textContent = "—"; continue; }
-        api("/admin/archive/keys?endpoint_id=" + encodeURIComponent(e.endpoint_id) + "&limit=100")
-          .then(kd => {
-            const ttls = kd.keys.map(x => x.ttl_s).filter(x => x > 0);
-            cell.textContent = ttls.length ? (ttls.length > 1 && Math.min(...ttls) !== Math.max(...ttls)
-              ? fmtS(Math.min(...ttls)) + " – " + fmtS(Math.max(...ttls)) : fmtS(ttls[0])) : "—";
-          }).catch(() => { cell.textContent = "—"; });
+        if (cell && !cell.dataset.learned) cell.textContent = "—";
       }
       if (selected) select(selected);
     } catch (e) {

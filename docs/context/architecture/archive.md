@@ -273,3 +273,12 @@ front of the API's 15-slot pool (SToneX's pool-pressure report). Queued recordin
 their fire-and-forget task, so the caller is unaffected; the 30s bound covers wait+write, so a
 stuck queue still sheds rather than wedges. Throttled, not shed: the burst test proves all 12
 concurrent recordings land while peak DB concurrency stays ≤4.
+
+## Keys-endpoint weight fix (2026-09-03, the pool-pressure repeat)
+
+`/admin/archive/keys` ran one whole-row query per key, dragging every stored BODY out of the
+database just to report whether one exists — and the panel fired it once per endpoint row
+(limit=100) to fill TTL cells: ~50 near-simultaneous heavy calls per page open. Now: the
+versions come from ONE columns-only query (`body IS NOT NULL` reads the header, never the
+bytes), and the panel fills a TTL cell only for the endpoint the operator clicks, from the
+inspector's own load. A dash in the TTL column means "click to learn".
