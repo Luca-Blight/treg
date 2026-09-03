@@ -35,7 +35,8 @@ from ...domain.capacity import signatures as capacity_signatures
 from ...domain.capacity.routes_view import view as routes_view
 from ...domain.capacity.verify import shape
 from ...domain.capacity.view import view as capacity_view
-from ...infra.upstream.aggregators import AggregatorRequest, AggregatorResult, by_name, AGGREGATOR_SIDE
+from ...infra.upstream.aggregators import (AGGREGATOR_SIDE, VENDOR_DRY, AggregatorRequest, AggregatorResult,
+                                            by_name, with_vendor_verdict)
 from ...timeutil import utcnow_naive
 from .resolve import MarketplaceCall
 from .reserve import _platform_reserve
@@ -237,7 +238,8 @@ async def _maybe_overflow_attempt(
         return None
     routes = routes_view.for_endpoint(mk.endpoint_id)
     routes = [r for r in routes if settings.overflow_key_for(r.aggregator)
-              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}")]
+              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}")
+              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}:{mk.provider}")]
     if not routes:
         return None
     route = routes[0]
@@ -271,21 +273,19 @@ async def _maybe_overflow_attempt(
         )
     except httpx.RequestError as exc:
         res = AggregatorResult(None, b"", None, "malformed", f"{type(exc).__name__}: {exc}")
+    res = with_vendor_verdict(res, mk.provider)
     budget.actual_micro = int(res.cost_micro) if res.cost_micro is not None else None
     delta = (budget.actual_micro - budget.direct_micro
              if budget.actual_micro is not None else None)
     # --- decide ---
-    # The aggregator's OWN account for this vendor can be dry too, and the vendor says so in its
-    # own dialect (Apollo's 422), not only with a 402: ask the table before treating a relayed
-    # 4xx as an answer the caller should pay for. BALANCE only: the mark below takes the whole
-    # aggregator offline for every provider, which one vendor's daily quota must never do.
-    relayed = (capacity_signatures.classify(mk.provider, res.upstream_status, None, res.upstream_body[:4096])
-               if res.failure is None and res.upstream_status is not None else None)
-    relayed_dry = relayed is not None and relayed.kind == "balance"
-    if res.failure in AGGREGATOR_SIDE or res.upstream_status == 402 or relayed_dry:
-        why_agg = res.failure or f"upstream {res.upstream_status} through the aggregator"
+    if res.failure in AGGREGATOR_SIDE or res.failure == VENDOR_DRY:
+        why_agg = res.failure
+        # The aggregator itself (key, account, host, envelope) is out for everyone; its account
+        # for THIS vendor being dry (a relayed 402 / Apollo 422 / period 429) is out for this
+        # provider only - one vendor's daily cap must not take hunter and lusha offline too.
+        mark_key = f"overflow:{aggregator}" if res.failure in AGGREGATOR_SIDE else f"overflow:{aggregator}:{mk.provider}"
         await capacity_marks.strike(
-            f"overflow:{aggregator}", endpoint_id=None, kind="balance", immediate=True,
+            mark_key, endpoint_id=None, kind="balance", immediate=True,
             resets_at=utcnow_naive().replace(microsecond=0) + timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
             note=f"{why_agg}: {res.detail[:80]}")
         capacity_view.invalidate()

@@ -540,24 +540,29 @@ async def test_aggregator_relaying_the_vendors_own_out_of_credits_dialect_is_the
     assert await _balance(clients) == before and await _holds() == []
     assert {e.kind for e in await _rows(LedgerEntry) if e.kind != "grant"} == {"reserve", "release"}
     async with session_maker() as db:
-        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal"))
+        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal:apollo"))
+        whole = await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal")
     assert lock.is_active(), "the aggregator's own Apollo account is dry: skip it for a while"
+    assert whole is None, "for Apollo only - hunter and lusha still overflow through Orthogonal"
 
 
 async def test_a_vendors_period_quota_through_the_aggregator_is_that_vendors_answer_not_an_aggregator_outage(
         clients: AsyncClient, overflow_on, monkeypatch):
-    """Apollo's daily cap on Orthogonal's account is Apollo's 429 for THIS caller. It must not mark
-    the whole aggregator unhealthy: that would take hunter, lusha and everyone else offline too."""
+    """Apollo's daily cap on Orthogonal's Apollo account: the aggregator is dry for APOLLO. The
+    child is released and Apollo skips Orthogonal for a while; hunter, lusha and everyone else
+    keep overflowing through it."""
     await _route(endpoint_id=APOLLO_SEARCH, provider="apollo", method="POST", path=APOLLO_SEARCH_PATH, price_micro=10_000, ratio=0.38)
     monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
     relayed = {"success": False, "error": "Upstream returned status 429",
                "data": {"error": "You have exceeded the rate limit per day"}, "priceCents": 0}
     monkeypatch.setattr(O, "_send", _orthogonal([(429, relayed)], []))
+    before = await _balance(clients)
     r = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
-    assert r.status_code == 429 and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal"
+    assert r.status_code == 503 and await _balance(clients) == before
     async with session_maker() as db:
-        raw = await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal")
-    assert raw is None or not Lock.from_json(raw).is_active(), "one vendor's quota is not the aggregator's outage"
+        whole = await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal")
+        mine = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal:apollo"))
+    assert whole is None and mine.is_active(), "one vendor's quota is not the aggregator's outage"
 
 
 async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):

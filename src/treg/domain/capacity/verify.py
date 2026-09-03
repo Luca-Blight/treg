@@ -16,7 +16,7 @@ from datetime import datetime
 import httpx
 
 from ...timeutil import utcnow_naive
-from ...infra.upstream.aggregators import AGGREGATOR_SIDE, by_name
+from ...infra.upstream.aggregators import AGGREGATOR_SIDE, VENDOR_DRY, by_name, with_vendor_verdict
 from . import signatures
 
 
@@ -57,18 +57,18 @@ def verdict(v: Verification) -> str:
     """What one verification means for its route (worker.py acts on it, nothing else decides):
       passed       - relay 2xx and the same shape as the direct call → stamp `last_verified_at`
       aggregator   - our key, the aggregator's account (its own refusal, or the vendor's
-                     out-of-credit answer relayed through it), its host or envelope
-                     (AGGREGATOR_SIDE, `relay unreachable`, `aggregator dry`) → the ROUTE is
-                     untouched; the RUN failed
+                     out-of-credit answer relayed through it, VENDOR_DRY), its host or envelope
+                     (AGGREGATOR_SIDE, `relay unreachable`) → the ROUTE is untouched; the RUN failed
       inconclusive - the relay answered 2xx but there was nothing sound to compare it with: no
-                     direct key, the direct call unreachable or non-2xx (our own account dry is
-                     exactly the moment these routes exist for), or an async run still pending
-                     → untouched, no stamp
+                     direct key, the direct call unreachable or non-2xx, or an async run still
+                     pending → untouched. `direct dry` (our own account, exactly the moment these
+                     routes exist for) still stamps in the worker: the relay served and the shape
+                     cannot be checked for OUR reason, and an unstamped route decays at the next sync
       failed       - the aggregator relayed but this route is wrong: contract refusal, relay
                      non-2xx, or a 2xx of a different shape → disable with the reason"""
     if v.passed:
         return "passed"
-    if v.note.startswith(AGGREGATOR_SIDE + ("relay unreachable", "aggregator dry")):
+    if v.note.startswith(AGGREGATOR_SIDE + (VENDOR_DRY, "relay unreachable")):
         return "aggregator"
     relay_ok = v.relay_status is not None and 200 <= v.relay_status < 300
     if v.note.startswith("pending") or (relay_ok and (v.direct_status is None or not 200 <= v.direct_status < 300)):
@@ -90,7 +90,7 @@ async def relay_once(client: httpx.AsyncClient, route, key: str, query: dict, bo
         polls += 1
         pr = await client.get(res.poll_url, headers={"Authorization": f"Bearer {key}"})
         res = agg.parse(pr.status_code, pr.content)
-    return res
+    return with_vendor_verdict(res, route.provider)
 
 
 async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tuple[str, dict, bytes | None] | None,
@@ -109,12 +109,6 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
     if res.failure or res.upstream_status is None:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note=f"{res.failure}: {res.detail}")
-    relayed = signatures.classify(route.provider, res.upstream_status, None, res.upstream_body[:4096])
-    if relayed is not None and relayed.kind == "balance":
-        # The aggregator's OWN account for this vendor is empty (a 402, or the vendor's dialect -
-        # Apollo's 422): the route is fine, the aggregator is dry.
-        return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
-                            res.cost_micro, None, note=f"aggregator dry: {relayed.detail[:80]}")
     if direct is None:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note="relay ok, direct not attempted")
@@ -124,7 +118,14 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
     except httpx.RequestError as exc:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note=f"direct unreachable: {type(exc).__name__}: {exc}")
-    same = shapes_match(dr.content, res.upstream_body) if 200 <= dr.status_code < 300 else None
+    if not 200 <= dr.status_code < 300:
+        # Our OWN account dry (the state these routes exist for) proves nothing against the route;
+        # any other direct failure (401, a bad test_request) is just no comparison.
+        ours = signatures.classify(route.provider, dr.status_code, dr.headers, dr.content[:4096])
+        why = "direct dry" if signatures.is_exhausting(ours) else f"direct {dr.status_code}"
+        return Verification(route.endpoint_id, route.aggregator, dr.status_code, res.upstream_status, None,
+                            res.cost_micro, None, note=f"{why}, relay {res.upstream_status}, no comparison")
+    same = shapes_match(dr.content, res.upstream_body)
     return Verification(route.endpoint_id, route.aggregator, dr.status_code, res.upstream_status, same,
                         res.cost_micro, now if same else None,
                         note="" if same else f"direct {dr.status_code}, relay {res.upstream_status}, shape differs")

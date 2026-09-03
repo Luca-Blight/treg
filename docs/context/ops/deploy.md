@@ -341,8 +341,8 @@ base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 
 ## Worker commands and the capacity cron (2026-08-28)
 
 `treg-worker` (console script, `[server]` extra) hosts the scheduled maintainer commands -
-`capacity sweep` and `overflow verify --all` (see `ops/capacity.md`). `render.yaml` describes them as
-cron services (`treg-capacity-sweep` hourly), with the DB URL, Fernet key and every
+`capacity sweep` and `overflow verify --all` (see `ops/capacity.md`). `render.yaml` describes only the
+first as a cron service (`treg-capacity-sweep`, hourly), with the DB URL, Fernet key and every
 `TREG_PLATFORM_KEY_*` pulled from the web service via `fromService`.
 
 > **`render.yaml` is not applied (checked 2026-09-02).** No Render Blueprint is registered for this

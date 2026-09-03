@@ -155,8 +155,11 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   vendor request (Orthogonal `POST /run {api, path, query, body}`; Monid `POST /run {provider,
   endpoint, input}`), `parse()` unwraps the vendor status + body + the real in-band charge, and
   names who to blame when the aggregator itself refused (`AGGREGATOR_SIDE` = `aggregator_auth`,
-  `aggregator_balance`, `malformed` - the call path marks the aggregator unhealthy on them, the
-  verifier leaves the route alone;
+  `aggregator_balance`, `malformed` - the call path marks the aggregator unhealthy for everyone, the
+  verifier leaves the route alone; `VENDOR_DRY`, folded in by `with_vendor_verdict` from the
+  signature table - the one place a relayed body is read - is the aggregator's account for THIS
+  vendor (a relayed 402, Apollo's 422, a period 429): the call path marks
+  `overflow:<aggregator>:<provider>` only, so one vendor's cap never takes the others offline;
   `contract` = its stricter schema, no vendor call, no charge; `pending` = a Monid async run to
   poll). Fixtures are recorded bodies (PII hashed) in `tests/fixtures/aggregators/`; every fixture
   round-trips. Keys are passed in by the caller and never read, logged or stored here.
@@ -167,18 +170,18 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   routes are skipped, as are routes whose endpoint has no `test_request`. Without `--all` only
   enabled or previously-stamped rows are visited, so a never-verified pair never enters the rota;
   run it with `--all`. Verify only STAMPS - `overflow sync` is what re-derives `enabled` from the
-  stamps, so **every verify is followed by a sync**; a route disabled by one failed verify is only
-  re-enabled by that sync. A failed route is a result, not a failed run: the command exits 0 after
+  stamps, so every verify must be followed by a sync (by hand today, `ops/deploy.md`); a route
+  disabled by one failed verify is only re-enabled by that sync. A failed route is a result, not a failed run: the command exits 0 after
   completing (it used to exit 1 whenever any route failed, which made every Render run read
   "failed"). `verify.verdict` is the one place that decides what a verification means: `passed`
   stamps; `failed` (contract refusal, relay non-2xx, a 2xx of a different shape) disables with the
-  reason; `aggregator` (`AGGREGATOR_SIDE` + `relay unreachable` + `aggregator dry`, the last
-  being the vendor's own out-of-credit answer relayed through it: our key, its account, host or
-  envelope) leaves the row untouched; `inconclusive` (relay 2xx but nothing sound to compare with
-  - no vendor key, the direct call unreachable or non-2xx, which is exactly OUR account being dry,
-  the moment these routes exist for - or an async run still pending) never disables, and a relay
-  2xx among them still STAMPS, because the route demonstrably serves and an unstamped route would
-  be decayed by the next sync precisely while our account is dry. The run exits 1 when
+  reason; `aggregator` (`AGGREGATOR_SIDE` + `vendor_dry` + `relay unreachable`: our key, its
+  account, the vendor's own out-of-credit answer relayed through it, its host or envelope) leaves
+  the row untouched; `inconclusive` (relay 2xx but nothing sound to compare with - no vendor key,
+  the direct call unreachable or non-2xx, or an async run still pending) never disables. One
+  inconclusive still STAMPS: `direct dry`, our own account refusing in its recorded dialect - the
+  relay served, the shape cannot be checked for OUR reason, and an unstamped route would be decayed
+  by the next sync precisely while our account is dry. No key or a 401 does not stamp. The run exits 1 when
   our key or the aggregator's balance was refused on any route, when every attempt was lost to
   the aggregator's side, or when nothing was attempted - so a schedule's failure notification
   means something and one timeout does not trip it.

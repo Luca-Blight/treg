@@ -52,11 +52,11 @@ _TABLE: list[tuple[str, int, str, str]] = [
 # "insufficient", "quota" or "balance" would flag "insufficient parameters", "quotation mark" and
 # "unbalanced quotes" - a caller's error echoed back.
 _UNRECORDED = re.compile(r"\b(?:" + "|".join(dict.fromkeys(
-    [f"(?:{p.lower()})" for _, st, p, _ in _TABLE if p and st != 429]  # grouped: a row's own `|` stays its own
+    [f"(?:{p})" for _, st, p, _ in _TABLE if p and st != 429]  # grouped: a row's own `|` stays its own
     + [r"insufficient (?:credits?|balance|funds)", r"out of credits?",
        r"credits? (?:exhausted|remaining|left)",
        r"(?:account |api |credit )?(?:balance|quota)(?: (?:has been|is|was))? (?:exceeded|reached|exhausted|limit)",
-       r"upgrade your plan"])) + r")\b")
+       r"upgrade your plan"])) + r")\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -115,14 +115,13 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
     """The capacity meaning of one upstream answer, or None when it has none."""
     now = now or utcnow_naive()
     text = body.decode("utf-8", "replace") if isinstance(body, bytes) else (body or "")
-    text_l = text.lower()
     provider = (provider or "").lower()
     if _edge_block(status, headers):  # before the table: a block page carries no vendor body to match
         return Signal("edge_block", None, None, detail=text[:120])
     for prov, st, pattern, kind in _TABLE:
         if st != status or prov not in ("*", provider):
             continue
-        if pattern and not re.search(pattern, text_l if pattern.islower() else text):
+        if pattern and not re.search(pattern, text, re.IGNORECASE):
             continue
         resets = _quota_reset(provider, kind, headers, now)
         return Signal(kind, resets, None, detail=text[:120])
@@ -133,9 +132,9 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
         if wait is not None:  # the provider named a long wait: a period allowance, not a burst
             return Signal("quota", now + timedelta(seconds=wait), None, detail=text[:120])
     if 400 <= status < 500 and status not in (401, 404):  # 401 is the key, 404 the resource
-        m = _UNRECORDED.search(text_l)
+        m = _UNRECORDED.search(text)
         if m:  # detail is the PHRASE, never the body: a vendor's error often echoes the request back
-            return Signal("unrecorded", None, None, detail=m.group(0))
+            return Signal("unrecorded", None, None, detail=m.group(0).lower())
     if status == 429:
         return Signal("unknown", None, None, detail=text[:120])
     return None

@@ -151,8 +151,8 @@ async def _overflow_verify(args) -> int:
                 if body is not None:
                     hdrs["Content-Type"] = "application/json"
             v = await V.verify_route(c, r, key=key, direct=direct, test_request=tr, direct_headers=hdrs)
-            if v.note.startswith(("aggregator_auth", "aggregator_balance")):
-                key_failures.append(v.note)
+            if v.note.startswith(("aggregator_auth", "aggregator_balance", "vendor_dry")):
+                key_failures.append(v.note)  # a key, an account or a vendor pool: someone must top up
             async with session_maker() as db:
                 row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
                 if row is None:
@@ -160,11 +160,11 @@ async def _overflow_verify(args) -> int:
                     continue
                 verdict = V.verdict(v)
                 tally[verdict] += 1
-                if verdict == "passed" or (verdict == "inconclusive" and v.relay_status is not None
-                                           and 200 <= v.relay_status < 300):
-                    # An inconclusive relay 2xx (our own key dry, no key) still proves the route
-                    # serves; without the stamp `overflow sync` would decay it after 7 days -
-                    # exactly while our account is dry, when it is needed.
+                if verdict == "passed" or v.note.startswith("direct dry"):
+                    # Our own key dry: the relay served, the shape cannot be checked for OUR reason;
+                    # without the stamp `overflow sync` would decay the route after 7 days -
+                    # exactly while our account is dry, when it is needed. Any other inconclusive
+                    # (no key, 401, a bad test_request) is not evidence and does not stamp.
                     row.last_verified_at = v.verified_at or utcnow_naive()
                 elif verdict == "failed" and row.enabled:
                     row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
@@ -179,9 +179,7 @@ async def _overflow_verify(args) -> int:
     # could not verify: our key refused or the aggregator dry on any route, every attempt lost
     # to the aggregator's side (a host down for the whole run, not one timeout), or nothing
     # attempted at all (ops/capacity.md).
-    keys_or_balance = any(
-        note.startswith(("aggregator_auth", "aggregator_balance")) for note in key_failures)
-    if attempted == 0 or keys_or_balance or tally["aggregator"] == attempted:
+    if attempted == 0 or key_failures or tally["aggregator"] == attempted:
         print("overflow verify: run failed - check aggregator keys, balances and the route table", file=sys.stderr)
         return 1
     return 0

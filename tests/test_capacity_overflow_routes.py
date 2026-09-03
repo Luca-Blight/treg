@@ -160,6 +160,7 @@ def test_route_for_orders_orthogonal_first():
 def test_signature_table_classifies_balance_quota_and_burst():
     assert S.classify("findymail", 402, {}, b'{"message":"Not enough credits"}').kind == "balance"
     assert S.classify("thecompaniesapi", 403, {}, b'{"code":"noCreditsRemaining"}').kind == "balance"
+    assert S.classify("thecompaniesapi", 403, {}, b'{"code":"nocreditsremaining"}').kind == "balance", "rows match any case"
     assert S.classify("lusha", 400, {}, b"You have reached your credit limit").kind == "balance"
     assert S.classify("anyone", 402, {}, b"").kind == "balance"
     now = utcnow_naive().replace(hour=10)
@@ -386,7 +387,9 @@ def test_verdict_disables_only_a_route_that_is_actually_wrong():
     assert V.verdict(_verification()) == "passed"
     # our own account dry (the 2026-09-01 state), or no vendor key at all: nothing to compare with
     assert V.verdict(_verification(direct_status=422, same_shape=None, verified_at=None,
-                                   note="direct 422, relay 200, shape differs")) == "inconclusive"
+                                   note="direct dry, relay 200, no comparison")) == "inconclusive"
+    assert V.verdict(_verification(direct_status=401, same_shape=None, verified_at=None,
+                                   note="direct 401, relay 200, no comparison")) == "inconclusive"
     assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
                                    note="relay ok, direct not attempted")) == "inconclusive"
     assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
@@ -395,7 +398,7 @@ def test_verdict_disables_only_a_route_that_is_actually_wrong():
                                    note="pending: RUNNING")) == "inconclusive"
     # the aggregator's side: key, account, host, envelope
     for note in ("aggregator_auth: key rejected", "aggregator_balance: empty", "malformed: orthogonal: not JSON",
-                 "relay unreachable: ReadTimeout: x"):
+                 "relay unreachable: ReadTimeout: x", "vendor_dry: quota: per day"):
         assert V.verdict(_verification(direct_status=None, relay_status=None, same_shape=None, verified_at=None,
                                        note=note)) == "aggregator", note
     # this route is wrong
@@ -409,7 +412,8 @@ def test_verdict_disables_only_a_route_that_is_actually_wrong():
 
 async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure():
     import httpx
-    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match")
+    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match",
+               provider="apollo")
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "api.orthogonal.dev" or "/run" in request.url.path:
@@ -420,6 +424,7 @@ async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure()
         v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
                                  test_request={"body": {"email": "x@y.z"}}, direct_headers={})
     assert not v.passed and v.direct_status == 422 and v.relay_status == 200
+    assert v.note.startswith("direct dry"), "our account, in Apollo's dialect - the worker still stamps this"
     assert V.verdict(v) == "inconclusive", "the route still works; it is our account that is dry"
 
 
@@ -437,7 +442,7 @@ async def test_verify_route_reads_a_relayed_out_of_credits_answer_as_the_aggrega
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
                                  test_request={"body": {"email": "x@y.z"}}, direct_headers={})
-    assert v.relay_status == 422 and v.note.startswith("aggregator dry")
+    assert v.relay_status == 422 and v.note.startswith("vendor_dry: balance")
     assert V.verdict(v) == "aggregator", "Orthogonal's Apollo account is empty; the route is not wrong"
 
 
