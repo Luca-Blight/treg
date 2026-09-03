@@ -286,6 +286,12 @@ class Settings(BaseSettings):
     # no caller attached, so the cap is the brake — 0 disables refreshing without touching serving.
     archive_refresh_interval_s: int = 300
     archive_refresh_daily_cap: int = 50
+    # The pruner (profit-shaped: a stored body is inventory, and inventory that cannot sell goes
+    # first). Runs whenever the archive records (shadow or serve); 0 batch disables it.
+    archive_prune_interval_s: int = 3600       # one pass per hour
+    archive_prune_batch: int = 500             # bodies stripped per pass, the load bound
+    archive_prune_keep_versions: int = 2       # newest N bodies kept on servable keys
+    archive_prune_min_age_days: int = 7        # servable bodies younger than this are never touched
 
     # Additive Claude directory MCP. Default OFF so deploying code cannot publish a new connector
     # surface before its production Inspector and custom-connector gates have passed.

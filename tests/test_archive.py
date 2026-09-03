@@ -880,3 +880,75 @@ async def test_compressed_change_detection_still_compares_raw(clients: AsyncClie
     await archive.drain()
     keys, _ = await _rows()
     assert keys[0].change_seen == 1 and keys[0].stable_seen == 0
+
+
+# ---------------------------------------------------------------------------------------------
+# The pruner (profit-shaped): strip bytes that cannot earn, never rows, never the newest body
+
+async def _age_versions(days: int):
+    from datetime import timedelta
+    async with session_maker() as s:
+        for v in (await s.execute(select(ArchiveSnapshot))).scalars().all():
+            v.fetched_at = v.fetched_at - timedelta(days=days)
+            s.add(v)
+        for k in (await s.execute(select(ArchiveKey))).scalars().all():
+            if k.last_requested_at is not None:
+                k.last_requested_at = k.last_requested_at - timedelta(days=days)
+            s.add(k)
+        await s.commit()
+
+
+async def test_pruner_strips_old_undemanded_bodies_keeps_rows(clients: AsyncClient, shadow, monkeypatch):
+    from tests.test_marketplace_call import _fake_relay
+    for n in range(4):                                   # 4 distinct answers → 4 stored bodies
+        monkeypatch.setattr(call_service, "relay",
+                            _fake_relay(200, b'{"v": %d, "pad": "%s"}' % (n, b"x" * 300)))
+        await clients.get(f"/call/{EP}?aweme_id=7")
+        await archive.drain()
+    await _age_versions(days=30)                         # old AND undemanded
+    assert await archive.prune_once() == 2               # newest 2 bodies kept, 2 stripped
+    keys, snaps = await _rows()
+    assert len(snaps) == 4                               # rows never deleted
+    bodies = [s for s in snaps if s.body is not None]
+    assert len(bodies) == 2
+    assert max(s.version for s in bodies) == 4           # the newest survives whole
+    from treg.models import ArchiveEndpointStat
+    async with session_maker() as s:
+        st = (await s.execute(select(ArchiveEndpointStat)
+                              .where(ArchiveEndpointStat.endpoint_id == EP))).scalars().one()
+        assert st.bodies_kept == 2                       # totals moved with the strip
+    assert await archive.prune_once() == 0               # idempotent — nothing left to strip
+
+
+async def test_pruner_never_cache_keeps_only_newest(clients: AsyncClient, shadow, monkeypatch):
+    from tests.test_marketplace_call import _fake_relay
+    for n in range(3):
+        monkeypatch.setattr(call_service, "relay",
+                            _fake_relay(200, b'{"v": %d, "pad": "%s"}' % (n, b"y" * 300)))
+        await clients.get(f"/call/{EP}?aweme_id=7")
+        await archive.drain()
+    async with session_maker() as s:                     # the learner's verdict, set directly
+        k = (await s.execute(select(ArchiveKey))).scalars().one()
+        k.ttl_s = archive.TTL_NEVER
+        s.add(k); await s.commit()
+    assert await archive.prune_once() == 2               # young age is no defense for never-cache
+    _, snaps = await _rows()
+    assert sum(1 for x in snaps if x.body is not None) == 1
+    assert next(x.version for x in snaps if x.body is not None) == 3
+
+
+async def test_pruner_spares_demanded_and_carriers(clients: AsyncClient, shadow, monkeypatch):
+    from tests.test_marketplace_call import _fake_relay
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"stable": "%s"}' % (b"z" * 300)))
+    for _ in range(4):                                   # identical → v1 carries, v2-4 reference
+        await clients.get(f"/call/{EP}?aweme_id=7")
+        await archive.drain()
+    await _age_versions(days=30)
+    async with session_maker() as s:                     # but the key was demanded YESTERDAY
+        from datetime import timedelta
+        k = (await s.execute(select(ArchiveKey))).scalars().one()
+        k.last_requested_at = archive._utcnow() - timedelta(days=1)
+        s.add(k); await s.commit()
+    assert await archive.prune_once() == 0               # demanded recently: full budget kept
+    _, snaps = await _rows()
+    assert snaps[0].body is not None                     # v1 the carrier untouched

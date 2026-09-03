@@ -250,3 +250,17 @@ bytes; `size_bytes` and `content_hash` describe RAW bytes always, keeping dedup 
 semantics unmoved. Rows from before migration 0014 stay raw and readable forever. The founder's
 keys-vs-values idea was examined and declined: compression removes repeated JSON keys anyway, and
 rebuilding JSON from stored values risks the byte-verbatim promise the hashes depend on.
+
+## The pruner (2026-09-03)
+
+Profit-shaped shelf clearing: a served hit is revenue with no vendor cost, so a body's right to
+disk is its earning potential. `prune_once` strips BYTES only — every version row keeps its hash,
+size and timestamp, the newest version of every key stays whole (serving and change-detection
+need it), and the strip set is decided before carrier protection so a surviving dedup reference
+never loses its carrier. Rank of removal: never-servable keys (TTL_NEVER) keep exactly one body,
+age no defense; then old (`archive_prune_min_age_days`, 7) versions beyond the newest
+`archive_prune_keep_versions` (2) on keys undemanded for 14 days. Archive-policy endpoints are
+exempt — their history is the future data product. Runs from the lifespan beside the refresh
+worker whenever the archive records, `archive_prune_batch` (500) bodies per pass per
+`archive_prune_interval_s` (3600); batch 0 disables. Rollup counters (bodies_kept, kept_bytes)
+move atomically with each strip.
