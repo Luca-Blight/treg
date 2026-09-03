@@ -331,6 +331,10 @@ async def admin_reconcile_repeats(
             **await reconcile.repeat_rate(db, since, top=top)}
 
 
+_ARCHIVE_REPORT_TTL_S = 30
+_archive_report_cache: dict = {}
+
+
 @app.get("/admin/archive")
 async def admin_archive(
     top: int = 50,
@@ -342,6 +346,13 @@ async def admin_archive(
     raw signal for how fast an endpoint's answers move. `kept_bytes` only grows where a judged
     licence allows storing (docs/context/architecture/archive.md)."""
     from .. import archive as archive_mod
+
+    # One expensive aggregation every 30s, not one per poll: the panel refreshes every 5s and
+    # several viewers stack — at 425k keys the pile-up alone froze the page (2026-09-03).
+    import time as _time
+    hit = _archive_report_cache.get(top)
+    if hit and _time.monotonic() - hit[0] < _ARCHIVE_REPORT_TTL_S:
+        return hit[1]
 
     keys = func.count(ArchiveKey.id)
     stable = func.coalesce(func.sum(ArchiveKey.stable_seen), 0)
@@ -391,13 +402,15 @@ async def admin_archive(
             "hits": hits_by_ep.get(endpoint_id, 0),
             "kept_bytes": kept_by_ep.get(endpoint_id, 0),
         })
-    return {"mode": archive_mod.mode(),
+    report = {"mode": archive_mod.mode(),
             "worker_on": archive_mod.worker_enabled(),
             "refresh_daily_cap": get_settings().archive_refresh_daily_cap,
             "keys": int(total_keys), "snapshots": int(all_snaps),
             "bodies_kept": int(snap_totals[0]), "kept_bytes": int(snap_totals[1]),
             "hits_today": int(hits_today), "refreshes_today": int(refreshes_today),
             "endpoints": rows}
+    _archive_report_cache[top] = (_time.monotonic(), report)
+    return report
 
 
 @app.get("/admin/archive/keys")
@@ -545,6 +558,7 @@ async def admin_referrals(
             "paid_micro": r.referrer_reward_micro + r.referred_reward_micro,
         } for r in rows],
     }
+
 
 async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
     """True if `target` is currently the ONLY active (unsuspended) super-admin, so demoting /

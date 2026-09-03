@@ -290,6 +290,10 @@ async def clients():
     # forgives it) — the serial CI job hung exactly here, 5-minute faulthandler timeouts on
     # whichever archive test ran next (2026-08-28, twice).
     await archive.drain()
+    # The archive report's 30s server-side cache would outlive this reset and serve the previous
+    # test's numbers — clear it with the schema.
+    from treg.routers import admin as admin_routes
+    admin_routes._archive_report_cache.clear()
     await reset_db()
     await app.state.endpoint_observation_reader.reset()
     app.state.hook_hits = []  # webhook POSTs the upstream received (for alerting assertions)
