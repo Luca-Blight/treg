@@ -463,12 +463,13 @@ async def admin_archive_body(
                              )).scalars().one_or_none()
     if snap is None:
         raise HTTPException(status_code=404, detail="no such version")
-    body = snap.body
+    from ..archive import _unpack as _archive_unpack
+    body = _archive_unpack(snap.body, snap.enc)
     carrier = None
     if body is None and snap.body_of is not None:
         ref = await db.get(AS, snap.body_of)
         if ref is not None:
-            body, carrier = ref.body, ref.version
+            body, carrier = _archive_unpack(ref.body, ref.enc), ref.version
     text = None
     if body is not None:
         try:

@@ -1267,6 +1267,10 @@ class ArchiveSnapshot(SQLModel, table=True):
     fetched_at: datetime = Field(default_factory=_now, index=True)
     # Who triggered the fetch: "caller" (a real request) | "refresh" (worker) | "sample" (learner).
     origin: str = Field(default="caller")
+    # How `body` is stored on disk: NULL = raw bytes (all rows before 0014), "zlib" = compressed.
+    # Readers unpack; size_bytes and content_hash always describe the RAW bytes. Declared LAST to
+    # match the migration's ALTER TABLE append position.
+    enc: str | None = Field(default=None)
 
 
 
