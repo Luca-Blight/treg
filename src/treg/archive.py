@@ -154,6 +154,31 @@ def _body_digest(body: bytes | None) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+# ---------------------------------------------------------------------------------------------
+# Body compression (zlib, stdlib). Measured on 40 real prod bodies (2026-09-03): 5.2x at
+# 68 MB/s compress / 1 GB/s decompress — the write path averages under 1 MB/s, so the cost is
+# invisible and ~6.5 GB/day of JSON becomes ~1.25 GB/day. The exact ORIGINAL bytes come back on
+# every read: hashes, dedup, and the verbatim-relay promise all operate on raw bytes only.
+
+_COMPRESS_MIN_BYTES = 256  # below this, zlib overhead can exceed the win — store raw
+
+
+def _pack(body: bytes) -> tuple[bytes, str | None]:
+    """(stored_bytes, encoding): zlib-compressed when it actually shrinks, else raw with None."""
+    if len(body) < _COMPRESS_MIN_BYTES:
+        return body, None
+    import zlib
+    packed = zlib.compress(body, 6)
+    return (packed, "zlib") if len(packed) < len(body) else (body, None)
+
+
+def _unpack(body: bytes | None, enc: str | None) -> bytes | None:
+    if body is None or not enc:
+        return body
+    import zlib
+    return zlib.decompress(body)
+
+
 def content_hash(body: bytes) -> str:
     """The stored body's identity, for deduplication across versions: same bytes, one blob.
     (Change DETECTION will strip noisy fields before comparing — that arrives with the learner in
@@ -361,10 +386,11 @@ async def _store(
             new_key = newest is None            # first version ⇒ this recording created the key
             seen_before = (key.stable_seen, key.change_seen)
 
+            stored, enc = _pack(body) if keep_bytes else (None, None)
             snap = ArchiveSnapshot(
                 key_id=key.id, version=1 if newest is None else newest.version + 1,
                 status_code=status_code, media_type=media_type, content_hash=ch,
-                body=body if keep_bytes else None, size_bytes=len(body),
+                body=stored, enc=enc, size_bytes=len(body),
                 fetched_at=now, origin=origin)
             if newest is not None:
                 if newest.content_hash == ch:
@@ -374,10 +400,10 @@ async def _store(
                     if carrier is not None:      # bytes already on file — reference, don't repeat
                         snap.body, snap.body_of = None, carrier
                 else:
-                    old_body = newest.body
+                    old_body = _unpack(newest.body, newest.enc)
                     if old_body is None and newest.body_of is not None:
                         old = await s.get(ArchiveSnapshot, newest.body_of)
-                        old_body = old.body if old is not None else None
+                        old_body = _unpack(old.body, old.enc) if old is not None else None
                     if _noise_only(old_body, body, key):
                         # Learned request ids / server timestamps moved; the data did not.
                         key.stable_seen += 1
@@ -437,10 +463,10 @@ async def resolve_result(session, key_hash: str, content_hash: str) -> dict[str,
         .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
     if snap is None:
         return None
-    body = snap.body
+    body = _unpack(snap.body, snap.enc)
     if body is None and snap.body_of is not None:
         carrier = await session.get(ArchiveSnapshot, snap.body_of)
-        body = carrier.body if carrier is not None else None
+        body = _unpack(carrier.body, carrier.enc) if carrier is not None else None
     return {
         "stored": body is not None,
         "request": {"method": key.req_method or "", "url": key.req_url or "",
@@ -562,17 +588,15 @@ async def lookup(
             newest = (await s.execute(
                 select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
                 .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
-            new_key = newest is None            # first version ⇒ this recording created the key
-            seen_before = (key.stable_seen, key.change_seen)
             if newest is None or not (200 <= newest.status_code < 300):
                 return None
             age_s = int((_utcnow() - newest.fetched_at).total_seconds())
             if age_s < 0 or age_s > window:
                 return None
-            body = newest.body
+            body = _unpack(newest.body, newest.enc)
             if body is None and newest.body_of is not None:  # deduplicated — follow the carrier
                 carrier = await s.get(ArchiveSnapshot, newest.body_of)
-                body = carrier.body if carrier is not None else None
+                body = _unpack(carrier.body, carrier.enc) if carrier is not None else None
             if body is None:  # hash-only history (policy or size cap at record time)
                 return None
         _touch(kh)

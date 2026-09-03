@@ -841,3 +841,42 @@ async def test_endpoint_stats_match_direct_aggregation(clients: AsyncClient, sha
         assert st.bodies_kept == sum(1 for x in snaps if x.body is not None)
         assert st.kept_bytes == sum(x.size_bytes for x in snaps if x.body is not None)
         assert st.newest_fetch is not None
+
+
+async def test_big_bodies_compress_and_serve_back_identical(clients: AsyncClient, serve, monkeypatch):
+    """A compressible body is stored smaller (enc='zlib') and the serve path returns the exact
+    original bytes; a tiny body stays raw (enc NULL). size_bytes always reports the RAW size."""
+    from tests.test_marketplace_call import _fake_relay
+    big = ('{"rows": [' + ",".join('{"name": "creator-%d", "followers": 1000}' % i
+                                   for i in range(200)) + "]}").encode()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, big))
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    _, snaps = await _rows()
+    assert snaps[0].enc == "zlib" and len(snaps[0].body) < len(big)
+    assert snaps[0].size_bytes == len(big)
+    r2 = await clients.get(f"/call/{EP}?aweme_id=7")     # a hit, decompressed on the way out
+    assert r2.headers.get("x-treg-cache") == "hit" and r2.content == big == r1.content
+
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 1}'))
+    await clients.get(f"/call/{EP}?aweme_id=8")
+    await archive.drain()
+    _, snaps = await _rows()
+    tiny = [s for s in snaps if s.size_bytes == len(b'{"n": 1}')]
+    assert tiny and tiny[0].enc is None                  # below the 256-byte floor: raw
+
+
+async def test_compressed_change_detection_still_compares_raw(clients: AsyncClient, shadow, monkeypatch):
+    """The noise/change compare must unpack the previous body first — a compressed v1 against a
+    raw-diffed v2 still counts stable/changed correctly."""
+    from tests.test_marketplace_call import _fake_relay
+    a = ('{"data": "' + "x" * 400 + '", "n": 1}').encode()
+    b = ('{"data": "' + "x" * 400 + '", "n": 2}').encode()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, a))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    keys, _ = await _rows()
+    assert keys[0].change_seen == 1 and keys[0].stable_seen == 0
