@@ -88,8 +88,9 @@ that redirect can drop the query string. No Google tag, first-party cookie only;
 The design tokens are now **shared across every served page** (`index.html`, `tutorial.html`,
 `tour/index.html`): **system mono** (`ui-monospace, "SF Mono", …` — `IBM Plex Mono` was never actually
 loaded, so this makes rendering consistent for everyone), `--r:14 / --rb:9`, a `14px` base, and one
-shared `.btn` / `.iconbtn` height so controls align. The logged-out `/` is now the **landing + sandbox
-studio** (see [landing-sandbox](landing-sandbox.md)), not a login box; sign-in is a modal.
+shared `.btn` / `.iconbtn` height so controls align. The logged-out SPA keeps the hero, key-leak
+explanation, footer CTA, and sign-in modal, but its anonymous sandbox studio has been removed. The
+backend sandbox routes remain temporarily for a later cleanup (see [landing-sandbox](landing-sandbox.md)).
 
 An OAuth authorization that needs sign-in redirects to `/?signin=oauth`. The dashboard reads this as
 a UI cue, removes it from the visible URL, and opens the same modal with generic connection copy. It
@@ -97,6 +98,11 @@ does not create a sandbox session. During this flow the modal hides the agent/CL
 because that token does not create the browser session required to resume authorization. The
 protected OAuth return path stays in an HttpOnly cookie, so GitHub, Google, and email-code sign-in all
 resume the same authorization flow without putting OAuth request data in the URL.
+
+A logged-out use-case CTA arrival at `/app?ref=<page>` follows the same front door: boot keeps `ref`
+long enough for attribution, strips it with the other one-shot parameters via `history.replaceState`,
+and opens the sign-in modal. It never calls `sbxInit` or `POST /demo/sandbox`. A plain logged-out
+`/app` visit still redirects to `/`.
 
 The **authed** shell is sidebar-first. The **top bar** is just brand + search. The **left sidebar**
 stacks: (top) an **org block** — role + team name — that on click opens a switcher **dropdown** where
@@ -316,6 +322,16 @@ Server side (`domain.identity.access`): `require_identity` (who, from token OR s
 - **Activity** — one time-sorted feed (`activityRows`) merging `GET /calls` (proxy calls) + `GET /runs`
   (CLI executions). Local runs now arrive via `/runs` (tagged `where`), so the calls feed **excludes**
   `local_run` rows to avoid double-counting, and each run row shows a **local/server** chip.
+  The feed shows **successes only by default** (`actOkOnly`, `activityShown` filters on `ok`);
+  a "Show all (N)" / "Successes only" button toggles failed and refused rows in, and the empty
+  state offers the same switch when every recent call failed.
+  A call row is clickable (`openCall` → `callView`, a right-side drawer in the `epTry` pattern)
+  and loads `GET /calls/{id}/result`: the request line (method + vendor URL before injection),
+  the response (status · media type · size · fetch time, JSON pretty-printed by `pretty`, a Copy
+  button via `toClipboard`, rendered text capped at 256 KB with a "show full" link), or the
+  endpoint's `note` when nothing is on file. Rows whose `has_result` is true show a small
+  "result ›" affordance next to the status badge; own-key, own-tool and failed calls open the
+  same drawer and read the note. Only metered platform 2xx calls ever have a stored answer.
 - **Admin** — nav auto-appears iff the caller is `is_superadmin` (read from `/auth/me` on boot — **not**
   by probing `/admin/stats`, which would 403 + log a console error on every load for normal users); `loadAdmin` fetches `stats` + `orgs` + `users` only when you open the panel. Shows `stats` + `orgs` + `users`, each
   with **mutations** (`_adm` helper): `admGrant`/`admSuspendUser`/`admDeleteUser`,

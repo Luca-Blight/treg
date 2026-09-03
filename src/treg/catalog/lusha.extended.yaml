@@ -239,16 +239,18 @@ endpoints:
     method: POST
     path: /v3/contacts/decision-makers
     name: "Find the buying-committee contacts at a company"
-    summary: "Resolve a company to a Lusha company id, rank the most relevant decision makers with the buying-committee-ranker model, and return them grouped per company"
+    summary: "Resolve a company to a Lusha company id, rank the most relevant decision makers with the buying-committee-ranker model, and return them grouped per company (1 credit per contact returned — pass contactsLimit)"
     input:
       bodyType: json
       body:
-        companies: {type: "array[object]", required: true, note: "each entry needs exactly one of domain (resolved server-side) or id (encrypted vN.… Lusha company id; legacy numeric ids also accepted during transition)", example: [{"domain": "lusha.com"}]}
-      note: "returns free previews (name, title, company, location, LinkedIn, seniority, department); call the contacts enrich endpoint on the returned ids for emails/phones"
+        companies: {type: "array[object]", required: true, note: "up to 25 entries; each needs exactly one of domain (resolved server-side) or id (encrypted vN.… Lusha company id). Optional clientReferenceId echoes back per company. The key is `domain` INSIDE each entry — a top-level domain / company_domain / website / company_name is rejected with 'property … should not exist' (all four seen live 2026-09-02)", example: [{"domain": "lusha.com"}]}
+        contactsLimit: {type: integer, required: false, note: "MAX CONTACTS RETURNED PER COMPANY — and therefore the bill, since every contact returned costs 1 credit. Lusha's default is 60. Always set it: microsoft.com with no limit answered 44 contacts = 44 credits = $5.49 in one call (observed 2026-09-02)", example: 5}
+        personas: {type: "array[string]", required: false, note: "filter to buying-committee roles: decision_maker | potential_champion | end_user; omit for all three (Lusha now documents this route as /v3/contacts/buying-group; the decision-makers path still answers)", example: ["decision_maker"]}
+      note: "returns previews (name, title, company, location, LinkedIn, seniority, department) grouped per company under `results[].decisionMakers`; call lusha.people.contacts.enrich on the returned ids for emails/phones (a further 1 credit per email, 5 per phone). NOT free: every preview row costs 1 credit — see cost"
     test_request:
-      body: {companies: [{domain: "lusha.com"}]}
-    cost: {type: free, value: 0, currency: USD, unit: call, note: previews are free; only a subsequent enrich call on the returned contact ids is billed}
-    verified: 2026-07-28
+      body: {companies: [{domain: "lusha.com"}], contactsLimit: 1}
+    cost: {type: per_result, value: 1, currency: credit, per: 1, unit: result, source: observed, source_url: 'https://docs.lusha.com/_bundle/apis/@v3/openapi.yaml', checked: '2026-09-03', confidence: verified, note: 'OBSERVED live 2026-09-02: billing.creditsCharged 44 for resultsReturned 44 (one company, no contactsLimit). Lusha''s OpenAPI bundle says "Charged per contact returned via the buyingGroupContact action". Previously catalogued as free from the docs prose — wrong, like lusha.people.search: trust billing.creditsCharged, never the prose. treg settles from that field, so the estimate is the reservation only; the bill is the row count'}
+    verified: 2026-09-02
     example_response: examples/lusha.x.decision-makers.json
     docs_url: https://docs.lusha.com/apis/openapi/decision-makers
     capability: people.decision_makers

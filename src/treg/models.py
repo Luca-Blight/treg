@@ -300,8 +300,15 @@ class CallRecord(SQLModel, table=True):
     # Did the provider FIND something? Decided at settle from the response body by the endpoint's
     # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
     # NULL = no adapter could tell (or the call failed). Feeds `stats.observed` `hit_rate`, the
-    # P(hit) of the router's expected-cost-per-hit ranking. Last column on purpose (alembic appends).
+    # P(hit) of the router's expected-cost-per-hit ranking.
     hit: bool | None = Field(default=None)
+    # The archive identities of the answer this call received — `ArchiveKey.key_hash` (the
+    # question) and `ArchiveSnapshot.content_hash` (the exact bytes) — set only when the archive
+    # recorded or served it, i.e. metered platform 2xx calls while recording is on. The join
+    # behind the team-facing `/calls/{id}/result`. Not indexed on purpose: the read starts from
+    # this row by id and both targets carry their own index. Last columns (alembic appends).
+    archive_key_hash: str | None = Field(default=None)
+    archive_content_hash: str | None = Field(default=None)
 
 
 class RunRecord(SQLModel, table=True):

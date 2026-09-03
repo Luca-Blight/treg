@@ -16,7 +16,6 @@ async def _org_id(client: AsyncClient) -> int:
     return (await client.get("/orgs")).json()[0]["org_id"]
 
 
-@pytest.mark.anyio
 async def test_a_lost_claim_does_not_abort_the_rest_of_the_reap(
     clients: AsyncClient, monkeypatch,
 ):
@@ -55,7 +54,6 @@ async def test_a_lost_claim_does_not_abort_the_rest_of_the_reap(
     assert left == [], "the second hold was left stranded by the aborted sweep"
 
 
-@pytest.mark.anyio
 async def test_settlement_crossing_a_window_boundary_keeps_the_usage_identity(
     clients: AsyncClient, monkeypatch,
 ):

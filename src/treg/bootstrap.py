@@ -217,6 +217,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/bundles/{bundle_id}', ('PATCH',), 'update_bundle'),
     ('/bundles/{bundle_id}', ('DELETE',), 'delete_bundle'),
     ('/calls', ('GET',), 'list_calls'),
+    ('/calls/{call_id:int}/result', ('GET',), 'get_call_result'),
     ('/calls/{call_ref}', ('GET',), 'get_call'),
     ('/runs', ('GET',), 'list_runs'),
     ('/oauth/providers', ('GET',), 'oauth_providers_list'),

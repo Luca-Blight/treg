@@ -9,8 +9,9 @@ settle, never while an upstream request is in flight, and never raises: a lost w
 more relayed 402, not the call. Listed in `tests/test_call_architecture.py` as
 `capacity_exhausted_mark`.
 
-Open conservatively: a signature is a strike; the second strike within `STRIKE_WINDOW`, with no
-2xx in between, locks. Close eagerly: while locked, `probe_due` admits one real call per process
+Open conservatively: a signature is a strike; the second strike within `STRIKE_WINDOW`, at least
+`STRIKE_MIN_GAP` after the first (concurrent calls that hit the same instant are one strike), with
+no 2xx in between, locks. Close eagerly: while locked, `probe_due` admits one real call per process
 per `PROBE_EVERY_S`; that call's 2xx clears the lock (conditionally on the lock id it was admitted
 under, so a late probe cannot erase a newer lock). Nothing else clears it except `until`: a guessed
 hold lasts `DEFAULT_LOCK`, a vendor-stated reset at most `MAX_LOCK`.
@@ -31,6 +32,7 @@ from ...timeutil import utcnow_naive
 LOCK_NS = "capacity:lock"
 LOCK_TTL_S = 24 * 3600
 STRIKE_WINDOW = timedelta(minutes=10)
+STRIKE_MIN_GAP = timedelta(seconds=15)
 DEFAULT_LOCK = timedelta(hours=1)
 MAX_LOCK = timedelta(hours=6)
 PROBE_EVERY_S = 60.0
@@ -81,6 +83,8 @@ async def strike(provider: str, *, endpoint_id: str | None, kind: str,
             prev = Lock.from_json(raw) if raw else None
             if prev is not None and prev.is_active(now):
                 return prev
+            if prev is not None and not immediate and now - prev.first_signal_at < STRIKE_MIN_GAP:
+                return prev  # the same burst as the first strike
             fresh = prev is None or now - prev.first_signal_at > STRIKE_WINDOW
             strikes = 1 if fresh else prev.strikes + 1
             first_at = now if fresh else prev.first_signal_at

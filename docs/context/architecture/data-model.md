@@ -13,6 +13,7 @@ sources:
   - src/treg/alembic/versions/0007_overflow_spend.py
   - src/treg/alembic/versions/0008_org_platform_overflow_disabled.py
   - src/treg/alembic/versions/0009_callrecord_hit.py
+  - src/treg/alembic/versions/0011_callrecord_archive_link.py
   - src/treg/maintenance.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
@@ -138,6 +139,11 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   the reserve refusal, where `detail` names **which** cap was hit, since every 429 collapses to
   `refused_by='cap'` and that one value spans member, tag, org, platform and trial limits.
   Never written for a success; `/calls` defers and omits both fields, keeping them admin-only.
+  Separate from that evidence, `archive_key_hash` + `archive_content_hash` (migration 0011, the
+  last two columns, nullable, no index) name the archived answer a metered platform 2xx call
+  received — `ArchiveKey.key_hash` and `ArchiveSnapshot.content_hash` — set by the call service
+  from what `archive.record()`/`archive.lookup()` return; the join behind the team-facing
+  `GET /calls/{id}/result` (see [archive](archive.md)). NULL on every other row.
   Redaction is exact-match-first for every injected credential: platform settings and decrypted org
   Secrets. OAuth/secret-file JSON masks the raw blob, injected field, `Bearer` form, and string values
   under the sensitive-key allowlist (including the binding's `secret_field`), while diagnosis fields
@@ -351,8 +357,8 @@ Four tables, all added with the MCP front door. See `architecture/mcp-oauth.md` 
 | `OAuthGrant` | mutable authority for one refresh family | `current_org_id` is where future tokens spend; `granted_at` is the stable consent time |
 | `OAuthRefresh` | a refresh token, **hashed** | `family_id` groups every descendant of one grant, so a replay can revoke all of them |
 
-`OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`; `OAuthGrant`
-is cleared explicitly by `_cascade_delete_org` because its FK is intentionally named `current_org_id`.
+`OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `ORG_SCOPED_MODELS` (`domain/governance/teams.py`); `OAuthGrant`
+is cleared explicitly by `cascade_delete_org` (in `domain/governance/teams.py`) because its FK is intentionally named `current_org_id`.
 The cascade revokes the union of families that name the deleted team through current authority or
 any historical `OAuthRefresh.org_id`: deleting only a retired provenance row would erase the replay
 evidence while leaving its live descendants usable. `OAuthClient` is not org-scoped — a client is

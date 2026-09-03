@@ -28,6 +28,7 @@ Regenerate via `scripts/build-map.py`.
 | `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
 | `pyproject.toml` | architecture/import-boundaries.md, ops/deploy.md |
 | `render.yaml` | ops/deploy.md |
+| `scripts/backfill_call_archive_links.py` | architecture/archive.md |
 | `scripts/build_plugin.py` | interface/skill.md |
 | `scripts/catalog_drift.py` | architecture/catalog.md |
 | `scripts/catalog_ingest.py` | architecture/catalog.md, architecture/instagram-oauth.md |
@@ -52,6 +53,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/alembic/versions/0008_org_platform_overflow_disabled.py` | architecture/data-model.md, ops/capacity.md |
 | `src/treg/alembic/versions/0009_callrecord_hit.py` | architecture/data-model.md |
 | `src/treg/alembic/versions/0010_oauth_authorization_method.py` | architecture/instagram-oauth.md |
+| `src/treg/alembic/versions/0011_callrecord_archive_link.py` | architecture/archive.md, architecture/data-model.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
 | `src/treg/api.py` | architecture/archive.md, architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/application/__init__.py` | architecture/import-boundaries.md |
@@ -67,7 +69,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/application/call/reserve.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/resolve.py` | architecture/import-boundaries.md, architecture/instagram-oauth.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/route.py` | architecture/catalog.md, architecture/import-boundaries.md |
-| `src/treg/application/call/service.py` | architecture/import-boundaries.md, architecture/instagram-oauth.md, architecture/proxy-model.md, interface/api.md |
+| `src/treg/application/call/service.py` | architecture/archive.md, architecture/import-boundaries.md, architecture/instagram-oauth.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/settle.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/call/types.py` | architecture/import-boundaries.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/application/connect.py` | architecture/auth-secrets.md, architecture/composition.md, guides/expanding-a-category.md, interface/api.md |
@@ -230,6 +232,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/claude-connector.html` | architecture/mcp-oauth.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
+| `src/treg/web/fable-gtm.html` | interface/seo.md |
 | `src/treg/web/grokbot.html` | interface/seo.md |
 | `src/treg/web/index.html` | architecture/instagram-oauth.md, interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
@@ -281,11 +284,11 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `signup.py`, `adtrack.js` |
-| `architecture/archive.md` | `archive.py`, `0002_archive_tables.py`, `0003_callrecord_cached.py`, `0004_archivekey_request_shape.py`, `api.py`, `bootstrap.py`, `admin.py` |
+| `architecture/archive.md` | `archive.py`, `0002_archive_tables.py`, `0003_callrecord_cached.py`, `0004_archivekey_request_shape.py`, `0011_callrecord_archive_link.py`, `service.py`, `backfill_call_archive_links.py`, `api.py`, `bootstrap.py`, `admin.py` |
 | `architecture/auth-secrets.md` | `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `authorization.py`, `oauth_flow.py`, `refresh.py`, `oauth_exchange.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `__init__.py`, `bindings.py`, `bundles.py`, `test_oauth_refresh.py` |
 | `architecture/catalog.md` | `contracts.yaml`, `adapters.yaml`, `findymail.search.business-profile.json`, `__init__.py`, `contracts.py`, `paths.py`, `plan.py`, `synthetic.py`, `route.py`, `test_routing.py`, `catalog-drift.yml`, `catalog_drift.py`, `catalog_ingest.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `google-tag-manager.yaml`, `google-tag-manager.extended.yaml`, `instagram.yaml`, `instagram.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `__init__.py`, `store.py`, `stats.py`, `catalog_observations.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `connect.py`, `mcp_oauth.py`, `session.py`, `admin.py`, `auth.py`, `billing.py`, `call.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `web.py`, `dump_surface.py`, `test_app_roles.py` |
-| `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `0002_archive_tables.py`, `0003_callrecord_cached.py`, `0004_archivekey_request_shape.py`, `0005_capacity_policy_snapshot.py`, `0006_overflow_route.py`, `0007_overflow_spend.py`, `0008_org_platform_overflow_disabled.py`, `0009_callrecord_hit.py`, `maintenance.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py`, `test_alembic_expand_safety.py` |
+| `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `0002_archive_tables.py`, `0003_callrecord_cached.py`, `0004_archivekey_request_shape.py`, `0005_capacity_policy_snapshot.py`, `0006_overflow_route.py`, `0007_overflow_spend.py`, `0008_org_platform_overflow_disabled.py`, `0009_callrecord_hit.py`, `0011_callrecord_archive_link.py`, `maintenance.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py`, `test_alembic_expand_safety.py` |
 | `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `access.py`, `authorize.py`, `idempotency.py`, `overflow.py`, `route.py`, `__init__.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `__init__.py`, `__init__.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `__init__.py`, `__init__.py`, `authorization.py`, `oauth_flow.py`, `refresh.py`, `__init__.py`, `__init__.py`, `__init__.py`, `injectors.py`, `relay.py`, `__init__.py`, `limiter.py`, `test_call_architecture.py`, `test_import_lightness.py` |
 | `architecture/instagram-oauth.md` | `catalog_ingest.py`, `access.py`, `resolve.py`, `service.py`, `instagram.yaml`, `instagram.extended.yaml`, `cli.py`, `store.py`, `authorization.py`, `oauth_flow.py`, `oauth_exchange.py`, `mcp.py`, `call.py`, `index.html`, `0010_oauth_authorization_method.py`, `test_instagram_oauth_architecture.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
@@ -304,7 +307,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `sandbox_identity.py`, `pubfeed.py`, `sandbox.py`, `__init__.py`, `sandbox.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `auth.py`, `__init__.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
-| `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `usecase.css`, `index.html`, `landing.html`, `people-search.html`, `grokbot.html`, `llms.txt`, `indexnow_submit.py`, `support.html`, `og-card.html` |
+| `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `usecase.css`, `index.html`, `landing.html`, `people-search.html`, `grokbot.html`, `fable-gtm.html`, `llms.txt`, `indexnow_submit.py`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
 | `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `marks.py`, `test_capacity_protect.py`, `limiter.py`, `overflow_spend.py`, `routes_view.py`, `overflow.py`, `0007_overflow_spend.py`, `test_capacity_overflow.py`, `test_capacity_overflow_spend.py`, `0008_org_platform_overflow_disabled.py`, `test_capacity_smoothing.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0006_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0005_capacity_policy_snapshot.py`, `test_capacity_know.py`, `test_capacity_collectors.py` |

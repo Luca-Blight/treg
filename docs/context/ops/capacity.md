@@ -77,7 +77,7 @@ consulted or affected by anything here.
   (`capacity:lock:*`): the meter it reads may not be the allowance that ran out.
 - **`marks.py`** - the call-path breaker, its own namespace `capacity:lock:<key>`; key = provider
   for a balance signature, endpoint id for a quota one. Strike, lock on the second strike within
-  10 min with no 2xx between, admit one probe per process per minute, clear on the probe's 2xx
+  10 min and at least 15 s later with no 2xx between, admit one probe per process per minute, clear on the probe's 2xx
   (conditional on the lock id). A guessed hold lasts 1 h, a vendor-stated reset at most 6 h.
   See `architecture/proxy-model.md`.
 - **`view.py`** - `LatestStateView`: the in-process copy of both namespaces, reloaded from

@@ -4880,6 +4880,78 @@
         "summary": "List Calls"
       }
     },
+    "/calls/{call_id}/result": {
+      "get": {
+        "description": "What one of this team's calls asked and what came back — the archive's copy.\n\nOnly a METERED PLATFORM 2xx call has one: those answers are recorded by the archive (see\ndocs/context/architecture/archive.md), and the audit row keeps the identities of the exact\nbytes the caller received. Own-key and own-tool calls are relayed without being stored, a\nfailed call never is, and the redacted failure evidence stays admin-only — `stored` is false\nwith a `note` saying which. The request shape is the vendor-facing one BEFORE credential\ninjection, so no secret can appear in it.",
+        "operationId": "get_call_result_calls__call_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-org",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Org",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "treg_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Treg Session",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Call Result Calls  Call Id  Result Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Call Result"
+      }
+    },
     "/calls/{call_ref}": {
       "get": {
         "description": "One call by the `X-Treg-Call-Id` it returned — the join key for a builder's own records.\n\nAlso reports the LEDGER's view of the same reference, because that is the durable one: the audit\nrow is fire-and-forget and may have been shed, while the money entries were written synchronously.\nA 404 here therefore means \"no audit row\", not \"this call never happened\" — check `ledger` in the\nbody before concluding anything about money.",

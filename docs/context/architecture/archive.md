@@ -6,6 +6,9 @@ sources:
   - src/treg/alembic/versions/0002_archive_tables.py
   - src/treg/alembic/versions/0003_callrecord_cached.py
   - src/treg/alembic/versions/0004_archivekey_request_shape.py
+  - src/treg/alembic/versions/0011_callrecord_archive_link.py
+  - src/treg/application/call/service.py
+  - scripts/backfill_call_archive_links.py
   - src/treg/api.py
   - src/treg/bootstrap.py
   - src/treg/routers/admin.py
@@ -26,7 +29,28 @@ time-series — backlink profiles over time, price history), not waste.
 **Build state: COMPLETE (PR 6 of 6 — the panel shipped after the original five).** All five slices exist behind `TREG_ARCHIVE_MODE`:
 skeleton, recorder, catalog `cache` field + report, serve path, and the learner + refresh worker.
 What does NOT exist: any billing difference for a cached hit (deferred founder decision), and the
-phase-3 aggregator surfaces (history endpoints) — do not document either as existing.
+phase-3 aggregator surfaces (history endpoints) — do not document either as existing. What DOES
+exist since 2026-09-03 is the per-call read below: a team can see the answer ITS OWN call got.
+
+## The call→archive link (2026-09-03)
+
+`record()` returns `(key_hash, content_hash)` — computed synchronously and handed to `_store`
+so the hash is taken once — and `lookup()` adds `key_hash`, `content_hash` and `version` to its
+dict. The call service (`application/call/service.py`) keeps them in `archive_key_hash` /
+`archive_content_hash` and the `_audit` closure writes them onto the `CallRecord` (migration
+0011: two nullable columns, no index — the read starts from the org-scoped row by id and both
+targets are already indexed). `archive.resolve_result(session, key_hash, content_hash)` walks
+row → key → newest snapshot with that content hash → `body_of` carrier, and returns the request
+shape (`req_*`, pre-injection) plus the answer; a hash-only version reports `stored: false`.
+`GET /calls/{id}/result` (api.py) exposes it to members of the row's org, with a `note` on every
+"nothing on file" branch; `/calls` rows carry `has_result`. The archive stays platform-scoped —
+what makes the read safe is that the row belongs to the team and names the exact bytes that
+team already received. Failure evidence (`error_*`) is untouched and still admin-only.
+
+Rows older than the migration have no link and cannot get an exact one (the key needs the query
+and body the audit row never kept); `scripts/backfill_call_archive_links.py` links them best-
+effort — same endpoint, same byte size, fetch within ±10 s, unambiguous in both directions —
+dry run by default, `--apply` to write, `--render` for the prod allowlist dance.
 
 ## The learner (PR 5)
 

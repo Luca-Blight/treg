@@ -433,6 +433,9 @@ def test_body_limit_reads_camel_case_and_nested_pagination_keys():
     # one row per listed item: moz `targets` (a 1-target body settled 20 quota rows live, $0.27 for $0.013)
     assert call_resolution._body_limit(json.dumps({"targets": ["moz.com"], "distributions": True}).encode()) == 1
     assert call_resolution._body_limit(json.dumps({"domains": ["a.com", "b.com"]}).encode()) == 2
+    # lusha decision-makers: `contactsLimit` caps contacts PER COMPANY and is the whole bill (1 credit
+    # each) — without it the route answered 44 rows for microsoft.com, $5.49 in one call (2026-09-02)
+    assert call_resolution._body_limit(json.dumps({"companies": [{"domain": "microsoft.com"}], "contactsLimit": 5}).encode()) == 5
 
 
 async def test_provider_5xx_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
@@ -994,10 +997,10 @@ async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
 async def test_deleting_a_team_takes_its_remembered_answers(clients: AsyncClient):
     """A stored response belongs to the team that paid for it. Left behind it is a dangling row
     holding someone's data after they asked to be gone."""
-    from treg.routers.orgs import _ORG_SCOPED_MODELS
+    from treg.domain.governance.teams import ORG_SCOPED_MODELS
     from treg.models import IdempotentCall
 
-    assert IdempotentCall in _ORG_SCOPED_MODELS
+    assert IdempotentCall in ORG_SCOPED_MODELS
 
 
 # ---- idempotency step 2: the lookup and replay (storage still off) ---------------------------
