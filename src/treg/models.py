@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, Index, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 # Role ordering for gates (owner > admin > member > viewer).
@@ -222,6 +222,12 @@ class CallRecord(SQLModel, table=True):
     """Audit: who called which tool, in which org, when, with what result. Written off the
     request path (fire-and-forget) so it never adds latency to a proxied call.
     """
+
+    # Partial index: the archive report counts cached=true rows (twice per refresh) over the
+    # biggest table in the database — without this it is two full scans per panel poll (measured
+    # 78s on prod at 425k archive keys, 2026-09-03). Partial because hits are a sliver of rows.
+    __table_args__ = (Index("ix_callrecord_cached_true", "cached",
+                            postgresql_where=text("cached"), sqlite_where=text("cached")),)
 
     id: int | None = Field(default=None, primary_key=True)
     org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
