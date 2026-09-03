@@ -226,3 +226,15 @@ answers honestly that nothing was kept. Every metric, chip, bar, tag and version
 the numbers mean, so the explanations are part of the product, not decoration. The report gained
 additive fields for the panel: per-endpoint `hits` and `kept_bytes`, and totals `hits_today`,
 `refreshes_today`, `worker_on`, `refresh_daily_cap`.
+
+## The running totals (2026-09-03)
+
+The panel's report reads `ArchiveEndpointStat` — one row per endpoint (keys, stable, changed,
+snapshots, bodies_kept, kept_bytes, newest_fetch), maintained by the recorder in the SAME
+transaction as each snapshot, using atomic column arithmetic only (the credit-block drift is why
+read-modify-write is banned near counters). The old per-load aggregates cost 9.9s + 8.0s + 14.8s
+at 434k keys on prod; the rollup read is milliseconds at any scale. Migration 0013 backfills the
+table once from the live archive and adds a partial index over refresh-origin snapshots for the
+"refreshes today" count; a 30s in-process report cache remains as the belt against poll stacking
+(cleared per test beside the drains). A dropped recording drops its counter bumps with it — the
+rollup rides the recording's own commit, so the two cannot drift.

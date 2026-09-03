@@ -812,3 +812,32 @@ async def test_the_result_never_carries_failure_evidence(clients: AsyncClient, s
     assert got.status_code == 200
     assert "SECRET-EVIDENCE" not in got.text
     assert got.json()["note"] == "not stored: the call failed, so there is no answer on file"
+
+
+async def test_endpoint_stats_match_direct_aggregation(clients: AsyncClient, shadow, monkeypatch):
+    """The rollup IS the report now, so it must equal what walking the tables would say — after
+    new keys, dedup references, a changed answer, and a policy-forbidden recording."""
+    from tests.test_marketplace_call import _fake_relay
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 1}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    await clients.get(f"/call/{EP}?aweme_id=7")            # identical → dedup ref, stable+1
+    await archive.drain()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 2}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")            # changed+1
+    await clients.get(f"/call/{EP}?aweme_id=8")            # second key
+    await archive.drain()
+
+    from sqlalchemy import func as F
+    from treg.models import ArchiveEndpointStat
+    async with session_maker() as s:
+        st = (await s.execute(select(ArchiveEndpointStat)
+                              .where(ArchiveEndpointStat.endpoint_id == EP))).scalars().one()
+        keys, snaps = await _rows()
+        assert st.keys == len(keys) == 2
+        assert st.snapshots == len(snaps) == 4
+        assert st.stable == sum(k.stable_seen for k in keys) == 1
+        assert st.changed == sum(k.change_seen for k in keys) == 1
+        assert st.bodies_kept == sum(1 for x in snaps if x.body is not None)
+        assert st.kept_bytes == sum(x.size_bytes for x in snaps if x.body is not None)
+        assert st.newest_fetch is not None

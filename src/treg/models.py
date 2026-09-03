@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, Index, UniqueConstraint
+from sqlalchemy import BigInteger, JSON, Column, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 # Role ordering for gates (owner > admin > member > viewer).
@@ -222,6 +222,12 @@ class CallRecord(SQLModel, table=True):
     """Audit: who called which tool, in which org, when, with what result. Written off the
     request path (fire-and-forget) so it never adds latency to a proxied call.
     """
+
+    # Partial index: the archive report counts cached=true rows (twice per refresh) over the
+    # biggest table in the database — without this it is two full scans per panel poll (measured
+    # 78s on prod at 425k archive keys, 2026-09-03). Partial because hits are a sliver of rows.
+    __table_args__ = (Index("ix_callrecord_cached_true", "cached",
+                            postgresql_where=text("cached"), sqlite_where=text("cached")),)
 
     id: int | None = Field(default=None, primary_key=True)
     org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
@@ -1244,6 +1250,9 @@ class ArchiveSnapshot(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("key_id", "version", name="uq_archive_snapshot_version"),
         Index("ix_archive_snapshot_content", "content_hash"),
+        # Partial index for the report's "refreshes today" count — only refresh-origin rows.
+        Index("ix_archivesnapshot_refresh_fetched", "fetched_at",
+              postgresql_where=text("origin = 'refresh'"), sqlite_where=text("origin = 'refresh'")),
     )
 
     id: int | None = Field(default=None, primary_key=True)
@@ -1258,3 +1267,23 @@ class ArchiveSnapshot(SQLModel, table=True):
     fetched_at: datetime = Field(default_factory=_now, index=True)
     # Who triggered the fetch: "caller" (a real request) | "refresh" (worker) | "sample" (learner).
     origin: str = Field(default="caller")
+
+
+
+class ArchiveEndpointStat(SQLModel, table=True):
+    """The archive report's running totals, one row per endpoint — maintained by the recorder in
+    the SAME transaction as each snapshot, so the panel reads 50 tiny rows instead of walking
+    434k keys + 505k snapshots (measured 9.9s + 8.0s + 14.8s per report on prod, 2026-09-03).
+    Counters move only via atomic column arithmetic (col = col + n): the credit-block drift
+    taught us what read-modify-write does under parallel settles."""
+
+    endpoint_id: str = Field(primary_key=True)
+    provider: str = Field(default="")
+    policy: str = Field(default="forbidden")       # the policy last observed for this endpoint
+    keys: int = Field(default=0)                   # distinct questions ever seen
+    stable: int = Field(default=0)                 # refetches whose stripped answer matched
+    changed: int = Field(default=0)                # refetches whose stripped answer differed
+    snapshots: int = Field(default=0)              # versions stored (bodies + dedup references)
+    bodies_kept: int = Field(default=0)            # versions whose bytes were kept
+    kept_bytes: int = Field(default=0, sa_column=Column(BigInteger, nullable=False, server_default="0"))  # already past int32 on prod
+    newest_fetch: datetime | None = Field(default=None)

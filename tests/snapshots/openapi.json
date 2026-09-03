@@ -1450,7 +1450,7 @@
   "paths": {
     "/admin/archive": {
       "get": {
-        "description": "Phase 0's read-out: what the recorder has observed, per endpoint — the evidence for the\nper-provider cache judgments (PR 3) and later for the timers. `refetches` counts repeat\nobservations of an existing key (stable + changed); `change_ratio` is changed/refetches, the\nraw signal for how fast an endpoint's answers move. `kept_bytes` only grows where a judged\nlicence allows storing (docs/context/architecture/archive.md).",
+        "description": "Phase 0's read-out, served from the recorder-maintained running totals\n(ArchiveEndpointStat): ~50 tiny rows instead of walking every key and snapshot — the old\naggregates cost 9.9s + 8.0s + 14.8s per cold load at 434k keys on prod (2026-09-03).\n`refetches` = stable + changed; `change_ratio` = changed/refetches. The 30s in-process cache\nstays as the belt against poll stacking.",
         "operationId": "admin_archive_admin_archive_get",
         "parameters": [
           {

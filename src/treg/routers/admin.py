@@ -18,7 +18,7 @@ from .. import reconcile
 from ..config import get_settings
 from ..infra.db import get_session, session_maker
 from ..domain import money
-from ..models import ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, LedgerEntry, Membership, Org, Referral, Secret, Tool, User
+from ..models import ArchiveEndpointStat, ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, LedgerEntry, Membership, Org, Referral, Secret, Tool, User
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
 from ..domain.identity.access import require_superadmin
@@ -331,36 +331,38 @@ async def admin_reconcile_repeats(
             **await reconcile.repeat_rate(db, since, top=top)}
 
 
+_ARCHIVE_REPORT_TTL_S = 30
+_archive_report_cache: dict = {}
+
+
 @app.get("/admin/archive")
 async def admin_archive(
     top: int = 50,
     _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Phase 0's read-out: what the recorder has observed, per endpoint — the evidence for the
-    per-provider cache judgments (PR 3) and later for the timers. `refetches` counts repeat
-    observations of an existing key (stable + changed); `change_ratio` is changed/refetches, the
-    raw signal for how fast an endpoint's answers move. `kept_bytes` only grows where a judged
-    licence allows storing (docs/context/architecture/archive.md)."""
+    """Phase 0's read-out, served from the recorder-maintained running totals
+    (ArchiveEndpointStat): ~50 tiny rows instead of walking every key and snapshot — the old
+    aggregates cost 9.9s + 8.0s + 14.8s per cold load at 434k keys on prod (2026-09-03).
+    `refetches` = stable + changed; `change_ratio` = changed/refetches. The 30s in-process cache
+    stays as the belt against poll stacking."""
     from .. import archive as archive_mod
 
-    keys = func.count(ArchiveKey.id)
-    stable = func.coalesce(func.sum(ArchiveKey.stable_seen), 0)
-    changed = func.coalesce(func.sum(ArchiveKey.change_seen), 0)
-    per_ep = (await db.execute(
-        select(ArchiveKey.endpoint_id, ArchiveKey.provider, ArchiveKey.policy,
-               keys, stable, changed, func.max(ArchiveKey.fetched_at))
-        .group_by(ArchiveKey.endpoint_id, ArchiveKey.provider, ArchiveKey.policy)
-        .order_by((stable + changed).desc(), keys.desc()).limit(max(1, min(top, 500))))).all()
+    import time as _time
+    hit = _archive_report_cache.get(top)
+    if hit and _time.monotonic() - hit[0] < _ARCHIVE_REPORT_TTL_S:
+        return hit[1]
 
-    snap_totals = (await db.execute(
-        select(func.count(ArchiveSnapshot.id),
-               func.coalesce(func.sum(ArchiveSnapshot.size_bytes), 0))
-        .where(ArchiveSnapshot.body.is_not(None)))).one()
-    all_snaps = (await db.execute(select(func.count(ArchiveSnapshot.id)))).scalar_one()
-    total_keys = (await db.execute(select(func.count(ArchiveKey.id)))).scalar_one()
+    stats = (await db.execute(
+        select(ArchiveEndpointStat)
+        .order_by((ArchiveEndpointStat.stable + ArchiveEndpointStat.changed).desc(),
+                  ArchiveEndpointStat.keys.desc())
+        .limit(max(1, min(top, 500))))).scalars().all()
+    totals = (await db.execute(
+        select(func.coalesce(func.sum(ArchiveEndpointStat.keys), 0),
+               func.coalesce(func.sum(ArchiveEndpointStat.snapshots), 0),
+               func.coalesce(func.sum(ArchiveEndpointStat.bodies_kept), 0),
+               func.coalesce(func.sum(ArchiveEndpointStat.kept_bytes), 0)))).one()
 
-    # Served-hit counts per endpoint, and today's totals — the panel's headline numbers. All
-    # additive: nothing the report already promised changes shape.
     hit_rows = (await db.execute(
         select(CallRecord.endpoint_id, func.count(CallRecord.id))
         .where(CallRecord.cached.is_(True)).group_by(CallRecord.endpoint_id))).all()
@@ -373,31 +375,28 @@ async def admin_archive(
         select(func.count(ArchiveSnapshot.id))
         .where(ArchiveSnapshot.origin == "refresh",
                ArchiveSnapshot.fetched_at >= today))).scalar_one()
-    kept_rows = (await db.execute(
-        select(ArchiveKey.endpoint_id, func.coalesce(func.sum(ArchiveSnapshot.size_bytes), 0))
-        .join(ArchiveSnapshot, ArchiveSnapshot.key_id == ArchiveKey.id)
-        .where(ArchiveSnapshot.body.is_not(None)).group_by(ArchiveKey.endpoint_id))).all()
-    kept_by_ep = {ep: int(n) for ep, n in kept_rows}
 
     rows = []
-    for endpoint_id, provider, pol, n_keys, n_stable, n_changed, newest in per_ep:
-        refetches = int(n_stable) + int(n_changed)
+    for st in stats:
+        refetches = st.stable + st.changed
         rows.append({
-            "endpoint_id": endpoint_id, "provider": provider, "policy": pol,
-            "keys": int(n_keys), "refetches": refetches,
-            "stable": int(n_stable), "changed": int(n_changed),
-            "change_ratio": round(int(n_changed) / refetches, 4) if refetches else None,
-            "newest_fetch": newest.isoformat() if newest else None,
-            "hits": hits_by_ep.get(endpoint_id, 0),
-            "kept_bytes": kept_by_ep.get(endpoint_id, 0),
+            "endpoint_id": st.endpoint_id, "provider": st.provider, "policy": st.policy,
+            "keys": st.keys, "refetches": refetches,
+            "stable": st.stable, "changed": st.changed,
+            "change_ratio": round(st.changed / refetches, 4) if refetches else None,
+            "newest_fetch": st.newest_fetch.isoformat() if st.newest_fetch else None,
+            "hits": hits_by_ep.get(st.endpoint_id, 0),
+            "kept_bytes": st.kept_bytes,
         })
-    return {"mode": archive_mod.mode(),
+    report = {"mode": archive_mod.mode(),
             "worker_on": archive_mod.worker_enabled(),
             "refresh_daily_cap": get_settings().archive_refresh_daily_cap,
-            "keys": int(total_keys), "snapshots": int(all_snaps),
-            "bodies_kept": int(snap_totals[0]), "kept_bytes": int(snap_totals[1]),
+            "keys": int(totals[0]), "snapshots": int(totals[1]),
+            "bodies_kept": int(totals[2]), "kept_bytes": int(totals[3]),
             "hits_today": int(hits_today), "refreshes_today": int(refreshes_today),
             "endpoints": rows}
+    _archive_report_cache[top] = (_time.monotonic(), report)
+    return report
 
 
 @app.get("/admin/archive/keys")
@@ -545,6 +544,7 @@ async def admin_referrals(
             "paid_micro": r.referrer_reward_micro + r.referred_reward_micro,
         } for r in rows],
     }
+
 
 async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
     """True if `target` is currently the ONLY active (unsuspended) super-admin, so demoting /

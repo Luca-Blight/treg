@@ -254,6 +254,42 @@ async def drain() -> None:
                              _STORE_TIMEOUT_S)
 
 
+
+async def _bump_stats(s, *, endpoint_id: str, provider: str, pol: str, new_key: bool,
+                      stable_d: int, changed_d: int, kept: bool, size: int, now) -> None:
+    """Move the endpoint's running totals (ArchiveEndpointStat) inside the caller's transaction.
+    Atomic column arithmetic only (col = col + n) — never read-modify-write: the credit-block
+    drift showed what parallel writers do to in-memory subtraction. A missing row is inserted
+    and the racing loser retries as an update."""
+    from sqlalchemy import update as sa_update
+    from sqlalchemy.exc import IntegrityError
+
+    from .models import ArchiveEndpointStat
+
+    values = {
+        "provider": provider, "policy": pol, "newest_fetch": now,
+        "keys": ArchiveEndpointStat.keys + (1 if new_key else 0),
+        "stable": ArchiveEndpointStat.stable + stable_d,
+        "changed": ArchiveEndpointStat.changed + changed_d,
+        "snapshots": ArchiveEndpointStat.snapshots + 1,
+        "bodies_kept": ArchiveEndpointStat.bodies_kept + (1 if kept else 0),
+        "kept_bytes": ArchiveEndpointStat.kept_bytes + (size if kept else 0),
+    }
+    res = await s.execute(sa_update(ArchiveEndpointStat)
+                          .where(ArchiveEndpointStat.endpoint_id == endpoint_id).values(**values))
+    if res.rowcount == 0:
+        try:
+            async with s.begin_nested():
+                s.add(ArchiveEndpointStat(
+                    endpoint_id=endpoint_id, provider=provider, policy=pol,
+                    keys=1 if new_key else 0, stable=stable_d, changed=changed_d,
+                    snapshots=1, bodies_kept=1 if kept else 0,
+                    kept_bytes=size if kept else 0, newest_fetch=now))
+        except IntegrityError:  # a concurrent recording inserted the row first — count on it
+            await s.execute(sa_update(ArchiveEndpointStat)
+                            .where(ArchiveEndpointStat.endpoint_id == endpoint_id).values(**values))
+
+
 async def _store(
     *,
     method: str,
@@ -322,6 +358,8 @@ async def _store(
             newest = (await s.execute(
                 select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
                 .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+            new_key = newest is None            # first version ⇒ this recording created the key
+            seen_before = (key.stable_seen, key.change_seen)
 
             snap = ArchiveSnapshot(
                 key_id=key.id, version=1 if newest is None else newest.version + 1,
@@ -353,6 +391,10 @@ async def _store(
                 key.last_requested_at = now
             s.add(key)
             s.add(snap)
+            await _bump_stats(
+                s, endpoint_id=endpoint_id, provider=provider, pol=pol, new_key=new_key,
+                stable_d=key.stable_seen - seen_before[0], changed_d=key.change_seen - seen_before[1],
+                kept=snap.body is not None, size=len(body), now=now)
             try:
                 await s.commit()
             except IntegrityError:  # version race with a concurrent recording — drop this sample
@@ -520,6 +562,8 @@ async def lookup(
             newest = (await s.execute(
                 select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
                 .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+            new_key = newest is None            # first version ⇒ this recording created the key
+            seen_before = (key.stable_seen, key.change_seen)
             if newest is None or not (200 <= newest.status_code < 300):
                 return None
             age_s = int((_utcnow() - newest.fetched_at).total_seconds())
