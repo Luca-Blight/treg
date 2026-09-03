@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import audit, crypto, localrun, ratestore, runner, sandbox as demo_sandbox
+from . import archive, audit, crypto, localrun, ratestore, runner, sandbox as demo_sandbox
 from .caller_metadata import _client_of
 from .config import get_settings
 from .domain.catalog import store as catalog_store
@@ -661,6 +661,10 @@ async def list_calls(
             # The archive answered instead of the vendor; the money columns are still identical to
             # a live call on purpose (docs/context/architecture/archive.md).
             "cached": c.cached,
+            # The archive holds this call's answer: `GET /calls/{id}/result` can show it. False
+            # for own-key/own-tool calls (never stored), failures, and calls made while recording
+            # was off.
+            "has_result": c.archive_key_hash is not None,
             "cost_estimated_micro": c.cost_estimated_micro,
             "cost_observed_micro": c.cost_observed_micro,
             "cost_charged_micro": c.cost_charged_micro,
@@ -680,6 +684,50 @@ async def list_calls(
         }
         for c in rows
     ]
+
+
+@app.get("/calls/{call_id:int}/result")
+async def get_call_result(
+    call_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """What one of this team's calls asked and what came back — the archive's copy.
+
+    Only a METERED PLATFORM 2xx call has one: those answers are recorded by the archive (see
+    docs/context/architecture/archive.md), and the audit row keeps the identities of the exact
+    bytes the caller received. Own-key and own-tool calls are relayed without being stored, a
+    failed call never is, and the redacted failure evidence stays admin-only — `stored` is false
+    with a `note` saying which. The request shape is the vendor-facing one BEFORE credential
+    injection, so no secret can appear in it.
+    """
+    row = (await db.execute(
+        select(CallRecord)
+        .options(defer(CallRecord.error_request), defer(CallRecord.error_response))
+        .where(CallRecord.org_id == caller.org_id, CallRecord.id == call_id))).scalars().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="no call with that id")
+    out = {"id": row.id, "call_ref": row.call_ref, "endpoint_id": row.endpoint_id,
+           "provider": row.provider, "credential_tier": row.credential_tier,
+           "method": row.method, "path": row.path, "status_code": row.status_code,
+           "cached": row.cached, "created_at": row.created_at.isoformat() if row.created_at else None,
+           "stored": False, "note": None, "request": None, "response": None}
+    if not row.archive_key_hash or not row.archive_content_hash:
+        if row.credential_tier != "platform":
+            out["note"] = ("not stored: calls on your own key or your own tools are relayed "
+                           "without being kept")
+        elif not (200 <= row.status_code < 300):
+            out["note"] = "not stored: the call failed, so there is no answer on file"
+        else:
+            out["note"] = "not stored: recording was off when this call was made"
+        return out
+    found = await archive.resolve_result(db, row.archive_key_hash, row.archive_content_hash)
+    if found is None:
+        out["note"] = "expired: this answer is no longer on file"
+        return out
+    out |= found
+    if not found["stored"]:
+        out["note"] = ("hash-only: the provider's licence or the size cap did not allow keeping "
+                       "the bytes")
+    return out
 
 
 @app.get("/calls/{call_ref}")

@@ -379,6 +379,10 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
 
     drop_params: set[str] = set()
     served_hit = False  # a cached hit — set where the archive answers instead of the vendor
+    # The archive identities of this call's answer (question key + exact bytes), set where the
+    # archive records or serves; kept on the audit row so `/calls/{id}/result` can find it.
+    archive_key_hash: str | None = None
+    archive_content_hash: str | None = None
     smoothed: list[str] = []  # what burst smoothing did (`wait=<ms>`, `retry=1`) - set on the relay path
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
@@ -571,6 +575,9 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 "params_hash": mk.params_hash,
                 # found / not found, when this endpoint's routing adapter could read the body
                 **({"hit": hit} if hit is not None else {}),
+                # The stored answer's identities — the join to the archive for `/calls/{id}/result`.
+                **({"archive_key_hash": archive_key_hash,
+                    "archive_content_hash": archive_content_hash} if archive_key_hash else {}),
             }
         # Sanctioned reversal of PR #139: failed own-key and own-tool calls now retain the same
         # redacted, admin-only, 14-day evidence as marketplace failures. Successes remain empty and
@@ -816,6 +823,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             if served is not None:
                 body = served["body"]
                 served_hit = True
+                archive_key_hash, archive_content_hash = served["key_hash"], served["content_hash"]
                 response = _served_response(served, body)
             else:
                 response = await relay(
@@ -848,7 +856,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                 if archive.recording() and 200 <= response.status < 300:
                     _ct = next((v.decode("latin-1") for k, v in response.raw_headers
                                 if k.lower() == b"content-type"), "")
-                    archive.record(
+                    archive_key_hash, archive_content_hash = archive.record(
                         method=request.method, endpoint_id=mk.endpoint_id, provider=mk.provider,
                         url=archive.key_url(upstream_url,
                                             list(request.query_params.multi_items()),

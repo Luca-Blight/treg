@@ -686,3 +686,129 @@ async def test_admin_archive_body_viewer(clients: AsyncClient, serve, monkeypatc
         assert r.status_code == 404
     finally:
         get_settings.cache_clear()
+
+
+# ---- the call→archive link: `has_result` on /calls and GET /calls/{id}/result -------------------
+# The team-facing read of a stored answer. Only metered platform 2xx calls have one (the archive's
+# gate 3); every other row answers `stored: false` with a note saying which case it is.
+
+async def _make_org_and_token(name: str, email: str) -> str:
+    from treg import crypto
+    from treg.models import Membership, Org, User
+    async with session_maker() as db:
+        org = Org(name=name, slug=name)
+        db.add(org)
+        await db.flush()
+        user = User(email=email)
+        db.add(user)
+        await db.flush()
+        token = crypto.new_token()
+        db.add(Membership(user_id=user.id, org_id=org.id, role="admin",
+                          token_hash=crypto.hash_token(token)))
+        await db.commit()
+    return token
+
+
+async def test_a_recorded_call_links_to_its_stored_answer(clients: AsyncClient, shadow):
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r1.status_code == 200, r1.text
+    await archive.drain()
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    assert row["has_result"] is True
+    got = await clients.get(f"/calls/{row['id']}/result")
+    assert got.status_code == 200, got.text
+    d = got.json()
+    assert d["stored"] is True and d["note"] is None and d["cached"] is False
+    assert d["endpoint_id"] == EP
+    assert d["response"]["body_text"] == r1.text            # the exact bytes the caller got
+    assert d["response"]["status_code"] == 200 and d["response"]["origin"] == "caller"
+    assert d["request"]["method"] == "GET"
+    assert "aweme_id=7" in d["request"]["url"] and "count=5" in d["request"]["url"]
+    assert "PLATFORM-TIKHUB-KEY" not in d["request"]["url"]  # pre-injection shape, no secret
+
+
+async def test_a_served_hit_links_to_the_same_answer(clients: AsyncClient, serve):
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    await archive.drain()
+    r2 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r2.headers["X-Treg-Cache"] == "hit"
+    await audit.drain()
+    rows = (await clients.get("/calls")).json()
+    hit, live = rows[0], rows[1]
+    assert hit["cached"] is True and hit["has_result"] is True
+    a = (await clients.get(f"/calls/{hit['id']}/result")).json()
+    b = (await clients.get(f"/calls/{live['id']}/result")).json()
+    assert a["stored"] and b["stored"] and a["cached"] is True
+    assert a["response"]["body_text"] == b["response"]["body_text"] == r1.text
+    assert a["response"]["version"] == b["response"]["version"]   # a hit is not a new version
+
+
+async def test_an_own_tool_call_has_no_stored_result(clients: AsyncClient, shadow):
+    await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream",
+                                       "auth": {"kind": "bearer", "secret_name": "echo"}})
+    await clients.post("/secrets", json={"name": "echo", "value": "S"})
+    r = await clients.get("/call/echo/anything")
+    assert r.status_code == 200, r.text
+    await archive.drain()
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    assert row["has_result"] is False
+    d = (await clients.get(f"/calls/{row['id']}/result")).json()
+    assert d["stored"] is False and d["request"] is None and d["response"] is None
+    assert d["note"].startswith("not stored: calls on your own key")
+
+
+async def test_a_platform_call_made_while_recording_was_off(clients: AsyncClient, platform_on,
+                                                            monkeypatch):
+    monkeypatch.setattr(get_settings(), "archive_mode", "off")
+    assert (await clients.get(f"/call/{EP}?aweme_id=7&count=5")).status_code == 200
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    assert row["has_result"] is False
+    d = (await clients.get(f"/calls/{row['id']}/result")).json()
+    assert d["stored"] is False and d["note"] == "not stored: recording was off when this call was made"
+
+
+async def test_a_hash_only_answer_says_so(clients: AsyncClient, shadow, monkeypatch):
+    # A judged `forbidden` licence: counted, hashed, bytes never kept.
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "forbidden")
+    assert (await clients.get(f"/call/{EP}?aweme_id=7&count=5")).status_code == 200
+    await archive.drain()
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    assert row["has_result"] is True                  # the link exists; the bytes do not
+    d = (await clients.get(f"/calls/{row['id']}/result")).json()
+    assert d["stored"] is False and d["note"].startswith("hash-only")
+    assert d["response"]["body_text"] is None and d["response"]["size_bytes"] > 0
+    assert d["request"]["method"] == "GET"            # the question is still on file
+
+
+async def test_a_result_is_scoped_to_the_team(clients: AsyncClient, shadow):
+    assert (await clients.get(f"/call/{EP}?aweme_id=7&count=5")).status_code == 200
+    await archive.drain()
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    assert (await clients.get(f"/calls/{row['id']}/result")).status_code == 200
+    outsider = await _make_org_and_token("other-team", "outsider@example.com")
+    denied = await clients.get(f"/calls/{row['id']}/result", headers={"X-Treg-Token": outsider})
+    assert denied.status_code == 404
+
+
+async def test_the_result_never_carries_failure_evidence(clients: AsyncClient, shadow):
+    # The redacted error columns stay admin-only: a failed call answers with a note, nothing more.
+    from treg.models import CallRecord
+    assert (await clients.get(f"/call/{EP}?aweme_id=7&count=5")).status_code == 200
+    await archive.drain()
+    await audit.drain()
+    row = (await clients.get("/calls")).json()[0]
+    async with session_maker() as s:
+        rec = await s.get(CallRecord, row["id"])
+        rec.status_code, rec.archive_key_hash, rec.archive_content_hash = 502, None, None
+        rec.error_response = "SECRET-EVIDENCE"
+        s.add(rec)
+        await s.commit()
+    got = await clients.get(f"/calls/{row['id']}/result")
+    assert got.status_code == 200
+    assert "SECRET-EVIDENCE" not in got.text
+    assert got.json()["note"] == "not stored: the call failed, so there is no answer on file"
