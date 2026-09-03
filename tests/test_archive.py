@@ -952,3 +952,33 @@ async def test_pruner_spares_demanded_and_carriers(clients: AsyncClient, shadow,
     assert await archive.prune_once() == 0               # demanded recently: full budget kept
     _, snaps = await _rows()
     assert snaps[0].body is not None                     # v1 the carrier untouched
+
+
+async def test_recorder_concurrency_is_throttled(clients: AsyncClient, shadow, monkeypatch):
+    """A burst of recordings may QUEUE, but at most _MAX_CONCURRENT_WRITES touch the database at
+    once — the pool-pressure guarantee. Measured by instrumenting the locked store."""
+    import asyncio as aio
+    peak = 0
+    active = 0
+    real = archive._store_locked
+
+    async def counting(**kw):
+        nonlocal peak, active
+        active += 1
+        peak = max(peak, active)
+        try:
+            await aio.sleep(0.01)          # hold the slot long enough for overlap to show
+            return await real(**kw)
+        finally:
+            active -= 1
+
+    monkeypatch.setattr(archive, "_store_locked", counting)
+    for i in range(12):                    # 12 concurrent recordings, one per key
+        archive.record(method="GET", endpoint_id=EP, provider="tikhub",
+                       url=f"https://api.example/x?aweme_id={i}", caller_body=b"",
+                       headers={}, status_code=200, media_type="application/json",
+                       body=b'{"n": %d}' % i)
+    await archive.drain()
+    assert peak <= archive._MAX_CONCURRENT_WRITES
+    keys, _ = await _rows()
+    assert len(keys) == 12                 # throttled, not shed: every recording landed

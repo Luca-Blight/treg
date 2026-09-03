@@ -199,6 +199,24 @@ from datetime import datetime, timedelta, timezone
 _log = logging.getLogger("treg.archive")
 _pending: set[asyncio.Task] = set()
 _MAX_PENDING = 512
+# At most this many recordings TOUCH THE DATABASE at once (audit's discipline, and its exact
+# loop-bound pattern). Without it a traffic burst put up to 512 concurrent short sessions in
+# front of the API's 15-slot pool — SToneX's pool-pressure report, 2026-09-03. Queued recordings
+# wait INSIDE their task; the caller's response left long ago either way.
+_MAX_CONCURRENT_WRITES = 4
+
+_sem: asyncio.Semaphore | None = None
+_sem_loop = None
+
+
+def _get_sem() -> asyncio.Semaphore:
+    """A semaphore bound to the CURRENT running loop (recreated if the loop changed — tests)."""
+    global _sem, _sem_loop
+    loop = asyncio.get_running_loop()
+    if _sem is None or _sem_loop is not loop:
+        _sem = asyncio.Semaphore(_MAX_CONCURRENT_WRITES)
+        _sem_loop = loop
+    return _sem
 # A recording is best-effort by contract (audit's discipline: shed, never wedge). A database that
 # does not answer in this window — a lock, a stuck pool slot, a dying connection — costs ONE
 # dropped sample, which the next identical call re-supplies; it must never hold drain(), a test,
@@ -347,86 +365,116 @@ async def _store(
         from .infra.db import session_maker
         from .models import ArchiveKey, ArchiveSnapshot
 
-        entry = catalog_store.load().by_id.get(endpoint_id)
-        pol = policy(entry)
-        # `record()` hands both hashes in, computed once on the call path; the fallback keeps
-        # `_store` callable on its own (tests).
-        kh = key_hash or cache_key(method, endpoint_id, url, caller_body, headers)
-        ch = body_hash or content_hash(body)
-        cap = get_settings().archive_max_body_bytes
-        keep_bytes = pol in _STORABLE and len(body) <= cap
-        now = _utcnow()
-
-        async with session_maker() as s:
-            key = (await s.execute(
-                select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
-            if key is None:
-                # The request shape is stored WITH the key so the refresh worker can re-ask the
-                # exact question later. It is the pre-injection request: credentials cannot be in
-                # it (they are added inside the relay, after this shape is fixed).
-                kept = {k.lower(): v.strip() for k, v in (headers or {}).items()
-                        if k.lower() in ("accept", "accept-language") and v.strip()}
-                key = ArchiveKey(key_hash=kh, endpoint_id=endpoint_id, provider=provider,
-                                 policy=pol, fetched_at=now,
-                                 last_requested_at=now if origin == "caller" else None,
-                                 ttl_s=ttl_for(entry),
-                                 req_method=method.upper(), req_url=url,
-                                 req_body=caller_body or None, req_headers=kept)
-                s.add(key)
-                try:
-                    await s.commit()
-                except IntegrityError:  # two first-calls raced; the winner's row is the key
-                    await s.rollback()
-                    key = (await s.execute(
-                        select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one()
-
-            newest = (await s.execute(
-                select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
-                .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
-            new_key = newest is None            # first version ⇒ this recording created the key
-            seen_before = (key.stable_seen, key.change_seen)
-
-            stored, enc = _pack(body) if keep_bytes else (None, None)
-            snap = ArchiveSnapshot(
-                key_id=key.id, version=1 if newest is None else newest.version + 1,
-                status_code=status_code, media_type=media_type, content_hash=ch,
-                body=stored, enc=enc, size_bytes=len(body),
-                fetched_at=now, origin=origin)
-            if newest is not None:
-                if newest.content_hash == ch:
-                    key.stable_seen += 1
-                    learn(key, stable=True, entry=entry)
-                    carrier = newest.body_of or (newest.id if newest.body is not None else None)
-                    if carrier is not None:      # bytes already on file — reference, don't repeat
-                        snap.body, snap.body_of = None, carrier
-                else:
-                    old_body = _unpack(newest.body, newest.enc)
-                    if old_body is None and newest.body_of is not None:
-                        old = await s.get(ArchiveSnapshot, newest.body_of)
-                        old_body = _unpack(old.body, old.enc) if old is not None else None
-                    if _noise_only(old_body, body, key):
-                        # Learned request ids / server timestamps moved; the data did not.
-                        key.stable_seen += 1
-                        learn(key, stable=True, entry=entry)
-                    else:
-                        key.change_seen += 1
-                        key.last_changed_at = now
-                        learn(key, stable=False, entry=entry)
-            key.fetched_at, key.policy = now, pol
-            if origin == "caller":     # a refresh is treg asking itself — never demand
-                key.last_requested_at = now
-            s.add(key)
-            s.add(snap)
-            await _bump_stats(
-                s, endpoint_id=endpoint_id, provider=provider, pol=pol, new_key=new_key,
-                stable_d=key.stable_seen - seen_before[0], changed_d=key.change_seen - seen_before[1],
-                kept=snap.body is not None, size=len(body), now=now)
-            try:
-                await s.commit()
-            except IntegrityError:  # version race with a concurrent recording — drop this sample
-                await s.rollback()
+        async with _get_sem():
+            return await _store_locked(
+                method=method, endpoint_id=endpoint_id, provider=provider, url=url,
+                caller_body=caller_body, headers=headers, status_code=status_code,
+                media_type=media_type, body=body, origin=origin,
+                key_hash=key_hash, body_hash=body_hash)
     except Exception:  # noqa: BLE001 — recording must never surface anywhere
         _log.warning("archive recording dropped for %s", endpoint_id, exc_info=True)
+
+
+async def _store_locked(
+    *,
+    method: str,
+    endpoint_id: str,
+    provider: str,
+    url: str,
+    caller_body: bytes,
+    headers: dict[str, str],
+    status_code: int,
+    media_type: str,
+    body: bytes,
+    origin: str = "caller",
+    key_hash: str | None = None,
+    body_hash: str | None = None,
+) -> None:
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+
+    from .domain.catalog import store as catalog_store
+    from .infra.db import session_maker
+    from .models import ArchiveKey, ArchiveSnapshot
+
+    entry = catalog_store.load().by_id.get(endpoint_id)
+    pol = policy(entry)
+    # `record()` hands both hashes in, computed once on the call path; the fallback keeps
+    # `_store` callable on its own (tests).
+    kh = key_hash or cache_key(method, endpoint_id, url, caller_body, headers)
+    ch = body_hash or content_hash(body)
+    cap = get_settings().archive_max_body_bytes
+    keep_bytes = pol in _STORABLE and len(body) <= cap
+    now = _utcnow()
+
+    async with session_maker() as s:
+        key = (await s.execute(
+            select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
+        if key is None:
+            # The request shape is stored WITH the key so the refresh worker can re-ask the
+            # exact question later. It is the pre-injection request: credentials cannot be in
+            # it (they are added inside the relay, after this shape is fixed).
+            kept = {k.lower(): v.strip() for k, v in (headers or {}).items()
+                    if k.lower() in ("accept", "accept-language") and v.strip()}
+            key = ArchiveKey(key_hash=kh, endpoint_id=endpoint_id, provider=provider,
+                             policy=pol, fetched_at=now,
+                             last_requested_at=now if origin == "caller" else None,
+                             ttl_s=ttl_for(entry),
+                             req_method=method.upper(), req_url=url,
+                             req_body=caller_body or None, req_headers=kept)
+            s.add(key)
+            try:
+                await s.commit()
+            except IntegrityError:  # two first-calls raced; the winner's row is the key
+                await s.rollback()
+                key = (await s.execute(
+                    select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one()
+
+        newest = (await s.execute(
+            select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
+            .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+        new_key = newest is None            # first version ⇒ this recording created the key
+        seen_before = (key.stable_seen, key.change_seen)
+
+        stored, enc = _pack(body) if keep_bytes else (None, None)
+        snap = ArchiveSnapshot(
+            key_id=key.id, version=1 if newest is None else newest.version + 1,
+            status_code=status_code, media_type=media_type, content_hash=ch,
+            body=stored, enc=enc, size_bytes=len(body),
+            fetched_at=now, origin=origin)
+        if newest is not None:
+            if newest.content_hash == ch:
+                key.stable_seen += 1
+                learn(key, stable=True, entry=entry)
+                carrier = newest.body_of or (newest.id if newest.body is not None else None)
+                if carrier is not None:      # bytes already on file — reference, don't repeat
+                    snap.body, snap.body_of = None, carrier
+            else:
+                old_body = _unpack(newest.body, newest.enc)
+                if old_body is None and newest.body_of is not None:
+                    old = await s.get(ArchiveSnapshot, newest.body_of)
+                    old_body = _unpack(old.body, old.enc) if old is not None else None
+                if _noise_only(old_body, body, key):
+                    # Learned request ids / server timestamps moved; the data did not.
+                    key.stable_seen += 1
+                    learn(key, stable=True, entry=entry)
+                else:
+                    key.change_seen += 1
+                    key.last_changed_at = now
+                    learn(key, stable=False, entry=entry)
+        key.fetched_at, key.policy = now, pol
+        if origin == "caller":     # a refresh is treg asking itself — never demand
+            key.last_requested_at = now
+        s.add(key)
+        s.add(snap)
+        await _bump_stats(
+            s, endpoint_id=endpoint_id, provider=provider, pol=pol, new_key=new_key,
+            stable_d=key.stable_seen - seen_before[0], changed_d=key.change_seen - seen_before[1],
+            kept=snap.body is not None, size=len(body), now=now)
+        try:
+            await s.commit()
+        except IntegrityError:  # version race with a concurrent recording — drop this sample
+            await s.rollback()
 
 
 

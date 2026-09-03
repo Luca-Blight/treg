@@ -264,3 +264,12 @@ exempt — their history is the future data product. Runs from the lifespan besi
 worker whenever the archive records, `archive_prune_batch` (500) bodies per pass per
 `archive_prune_interval_s` (3600); batch 0 disables. Rollup counters (bodies_kept, kept_bytes)
 move atomically with each strip.
+
+## Recorder throttle (2026-09-03)
+
+At most `_MAX_CONCURRENT_WRITES` (4) recordings touch the database at once — audit's exact
+loop-bound-semaphore pattern. Before it, a burst could put up to 512 concurrent short sessions in
+front of the API's 15-slot pool (SToneX's pool-pressure report). Queued recordings wait inside
+their fire-and-forget task, so the caller is unaffected; the 30s bound covers wait+write, so a
+stuck queue still sheds rather than wedges. Throttled, not shed: the burst test proves all 12
+concurrent recordings land while peak DB concurrency stays ≤4.
