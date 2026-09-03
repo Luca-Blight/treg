@@ -194,7 +194,7 @@ def content_hash(body: bytes) -> str:
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 _log = logging.getLogger("treg.archive")
 _pending: set[asyncio.Task] = set()
@@ -427,6 +427,107 @@ async def _store(
                 await s.rollback()
     except Exception:  # noqa: BLE001 — recording must never surface anywhere
         _log.warning("archive recording dropped for %s", endpoint_id, exc_info=True)
+
+
+
+# ---------------------------------------------------------------------------------------------
+# The pruner — profit-shaped shelf clearing. A served hit is revenue with no vendor cost, so a
+# body's right to disk is its earning potential. It strips BYTES only: every version row stays
+# (hash, size, timestamp — the history and the statistics are untouched), the newest version of
+# every key stays whole (serving and change-detection need it), and a dedup carrier is never
+# stripped while a kept version still points at it.
+#
+# Rank of removal, first to go:
+#   1. Old versions of keys the learner marked never-servable (TTL_NEVER) — they can never sell.
+#   2. Old versions beyond the newest `archive_prune_keep_versions` on keys nobody has demanded
+#      recently, oldest first, once they pass `archive_prune_min_age_days`.
+# Archive-policy endpoints are exempt: their history is the future data product.
+
+_PRUNE_DEMAND_GRACE_DAYS = 14  # a key demanded in this window keeps its full version budget
+
+
+def prune_enabled() -> bool:
+    return recording() and get_settings().archive_prune_batch > 0
+
+
+async def prune_worker() -> None:
+    """Run forever from lifespan; same discipline as refresh_worker."""
+    while True:
+        try:
+            done = await prune_once()
+            if done:
+                _log.info("archive prune: %d body(ies) stripped", done)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            _log.warning("archive prune pass failed", exc_info=True)
+        await asyncio.sleep(get_settings().archive_prune_interval_s)
+
+
+async def prune_once() -> int:
+    """One bounded pass. Returns how many bodies were stripped."""
+    if not prune_enabled():
+        return 0
+    from sqlalchemy import select, update as sa_update
+
+    from .infra.db import session_maker
+    from .models import ArchiveEndpointStat, ArchiveKey, ArchiveSnapshot
+
+    s_cfg = get_settings()
+    batch = s_cfg.archive_prune_batch
+    keep_n = max(1, s_cfg.archive_prune_keep_versions)
+    min_age = _utcnow() - timedelta(days=s_cfg.archive_prune_min_age_days)
+    demand_floor = _utcnow() - timedelta(days=_PRUNE_DEMAND_GRACE_DAYS)
+    stripped = 0
+
+    async with session_maker() as s:
+        # Candidate keys, worst earners first: never-servable, then long-undemanded.
+        keys = (await s.execute(
+            select(ArchiveKey)
+            .where(ArchiveKey.policy != CACHE_ARCHIVE)
+            .where((ArchiveKey.ttl_s == TTL_NEVER)
+                   | (ArchiveKey.last_requested_at.is_(None))
+                   | (ArchiveKey.last_requested_at < demand_floor))
+            .order_by((ArchiveKey.ttl_s == TTL_NEVER).desc(), ArchiveKey.last_requested_at)
+            .limit(2000))).scalars().all()
+
+        for key in keys:
+            if stripped >= batch:
+                break
+            versions = (await s.execute(
+                select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
+                .order_by(ArchiveSnapshot.version.desc()))).scalars().all()
+            if not versions:
+                continue
+            budget = 1 if key.ttl_s == TTL_NEVER else keep_n
+            # Decide the strip set FIRST, then protect the carriers of everything that survives —
+            # a surviving version may reference a body on an older row (dedup), and stripping the
+            # carrier would silently orphan it.
+            candidates = [v for v in versions[budget:]
+                          if v.body is not None
+                          and (key.ttl_s == TTL_NEVER or v.fetched_at <= min_age)]
+            surviving = [v for v in versions if v not in candidates]
+            protected = ({v.id for v in surviving}
+                         | {v.body_of for v in surviving if v.body_of is not None})
+            freed_bytes = 0
+            freed_n = 0
+            for v in candidates:
+                if v.id in protected:
+                    continue
+                v.body, v.enc = None, None
+                freed_n += 1
+                freed_bytes += v.size_bytes
+                s.add(v)
+                stripped += 1
+                if stripped >= batch:
+                    break
+            if freed_n:
+                await s.execute(sa_update(ArchiveEndpointStat)
+                                .where(ArchiveEndpointStat.endpoint_id == key.endpoint_id)
+                                .values(bodies_kept=ArchiveEndpointStat.bodies_kept - freed_n,
+                                        kept_bytes=ArchiveEndpointStat.kept_bytes - freed_bytes))
+        await s.commit()
+    return stripped
 
 
 # ---------------------------------------------------------------------------------------------
