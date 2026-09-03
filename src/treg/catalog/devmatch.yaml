@@ -51,8 +51,8 @@ endpoints:
     scope: any_account
     method: POST
     path: /tools/find_candidates
-    name: "Find engineers by verified public work"
-    summary: "Rank engineers for a role or project by their verified open-source contributions and other public work."
+    name: "Find engineers by public work"
+    summary: "Rank engineers for a role or project by open-source contributions and other public work, with evidence."
     input:
       bodyType: json
       body:
