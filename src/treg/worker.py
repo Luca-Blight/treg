@@ -112,7 +112,8 @@ async def _overflow_verify(args) -> int:
         rows = (await db.execute(select(OverflowRoute))).scalars().all()
     todo = [r for r in rows if args.all or r.enabled or r.last_verified_at]
     keys = {"orthogonal": s.overflow_key_orthogonal, "monid": s.overflow_key_monid}
-    passed = failed = skipped = 0
+    tally = {"passed": 0, "failed": 0, "aggregator": 0, "inconclusive": 0}
+    skipped, key_failures = 0, []
     # One SHORT transaction per route. The first prod run (2026-08-28) kept a single session open
     # across every network round-trip: each `db.get` autoflushed the previous row's UPDATE, the row
     # locks piled up for minutes, and db.py's 5 s lock_timeout — there to keep the worker from
@@ -150,24 +151,39 @@ async def _overflow_verify(args) -> int:
                 if body is not None:
                     hdrs["Content-Type"] = "application/json"
             v = await V.verify_route(c, r, key=key, direct=direct, test_request=tr, direct_headers=hdrs)
+            if v.failure in ("aggregator_auth", "aggregator_balance"):
+                key_failures.append(v.note)  # OUR key or OUR prepaid balance: someone here must act
             async with session_maker() as db:
                 row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
                 if row is None:
                     skipped += 1
                     continue
-                if v.passed:
+                verdict = V.verdict(v)
+                tally[verdict] += 1
+                if verdict == "passed" or (verdict == "inconclusive" and v.direct_dry and v.relay_ok):
+                    # Our own key dry and the relay served: the shape cannot be checked for OUR
+                    # reason; without the stamp `overflow sync` would decay the route after 7 days -
+                    # exactly while our account is dry, when it is needed. Any other inconclusive
+                    # (no key, 401, a stale test_request) is not evidence and does not stamp.
                     row.last_verified_at = v.verified_at or utcnow_naive()
-                    passed += 1
-                else:
-                    failed += 1
-                    if row.enabled:
-                        row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
+                elif verdict == "failed" and row.enabled:
+                    row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
                 row.updated_at = utcnow_naive()
                 await db.commit()
-            print(f"{'ok ' if v.passed else 'FAIL'} {r.endpoint_id} via {r.aggregator} "
+            print(f"{verdict:<12} {r.endpoint_id} via {r.aggregator} "
                   f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
-    print(f"verified {passed}, failed {failed}, skipped {skipped}")
-    return 1 if failed else 0
+    attempted = sum(tally.values())
+    print(f"verified {tally['passed']}, failed {tally['failed']}, inconclusive {tally['inconclusive']}, "
+          f"aggregator errors {tally['aggregator']}, skipped {skipped}")
+    # A failed ROUTE is a result (its row is disabled with the reason). A failed RUN is one that
+    # could not verify: our key or our balance refused on any route, every attempt lost to the
+    # aggregator's side (a host down for the whole run, not one timeout), or nothing attempted at
+    # all (ops/capacity.md). A vendor pool dry on the aggregator's side (VENDOR_DRY) is theirs to
+    # refill: counted under aggregator errors, never a failed run on its own.
+    if attempted == 0 or key_failures or tally["aggregator"] == attempted:
+        print("overflow verify: run failed - check aggregator keys, balances and the route table", file=sys.stderr)
+        return 1
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

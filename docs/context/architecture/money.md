@@ -453,6 +453,12 @@ shared plan" — `cost_view`, holds, caps and settlement needed zero changes. Wh
   method: `_resolve_marketplace_call` rejects a mismatch before relay. The only method the provider
   can reject is therefore treg's recorded method, so settling a `per_call` hold would charge the
   team for catalog metadata treg owns. `_NOT_THE_CALLERS_FAULT` makes that path release the hold.
+- **A 4xx that the signature table reads as OUR account running dry is never billable**, whatever
+  its status: Apollo says "out of credits" with a 422, which `per_call` would otherwise charge to
+  the caller as an input error - and, once overflow serves the same request through an aggregator,
+  charge them twice. `_platform_settle` asks `signatures.classify` before settling any platform-tier
+  4xx and releases the hold with reason `capacity_<kind>` (`test_apollo_out_of_credits_on_a_per_call_
+  endpoint_*` in `tests/test_capacity_overflow.py`).
 - **`shared_plan_recovery`** (`GET /admin/reconcile/shared-plans`): fee versus collected per
   treg-set rate, with `suggested_usd = fee ÷ measured calls` and an action at ±50% thresholds. It
   REPORTS; a human edits fx.yaml monthly. An auto-adjusting price would move under an agent's feet,

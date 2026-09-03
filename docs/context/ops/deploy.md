@@ -340,10 +340,29 @@ base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 
 
 ## Worker commands and the capacity cron (2026-08-28)
 
-`treg-worker` (console script, `[server]` extra) hosts the scheduled maintainer commands — today
-`capacity sweep` (see `ops/capacity.md`). `render.yaml` runs it as the cron service
-`treg-capacity-sweep` every hour, with the DB URL, Fernet key and every `TREG_PLATFORM_KEY_*` pulled
-from the web service via `fromService` — so a new platform key is added in ONE place. Aggregator keys
+`treg-worker` (console script, `[server]` extra) hosts the scheduled maintainer commands -
+`capacity sweep` and `overflow verify --all` (see `ops/capacity.md`). `render.yaml` describes only the
+first as a cron service (`treg-capacity-sweep`, hourly), with the DB URL, Fernet key and every
+`TREG_PLATFORM_KEY_*` pulled from the web service via `fromService`.
+
+> **`render.yaml` is not applied (checked 2026-09-02).** No Render Blueprint is registered for this
+> repo - the web service, both cron jobs and the database were made in the dashboard, the web
+> service has auto-deploy off, and the live environment has drifted far from the file (87 variables
+> live vs 24 in the file; `TREG_OVERFLOW_MODE` is `on` live and `off` in the file). Treat the file
+> as a statement of intent until a Blueprint is registered - and register one only after the file
+> has been reconciled to the live services, because a Blueprint sync overwrites what it manages.
+> The overflow re-verify cron (`treg-overflow-verify`, Mondays 06:00 UTC, dashboard-made, command
+> `treg-worker overflow verify --all` since 2026-09-02) is deliberately absent from the file for
+> that reason.
+
+**Running the overflow routine by hand** (until a Blueprint schedules verify → sync): two one-off
+jobs on the verify cron service, in order - `render jobs create <cron-id> --start-command
+"treg-worker overflow verify --all"`, then the same with `overflow sync` - and read the
+`verified N, failed N, inconclusive N, aggregator errors N, skipped N` line of the first and the
+`enabled` count of the second. Verify only
+stamps; sync is what opens routes.
+
+Aggregator keys
 (`TREG_OVERFLOW_KEY_ORTHOGONAL` / `_MONID`) are dashboard-managed on the web service and flow the same
 way. `TREG_OVERFLOW_MODE` (`off` default | `shadow` | `on`) and `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
 govern the overflow child cycle (`ops/capacity.md`); the keys serve nothing while the mode is `off`.

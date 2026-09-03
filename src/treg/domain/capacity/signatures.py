@@ -7,9 +7,13 @@ one thing everywhere. Pure functions over (provider, status, headers, body).
   balance  — the account is out of money/credits → exhausted until a top-up (no reset time)
   quota    — the period allowance is used up (a 429 wearing quota clothes) → exhausted until reset
   burst    — a genuine rate limit with a short retry-after → smoothed, NEVER exhausted
-  unknown  — a 429 we cannot classify → logged for classification (treated as burst: never refuse)
+  unknown  - a 429 we cannot classify and whose body names no capacity phrase → logged for
+             classification (treated as burst: never refuse)
   edge_block - the vendor's CDN refused the request's shape before the vendor's code saw it → NEVER
              exhausted, only recorded (so a chart can attribute it to a UA family)
+  unrecorded - a 4xx no row matched whose body still names credits/quota/balance → NEVER exhausted,
+             only logged/counted: the tripwire for a vendor whose out-of-credit answer is not in
+             the table yet (how Apollo's 422 went unseen for eleven hours, 2026-09-01)
   None     — not a capacity signal at all (caller-caused 4xx, 5xx, success)
 """
 
@@ -36,13 +40,31 @@ _TABLE: list[tuple[str, int, str, str]] = [
     ("lusha", 429, r"daily", "quota"),
     ("hunter", 429, r"per billing period", "quota"),
     ("apollo", 429, r"per (day|month)|daily|monthly", "quota"),
+    # Apollo: an empty credit pool is a 422 {"error": "Insufficient credits. Please upgrade your
+    # plan."} (ops/capacity.md, 2026-09-01). A 422 without the phrase is the caller's validation error.
+    ("apollo", 422, r"insufficient credits", "balance"),
     ("*", 402, r"", "balance"),
 ]
+
+# The `unrecorded` tripwire's vocabulary, hand-kept: every capacity PHRASE the table records for
+# some vendor (recording one vendor's wording arms the tripwire for every other) plus the generic
+# nouns. Period words from the 429 rows ("daily", "monthly", "per day") are NOT capacity words and
+# stay out; a bare "insufficient", "quota" or "balance" would flag "insufficient parameters",
+# "quotation mark" and "unbalanced quotes" - a caller's error echoed back. The test
+# `test_every_recorded_phrase_arms_the_tripwire` keeps this list and the table in step.
+CAPACITY_PHRASES = (
+    r"not enough credits", r"insufficient[ _]credits", r"nocreditsremaining", r"payment required",
+    r"reached your credit limit", r"exceeded the monthly request limit",
+    r"insufficient (?:credits?|balance|funds)", r"out of credits?", r"credits? (?:exhausted|remaining|left)",
+    r"(?:account |api |credit )?(?:balance|quota)(?: (?:has been|is|was))? (?:exceeded|reached|exhausted|limit)",
+    r"upgrade your plan",
+)
+_UNRECORDED = re.compile(r"\b(?:" + "|".join(f"(?:{p})" for p in CAPACITY_PHRASES) + r")\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
 class Signal:
-    kind: str                    # balance | quota | burst | unknown | edge_block
+    kind: str                    # balance | quota | burst | unknown | edge_block | unrecorded
     resets_at: datetime | None   # when the account serves again, if the provider told us
     retry_after_s: int | None    # for burst: how long the provider asked us to wait
     detail: str = ""
@@ -110,7 +132,7 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
     for prov, st, pattern, kind in _TABLE:
         if st != status or prov not in ("*", provider):
             continue
-        if pattern and not re.search(pattern, text_l if pattern.islower() else text):
+        if pattern and not re.search(pattern, text, re.IGNORECASE):
             continue
         resets = _quota_reset(provider, kind, headers, now)
         return Signal(kind, resets, None, detail=text[:120])
@@ -120,6 +142,11 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
             return Signal("burst", None, wait, detail=text[:120])
         if wait is not None:  # the provider named a long wait: a period allowance, not a burst
             return Signal("quota", now + timedelta(seconds=wait), None, detail=text[:120])
+    if 400 <= status < 500 and status not in (401, 404):  # 401 is the key, 404 the resource
+        m = _UNRECORDED.search(text)
+        if m:  # detail is the PHRASE, never the body: a vendor's error often echoes the request back
+            return Signal("unrecorded", None, None, detail=m.group(0).lower())
+    if status == 429:
         return Signal("unknown", None, None, detail=text[:120])
     return None
 
@@ -137,5 +164,5 @@ def _quota_reset(provider: str, kind: str, headers, now: datetime) -> datetime |
 
 def is_exhausting(signal: Signal | None) -> bool:
     """Does this signal mark the account exhausted? Only confirmed balance/quota signatures do;
-    burst, unknown and edge_block never refuse a call (plan §4.1)."""
+    burst, unknown, edge_block and unrecorded never refuse a call (plan §4.1)."""
     return signal is not None and signal.kind in ("balance", "quota")

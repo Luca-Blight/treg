@@ -160,6 +160,7 @@ def test_route_for_orders_orthogonal_first():
 def test_signature_table_classifies_balance_quota_and_burst():
     assert S.classify("findymail", 402, {}, b'{"message":"Not enough credits"}').kind == "balance"
     assert S.classify("thecompaniesapi", 403, {}, b'{"code":"noCreditsRemaining"}').kind == "balance"
+    assert S.classify("thecompaniesapi", 403, {}, b'{"code":"nocreditsremaining"}').kind == "balance", "rows match any case"
     assert S.classify("lusha", 400, {}, b"You have reached your credit limit").kind == "balance"
     assert S.classify("anyone", 402, {}, b"").kind == "balance"
     now = utcnow_naive().replace(hour=10)
@@ -178,6 +179,85 @@ def test_signature_table_classifies_balance_quota_and_burst():
     raw = ((b"Retry-After", b"2"),)
     assert S.classify("crustdata", 429, raw, b"").retry_after_s == 2
     assert S.is_exhausting(S.classify("findymail", 402, {}, b"x")) and not S.is_exhausting(None)
+
+
+# Apollo API reference, "422 Unprocessable Entity": the body an empty credit pool gets (live 2026-09-01).
+APOLLO_OUT_OF_CREDITS = b'{"error": "Insufficient credits. Please upgrade your plan."}'
+# The SAME status for a caller's mistake - must never read as our account running dry.
+APOLLO_VALIDATION = b'{"error": "Please provide at least one of: first_name, last_name, email"}'
+
+
+def test_apollo_says_out_of_credits_with_a_422():
+    sig = S.classify("apollo", 422, None, APOLLO_OUT_OF_CREDITS)
+    assert sig.kind == "balance" and S.is_exhausting(sig) and sig.resets_at is None
+    assert S.classify("apollo", 422, None, APOLLO_VALIDATION) is None
+    # Rows are per provider: a 422 is a validation status almost everywhere else.
+    assert S.classify("hunter", 422, None, APOLLO_OUT_OF_CREDITS).kind == "unrecorded"
+
+
+def test_every_recorded_phrase_arms_the_tripwire():
+    """Recording one vendor's wording must arm the tripwire for every other: each literal body
+    phrase in `_TABLE` (the 429 rows carry period words, not capacity phrases) is in CAPACITY_PHRASES."""
+    import re as _re
+    for provider, status, pattern, kind in S._TABLE:
+        if not pattern or status == 429 or _re.escape(pattern) != pattern:
+            continue  # empty (the bare 402 row), a period word, or a regex we cannot use as a body
+        sig = S.classify("someone-else", 400, None, pattern.encode())
+        assert sig is not None and sig.kind == "unrecorded", f"{provider}'s phrase {pattern!r} does not arm the tripwire"
+
+
+def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
+    """The next Apollo: a 4xx no row matched whose body still names credits/quota/balance. It is
+    logged and counted (`capacity_signal=unrecorded`) and does nothing else."""
+    sig = S.classify("someone", 403, None, b'{"message":"Your quota has been exceeded"}')
+    assert sig.kind == "unrecorded" and sig.detail == "quota has been exceeded" and not S.is_exhausting(sig)
+    # a phrase recorded for ONE vendor arms the tripwire for every other
+    assert S.classify("someone", 400, None, b"Not enough credits").kind == "unrecorded"
+    assert S.classify("someone", 422, None, b'{"error":"insufficient parameters: first_name"}') is None
+    # echoes of a caller's own request: period words, path names, half-words
+    assert S.classify("coingecko", 400, None, b'{"error":"invalid interval: daily"}') is None
+    assert S.classify("exa", 400, None, b"unbalanced quotes in query") is None
+    assert S.classify("tikhub", 400, None, b"unterminated quotation mark") is None
+    assert S.classify("twelvedata", 400, None, b"/balance_sheet: symbol parameter is missing") is None
+    assert S.classify("tikhub", 400, None, b'{"error":"field balance is required"}') is None
+    assert S.classify("tikhub", 400, None, b"quota must be an integer") is None
+    assert S.classify("someone", 403, None, b"Your API quota limit was reached").kind == "unrecorded"
+    # a rowless vendor saying it with a 429 and no retry-after trips the same wire, not `unknown`
+    sig = S.classify("serpstat", 429, None, b'{"error":"Your monthly quota has been exhausted"}')
+    assert sig.kind == "unrecorded" and sig.detail == "quota has been exhausted"
+    assert S.classify("scrapecreators", 429, None, b"slow down").kind == "unknown"
+    assert S.classify("someone", 401, None, b'{"error":"insufficient credits"}') is None, "401 is the key"
+    assert S.classify("someone", 404, None, b'{"error":"no balance found for id"}') is None
+    assert S.classify("someone", 500, None, b'{"error":"balance service down"}') is None
+
+
+# Platform providers whose out-of-credit answer nobody has recorded in `_TABLE` yet. An acknowledged
+# gap, not a claim the vendor never runs dry: their 4xx trips `unrecorded` instead.
+_UNRECORDED_SIGNATURE = {
+    "apify", "aviato", "branddev", "brightdata", "coingecko", "coresignal", "crustdata", "dataforseo",
+    "diffbot", "exa", "fiber-ai", "finnhub", "icypeas", "influencersclub", "justoneapi", "marketstack",
+    "moz", "oceanio", "pdl", "scrapecreators", "seranking", "serpapi", "serpstat", "spyfu", "tiingo",
+    "tikhub", "tomba", "twelvedata",
+}
+
+
+def test_every_platform_provider_has_a_recorded_or_acknowledged_signature():
+    """The guard. A provider gains a `platform_key_*` slot → record how it says "out of credits"
+    (a row in `_TABLE`) or add it above knowingly. Silence is how Apollo's 422 went unseen."""
+    from treg.config import platform_setting_name
+    from treg.domain.capacity.collectors import all_platform_providers
+    from treg.domain.catalog import store as catalog_store
+    # Slot spelling is not provider spelling (`fiber_ai` vs `fiber-ai`); rows match `mk.provider`,
+    # the catalog id, so the guard must speak that or a row written to satisfy it never fires.
+    settings = {"platform_key_" + s for s in all_platform_providers()}
+    catalog_ids = {e["provider"] for e in catalog_store.load().endpoints}
+    slots = {p for p in catalog_ids if platform_setting_name(p) in settings}
+    assert len(slots) == len(settings), f"a key slot with no catalog provider: {sorted(settings - {platform_setting_name(p) for p in slots})}"
+    recorded = {p for p, *_ in S._TABLE if p != "*"}
+    missing = slots - recorded - _UNRECORDED_SIGNATURE
+    assert not missing, f"record how these say 'out of credits' or acknowledge them: {sorted(missing)}"
+    stale = (_UNRECORDED_SIGNATURE & recorded) | (_UNRECORDED_SIGNATURE - slots)
+    assert not stale, f"acknowledged providers that are now recorded or gone: {sorted(stale)}"
 
 
 _CF_PAGE = (b"<!DOCTYPE html><html><head><title>Access denied | api.example.com used Cloudflare "
@@ -309,6 +389,72 @@ def test_shape_empty_vs_nonempty_list_differs_but_both_empty_match():
     assert V.shapes_match(no_jobs, both_empty) is True, "both-empty lists must have same shape"
     assert V.shape({"jobs": []}) == {"jobs": []}
     assert V.shape({"jobs": [{"id": "x"}]}) == {"jobs": [{"id": "leaf"}]}
+
+
+def _verification(**kw) -> V.Verification:
+    base = dict(endpoint_id="e", aggregator="orthogonal", direct_status=200, relay_status=200, same_shape=True,
+                cost_micro=1, verified_at=utcnow_naive(), note="")
+    return V.Verification(**{**base, **kw})
+
+
+def test_verdict_disables_only_a_route_that_is_actually_wrong():
+    """The verifier must never switch off the routes that exist to cover OUR key running dry, nor
+    every route behind an aggregator that is having a bad morning."""
+    assert V.verdict(_verification()) == "passed"
+    # nothing to compare with: our own account dry (the 2026-09-01 state), a 401, no vendor key,
+    # the vendor host down, a stale test_request that fails both legs, an async run still pending
+    assert V.verdict(_verification(direct_status=422, same_shape=None, verified_at=None, direct_dry=True)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=401, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, relay_status=400, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=401, relay_status=400, same_shape=None, verified_at=None)) == "inconclusive"
+    assert V.verdict(_verification(direct_status=422, relay_status=404, same_shape=None, verified_at=None, direct_dry=True)) == "inconclusive"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None, failure="pending")) == "inconclusive"
+    # the aggregator's side: key, account, host, envelope, its vendor pool
+    for failure in ("aggregator_auth", "aggregator_balance", "malformed", "unreachable", "vendor_dry"):
+        assert V.verdict(_verification(direct_status=None, relay_status=None, same_shape=None, verified_at=None,
+                                       failure=failure)) == "aggregator", failure
+    # this route is shown wrong: the direct leg proves the request, the relay does not match it
+    assert V.verdict(_verification(same_shape=False, verified_at=None)) == "failed"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None, failure="contract")) == "failed"
+    assert V.verdict(_verification(relay_status=500, same_shape=None, verified_at=None)) == "failed"
+    assert V.verdict(_verification(relay_status=404, same_shape=None, verified_at=None)) == "failed"
+
+
+async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure():
+    import httpx
+    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match",
+               provider="apollo")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.orthogonal.dev" or "/run" in request.url.path:
+            return httpx.Response(200, json={"success": True, "data": {"person": {"id": "p"}}, "priceCents": 1.0})
+        return httpx.Response(422, json={"error": "Insufficient credits. Please upgrade your plan."})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
+                                 test_request={"body": {"email": "x@y.z"}}, direct_headers={})
+    assert not v.passed and v.direct_status == 422 and v.relay_status == 200
+    assert v.direct_dry and v.relay_ok, "our account, in Apollo's dialect - the worker still stamps this"
+    assert V.verdict(v) == "inconclusive", "the route still works; it is our account that is dry"
+
+
+async def test_verify_route_reads_a_relayed_out_of_credits_answer_as_the_aggregators_dry_account():
+    import httpx
+    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match",
+               provider="apollo")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/run" in request.url.path:  # Orthogonal relays Apollo's 422 with its body
+            return httpx.Response(422, json={"success": False, "error": "Upstream returned status 422",
+                                             "data": {"error": "Insufficient credits. Please upgrade your plan."}, "priceCents": 1.0})
+        return httpx.Response(200, json={"person": {"id": "p"}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
+                                 test_request={"body": {"email": "x@y.z"}}, direct_headers={})
+    assert v.relay_status == 422 and v.failure == "vendor_dry" and v.note.startswith("vendor_dry: balance")
+    assert V.verdict(v) == "aggregator", "Orthogonal's Apollo account is empty; the route is not wrong"
 
 
 async def test_verify_route_marks_same_shape_and_polls_async_runs():

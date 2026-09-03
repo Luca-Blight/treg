@@ -35,7 +35,8 @@ from ...domain.capacity import signatures as capacity_signatures
 from ...domain.capacity.routes_view import view as routes_view
 from ...domain.capacity.verify import shape
 from ...domain.capacity.view import view as capacity_view
-from ...infra.upstream.aggregators import AggregatorRequest, AggregatorResult, by_name
+from ...infra.upstream.aggregators import (AGGREGATOR_SIDE, VENDOR_DRY, AggregatorRequest, AggregatorResult,
+                                            by_name, with_vendor_verdict)
 from ...timeutil import utcnow_naive
 from .resolve import MarketplaceCall
 from .reserve import _platform_reserve
@@ -79,7 +80,7 @@ def _trigger(mk: MarketplaceCall, status: int, headers, body: bytes) -> str | No
     signal = capacity_signatures.classify(mk.provider, status, headers, body[:4096])
     if signal is None:
         return None
-    if signal.kind in ("balance", "quota"):
+    if capacity_signatures.is_exhausting(signal):
         return signal.kind
     if signal.kind == "burst":
         return "burst"
@@ -237,7 +238,8 @@ async def _maybe_overflow_attempt(
         return None
     routes = routes_view.for_endpoint(mk.endpoint_id)
     routes = [r for r in routes if settings.overflow_key_for(r.aggregator)
-              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}")]
+              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}")
+              and not capacity_view.is_exhausted(f"overflow:{r.aggregator}:{mk.provider}")]
     if not routes:
         return None
     route = routes[0]
@@ -271,14 +273,19 @@ async def _maybe_overflow_attempt(
         )
     except httpx.RequestError as exc:
         res = AggregatorResult(None, b"", None, "malformed", f"{type(exc).__name__}: {exc}")
+    res = with_vendor_verdict(res, mk.provider)
     budget.actual_micro = int(res.cost_micro) if res.cost_micro is not None else None
     delta = (budget.actual_micro - budget.direct_micro
              if budget.actual_micro is not None else None)
     # --- decide ---
-    if res.failure in ("aggregator_auth", "aggregator_balance", "malformed") or res.upstream_status == 402:
-        why_agg = res.failure or "upstream 402 through the aggregator"
+    if res.failure in AGGREGATOR_SIDE or res.failure == VENDOR_DRY:
+        why_agg = res.failure
+        # The aggregator itself (key, account, host, envelope) is out for everyone; its account
+        # for THIS vendor being dry (a relayed 402 / Apollo 422 / period 429) is out for this
+        # provider only - one vendor's daily cap must not take hunter and lusha offline too.
+        mark_key = f"overflow:{aggregator}" if res.failure in AGGREGATOR_SIDE else f"overflow:{aggregator}:{mk.provider}"
         await capacity_marks.strike(
-            f"overflow:{aggregator}", endpoint_id=None, kind="balance", immediate=True,
+            mark_key, endpoint_id=None, kind="balance", immediate=True,
             resets_at=utcnow_naive().replace(microsecond=0) + timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
             note=f"{why_agg}: {res.detail[:80]}")
         capacity_view.invalidate()

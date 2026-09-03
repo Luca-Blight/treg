@@ -47,6 +47,7 @@ PLATFORM_KEYS = {  # never a real key: a test that leaked one into an assertion 
     "SCRAPECREATORS": "PLATFORM-SC-KEY",
     "DATAFORSEO": "PLATFORM-DFS-KEY",
     "BRIGHTDATA": "PLATFORM-BD-KEY",
+    "APOLLO": "PLATFORM-APOLLO-KEY",
 }
 
 
@@ -55,7 +56,7 @@ def platform_on(monkeypatch):
     """Turn tier 4 on the way a deploy does: keys in the environment AND the provider allow-listed."""
     for name, value in PLATFORM_KEYS.items():
         monkeypatch.setenv(f"TREG_PLATFORM_KEY_{name}", value)
-    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", ",".join(k.lower() for k in PLATFORM_KEYS))
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

@@ -15,7 +15,7 @@ never logged, never part of a result. No DB, no framework imports (import-linter
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 
 @dataclass(frozen=True)
@@ -25,6 +25,31 @@ class AggregatorRequest:
     headers: dict[str, str]
     json: dict
     poll_url: str | None = None  # set by parse() on an async run, not by build()
+
+
+AGGREGATOR_SIDE = ("aggregator_auth", "aggregator_balance", "malformed")
+"""The `failure` kinds that blame the aggregator (our key, its account, its host or envelope), never
+the route or the vendor: the call path marks the aggregator unhealthy on them, the verifier leaves
+the route as it is. `contract` is this route's fault; `pending` is nobody's yet."""
+
+VENDOR_DRY = "vendor_dry"
+"""The aggregator relayed the vendor's own out-of-credit / quota answer (a 402, Apollo's 422, a
+period-cap 429): the AGGREGATOR'S account for THIS vendor is dry. Not the route's fault and not the
+whole aggregator's: the call path marks `overflow:<aggregator>:<provider>`, the verifier leaves
+the route as it is. Set by `with_vendor_verdict`, the one place a relayed body is read."""
+
+
+def with_vendor_verdict(res: "AggregatorResult", provider: str) -> "AggregatorResult":
+    """Fold the vendor's own capacity dialect into the result, so every consumer sees one
+    `failure` instead of re-classifying the relayed body. Keeps `cost_micro`: the aggregator may
+    have charged for the relay."""
+    from ....domain.capacity import signatures  # pure; the capacity domain imports this package back
+    if res.failure is not None or res.upstream_status is None:
+        return res
+    sig = signatures.classify(provider, res.upstream_status, None, res.upstream_body[:4096])
+    if not signatures.is_exhausting(sig):
+        return res
+    return replace(res, failure=VENDOR_DRY, detail=f"{sig.kind}: {sig.detail[:100]}")
 
 
 @dataclass(frozen=True)

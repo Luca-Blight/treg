@@ -140,22 +140,60 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
 - **`signatures.py`** — the signature table: what a provider's error body means for OUR account
   (`balance` / `quota` → exhausted; `burst` → smoothed, never exhausted; `unknown` 429 → logged).
   Lusha's "Daily" 429 and Hunter's "per billing period" 429 are quota exhaustion wearing a 429;
-  a `retry-after ≤ 60 s` is a burst. `edge_block` is the odd one out: the vendor's CDN refused the
+  a `retry-after ≤ 60 s` is a burst. Apollo says "out of credits" with a **422** ("Insufficient
+  credits"), recorded after 2026-09-01: eleven hours of `people.enrich` 422s with overflow on and
+  not one attempt, because no row matched. Two guards against the next such vendor: `unrecorded`,
+  a signal kind for a 4xx no row matched whose body still names credits/quota/balance (pattern =
+  the table's own phrases plus generic nouns) - never a mark, only a log line and
+  `capacity_signal=unrecorded` on `tool_called`; and the coverage guard in
+  `tests/test_capacity_overflow_routes.py`, which fails when a `platform_key_*` provider has neither
+  a table row nor an acknowledged gap. `edge_block` is the odd one out: the vendor's CDN refused the
   request's shape (decided on headers, never the caller's UA), so it exhausts nothing, overflows
   nothing and alerts nothing; it exists so a chart can tell a bot-filtered UA family from a
   provider outage. Shared by the sweep, the future call-path trigger and alerts.
 - **`infra/upstream/aggregators/`** — the envelopes, and nothing else: `build()` wraps the
   vendor request (Orthogonal `POST /run {api, path, query, body}`; Monid `POST /run {provider,
   endpoint, input}`), `parse()` unwraps the vendor status + body + the real in-band charge, and
-  names who to blame when the aggregator itself refused (`aggregator_auth`, `aggregator_balance`,
+  names who to blame when the aggregator itself refused (`AGGREGATOR_SIDE` = `aggregator_auth`,
+  `aggregator_balance`, `malformed` - the call path marks the aggregator unhealthy for everyone, the
+  verifier leaves the route alone; `VENDOR_DRY`, folded in by `with_vendor_verdict` from the
+  signature table - the one place a relayed body is read - is the aggregator's account for THIS
+  vendor (a relayed 402, Apollo's 422, a period 429): the call path marks
+  `overflow:<aggregator>:<provider>` only, so one vendor's cap never takes the others offline.
+  Deliberately not the direct path's strike ladder: the mark is immediate and a flat 15 min, because
+  a relayed body carries no headers to tell a burst from a cap and the caller has already paid the
+  aggregator's round trip;
   `contract` = its stricter schema, no vendor call, no charge; `pending` = a Monid async run to
   poll). Fixtures are recorded bodies (PII hashed) in `tests/fixtures/aggregators/`; every fixture
   round-trips. Keys are passed in by the caller and never read, logged or stored here.
 - **`verify.py`** + `treg-worker overflow verify` — the weekly re-verify: one cheap call per
   route through the aggregator (and, when we hold the vendor key, directly), compare the shape
   fingerprint (keys and list/leaf markers, values ignored), stamp `last_verified_at` or disable
-  with the reason. Spends real money (bounded by `--max-usd`, default 2¢); needs the aggregator
-  keys in the env — a Render cron, never the dataplane.
+  with the reason. `--max-usd` (default 2¢) is a per-route price cap, not a run budget: pricier
+  routes are skipped, as are routes whose endpoint has no `test_request`. Without `--all` only
+  enabled or previously-stamped rows are visited, so a never-verified pair never enters the rota;
+  run it with `--all`. Verify only STAMPS - `overflow sync` is what re-derives `enabled` from the
+  stamps, so every verify must be followed by a sync (by hand today, `ops/deploy.md`); a route
+  disabled by one failed verify is only re-enabled by that sync. A failed route is a result, not a failed run: the command exits 0 after
+  completing (it used to exit 1 whenever any route failed, which made every Render run read
+  "failed"). `verify.verdict` is the one place that decides what a verification means: `passed`
+  stamps; `failed` (contract refusal, relay non-2xx, a 2xx of a different shape) disables with the
+  reason, and only when the direct leg proved the request (a direct 2xx beside a relay non-2xx or
+  a different shape, or a contract refusal); `aggregator` (`AGGREGATOR_SIDE`, `vendor_dry`,
+  unreachable: our key, its account, the vendor's own out-of-credit answer relayed through it, its
+  host or envelope) leaves the row untouched; `inconclusive` (no direct 2xx to compare with - no
+  key, 401, our own account dry, a stale test_request failing both legs - or a run still pending)
+  never disables. One inconclusive still STAMPS: `direct_dry` with a relay 2xx, our own account
+  refusing in its recorded dialect - the relay served, the shape cannot be checked for OUR reason,
+  and an unstamped route would be decayed by the next sync precisely while our account is dry.
+  The verdict is pure over `Verification`'s typed fields (`failure`, `direct_dry`, statuses); the
+  note is for people. The run exits 1 when OUR key or OUR prepaid balance was refused on any
+  route, when every attempt was lost to the aggregator's side, or when nothing was attempted - so
+  a schedule's failure notification means something and one timeout does not trip it. A vendor
+  pool dry on the aggregator's side (`vendor_dry`) is theirs to refill: it counts under
+  "aggregator errors" in the summary line and never fails the run by itself.
+  Spends real money; needs the aggregator keys in the env - a Render job, never the dataplane.
+  How it is scheduled and run by hand is in `ops/deploy.md` § Worker commands.
 
 ## Protect, part one (step D) — refuse before reserve
 

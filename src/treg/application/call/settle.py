@@ -407,6 +407,15 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
+    if billable and status_code >= 400 and mk.tier == "platform":
+        # A 4xx the status set calls the caller's fault may still be OUR account running dry in a
+        # vendor's own dialect (Apollo's 422 "Insufficient credits"). Ask the signature table before
+        # charging: billing it would take the caller's money for treg's empty account, and once
+        # overflow serves the same request through an aggregator they would pay twice. (The
+        # overflow child never reaches here with such a body: `with_vendor_verdict` diverts it.)
+        signal = capacity_signatures.classify(mk.provider, status_code, headers, body[:4096])
+        if capacity_signatures.is_exhausting(signal):
+            billable, reason = False, f"capacity_{signal.kind}"
     # `observed_override`: the overflow child cycle knows its cost from the aggregator's envelope, not
     # from the vendor body — the caller pays exactly that (plan §4.3 step 5), whatever the vendor's
     # own billing shape. `overflow_spend` = (aggregator, adjustment from the budget reservation,
@@ -542,6 +551,10 @@ async def _note_capacity_signal(mk: MarketplaceCall, status_code: int, headers, 
             logging.getLogger("treg.capacity").warning(
                 "edge block on %s (%s): the vendor's CDN answered, not the vendor",
                 mk.provider, mk.endpoint_id)
+        elif signal.kind == "unrecorded":  # a vendor phrase the table lacks: for a person to record
+            logging.getLogger("treg.capacity").warning(
+                "unrecorded capacity-looking %d from %s on %s: body says %r",
+                status_code, mk.provider, mk.endpoint_id, signal.detail)
         else:
             logging.getLogger("treg.capacity").info(
                 "rate signal on %s: %s retry_after=%s", mk.provider, signal.kind, signal.retry_after_s)

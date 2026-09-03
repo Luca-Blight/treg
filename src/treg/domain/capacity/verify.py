@@ -16,7 +16,8 @@ from datetime import datetime
 import httpx
 
 from ...timeutil import utcnow_naive
-from ...infra.upstream.aggregators import by_name
+from ...infra.upstream.aggregators import AGGREGATOR_SIDE, VENDOR_DRY, by_name, with_vendor_verdict
+from . import signatures
 
 
 def shape(obj, depth: int = 0):
@@ -46,10 +47,46 @@ class Verification:
     cost_micro: int | None
     verified_at: datetime | None
     note: str = ""
+    failure: str | None = None   # AggregatorResult.failure, or "unreachable" for a dead host; None = relayed
+    direct_dry: bool = False     # the direct leg was OUR account refusing in its recorded dialect
+
+    @property
+    def relay_ok(self) -> bool:
+        return self.relay_status is not None and 200 <= self.relay_status < 300
+
+    @property
+    def direct_ok(self) -> bool:
+        return self.direct_status is not None and 200 <= self.direct_status < 300
 
     @property
     def passed(self) -> bool:
-        return bool(self.same_shape) and self.relay_status is not None and 200 <= self.relay_status < 300
+        return bool(self.same_shape) and self.relay_ok
+
+
+def verdict(v: Verification) -> str:
+    """What one verification means for its route (worker.py acts on it, nothing else decides):
+      passed       - relay 2xx and the same shape as the direct call → stamp `last_verified_at`
+      aggregator   - our key, the aggregator's account (its own refusal, or the vendor's
+                     out-of-credit answer relayed through it, VENDOR_DRY), its host or envelope
+                     (AGGREGATOR_SIDE, unreachable) → the ROUTE is untouched
+      failed       - the aggregator relayed and this route is shown wrong: a contract refusal, or
+                     a direct 2xx beside a relay non-2xx / a 2xx of a different shape → disable
+      inconclusive - nothing shows the route wrong, nothing proves it right: no direct 2xx to
+                     compare with (no key, unreachable, 401, our own account dry, a stale
+                     test_request that fails both legs), or an async run still pending → untouched.
+                     `direct_dry` with a relay 2xx still stamps in the worker: the relay served,
+                     the shape cannot be checked for OUR reason, and an unstamped route decays at
+                     the next sync exactly while our account is dry.
+    Pure over the typed fields; the note is for people."""
+    if v.passed:
+        return "passed"
+    if v.failure in AGGREGATOR_SIDE or v.failure in (VENDOR_DRY, "unreachable"):
+        return "aggregator"
+    if v.failure == "contract":
+        return "failed"
+    if v.failure is not None:  # pending, or a kind this module does not know yet
+        return "inconclusive"
+    return "failed" if v.direct_ok else "inconclusive"
 
 
 async def relay_once(client: httpx.AsyncClient, route, key: str, query: dict, body: bytes | None,
@@ -66,7 +103,7 @@ async def relay_once(client: httpx.AsyncClient, route, key: str, query: dict, bo
         polls += 1
         pr = await client.get(res.poll_url, headers={"Authorization": f"Bearer {key}"})
         res = agg.parse(pr.status_code, pr.content)
-    return res
+    return with_vendor_verdict(res, route.provider)
 
 
 async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tuple[str, dict, bytes | None] | None,
@@ -80,11 +117,11 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
         res = await relay_once(client, route, key, q, body, path_params)
     except httpx.RequestError as exc:  # a dead aggregator host is a failed verification, not a crash
         return Verification(route.endpoint_id, route.aggregator, None, None, None, None, None,
-                            note=f"relay unreachable: {type(exc).__name__}: {exc}")
+                            note=f"relay unreachable: {type(exc).__name__}: {exc}", failure="unreachable")
     now = utcnow_naive()
     if res.failure or res.upstream_status is None:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
-                            res.cost_micro, None, note=f"{res.failure}: {res.detail}")
+                            res.cost_micro, None, note=f"{res.failure}: {res.detail}", failure=res.failure or "malformed")
     if direct is None:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note="relay ok, direct not attempted")
@@ -94,7 +131,16 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
     except httpx.RequestError as exc:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note=f"direct unreachable: {type(exc).__name__}: {exc}")
-    same = shapes_match(dr.content, res.upstream_body) if 200 <= dr.status_code < 300 else None
+    if not 200 <= dr.status_code < 300:
+        # Our OWN account dry (the state these routes exist for) proves nothing against the route;
+        # any other direct failure (401, a bad test_request) is just no comparison.
+        ours = signatures.classify(route.provider, dr.status_code, dr.headers, dr.content[:4096])
+        dry = signatures.is_exhausting(ours)
+        why = "direct dry" if dry else f"direct {dr.status_code}"
+        return Verification(route.endpoint_id, route.aggregator, dr.status_code, res.upstream_status, None,
+                            res.cost_micro, None, note=f"{why}, relay {res.upstream_status}, no comparison",
+                            direct_dry=dry)
+    same = shapes_match(dr.content, res.upstream_body)
     return Verification(route.endpoint_id, route.aggregator, dr.status_code, res.upstream_status, same,
                         res.cost_micro, now if same else None,
                         note="" if same else f"direct {dr.status_code}, relay {res.upstream_status}, shape differs")
