@@ -125,6 +125,7 @@ def classify(provider: str, status: int, headers=None, body: bytes | str = b"",
     """The capacity meaning of one upstream answer, or None when it has none."""
     now = now or utcnow_naive()
     text = body.decode("utf-8", "replace") if isinstance(body, bytes) else (body or "")
+    text_l = text.lower()
     provider = (provider or "").lower()
     if _edge_block(status, headers, text_l):  # before the table: a block page carries no vendor body to match
         return Signal("edge_block", None, None, detail=text[:120])
