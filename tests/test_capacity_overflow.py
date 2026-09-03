@@ -456,3 +456,69 @@ def test_cli_org_overflow_parses(monkeypatch):
         pytest.skip("no exposed parser builder")
     args = parser.parse_args(["org", "overflow", "off"])
     assert args.state == "off" and args.fn is not None
+
+
+# --- the dashboard sees what the caller got -----------------------------------------------------
+
+async def _exhausted(provider: str = "tikhub") -> None:
+    from datetime import timedelta
+    now = utcnow_naive()
+    async with session_maker() as db:
+        await ratestore.kv_put(db, STATE_NS, provider, LatestState(
+            provider, 0.0, "USD", now, "exact", exhausted_until=now + timedelta(hours=1), health="exhausted").to_json(), ttl_s=3600)
+        await db.commit()
+    capacity_view.invalidate()
+
+
+async def test_a_call_rescued_by_overflow_is_one_ok_event_not_a_refusal(clients: AsyncClient, overflow_on, monkeypatch, posthog_events):
+    """Skip-direct: the resolver knew the account was dry and went straight to the aggregator. The
+    caller got a 200; the dashboard used to see a 503 refused_by=capacity and nothing else."""
+    await _route(price_micro=3_000)
+    await _exhausted()
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, {"success": True, "data": VENDOR_BODY, "priceCents": 0.3})], []))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal"
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["status_code"] == 200 and p["outcome"] == "ok" and p["refused_by"] is None
+    assert p["tier"] == "platform-overflow" and p["served_via"] == "overflow:orthogonal"
+    assert p["charged_micro"] == 3_000 and p["call_ref"] == r.headers["X-Treg-Call-Id"]
+    await audit.drain()
+    rows = [x for x in (await clients.get("/calls")).json() if x["tool_name"] == EP]
+    assert {x.get("credential_tier") for x in rows} == {"platform", "platform-overflow"}, "both DB rows stay"
+
+
+async def test_a_call_overflow_could_not_rescue_is_still_one_refusal_event(clients: AsyncClient, overflow_on, monkeypatch, posthog_events):
+    await _route(price_micro=3_000)
+    await _exhausted()
+    monkeypatch.setattr(O, "_send", _orthogonal([(402, {"success": False, "error": "insufficient balance"})], []))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 503
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["status_code"] == 503 and p["outcome"] == "treg_refused" and p["refused_by"] == "capacity"
+    assert "served_via" not in p
+
+
+async def test_a_vendor_402_rescued_by_overflow_is_one_ok_event(clients: AsyncClient, overflow_on, monkeypatch, posthog_events):
+    """The post-failure path: the vendor answered 402, the child served. One event, the child's."""
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"Insufficient balance"}'))
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, {"success": True, "data": VENDOR_BODY, "priceCents": 0.3})], []))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["status_code"] == 200 and p["outcome"] == "ok" and p["tier"] == "platform-overflow"
+    assert p["served_via"] == "overflow:orthogonal" and p["capacity_signal"] == "balance", "the strike is still on the event"
+
+
+async def test_a_vendor_402_overflow_did_not_rescue_keeps_the_vendor_error_event(clients: AsyncClient, overflow_on, monkeypatch, posthog_events):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"nope"}'))
+    monkeypatch.setattr(O, "_send", _orthogonal([(400, {"success": False, "error": "x", "_orthogonal": {"error": "orthogonal_endpoint_contract", "message": "missing"}})], []))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 402
+    (e,) = await posthog_events()
+    p = e["properties"]
+    assert p["status_code"] == 402 and p["outcome"] == "vendor_error" and p["tier"] == "platform" and "served_via" not in p
