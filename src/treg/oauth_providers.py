@@ -1723,7 +1723,7 @@ DEVMATCH = OAuthProvider(
     scopes={},
     client_id_setting="", client_secret_setting="",
     category="Enrichment",
-    summary="Rank engineers by public work with evidence — job description or repo in, shortlist out.",
+    summary="Find engineers who uniquely fit a role from public work with evidence — job description or repo in, shortlist out.",
     base_url="https://mcp.dev-match.xyz",
     docs_url="https://dev-match.xyz/docs/mcp",
     # No free /account route for API keys (GET /api/account/credits is session-JWT only). POST /mcp

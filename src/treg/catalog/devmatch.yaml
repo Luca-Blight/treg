@@ -52,15 +52,15 @@ endpoints:
     method: POST
     path: /tools/find_candidates
     name: "Find engineers by public work"
-    summary: "Rank engineers for a role or project by open-source contributions and other public work, with evidence."
+    summary: "Find engineers who uniquely fit a role or project from open-source contributions and other public work, with evidence."
     input:
       bodyType: json
       body:
-        input: {type: string, required: true, note: "job description, informal brief, or public github.com repo URL. Longer, more specific input ranks better. The older field name job_description is also accepted.", example: "Senior Rust engineer for systems and infrastructure. Prefer open-source maintainers."}
+        input: {type: string, required: true, note: "job description, informal brief, or public github.com repo URL. Longer, more specific input produces a tighter mission fit. The older field name job_description is also accepted.", example: "Senior Rust engineer for systems and infrastructure. Prefer open-source maintainers."}
         limit: {type: integer, required: false, note: "max candidates, default 20, max 20 on this HTTP/MCP surface (the paid x402 docs mention 50; ClampFindCandidatesLimit caps MCP at 20). THIS IS NOT A PRICE DIAL: every successful run costs 25 credits regardless of limit.", example: 1}
         exclude: {type: "array[string]", required: false, note: "GitHub logins or org names to drop"}
         location: {type: string, required: false, note: "optional place filter (city, country, or ISO code); forwarded as a strict must-be-there constraint"}
-      note: "returns ranked candidates with evidence (source, matched projects, signals) and contact where the plan allows. Contact is withheld for unpaid/free callers. Bots and service accounts are filtered server-side. Price does not change with limit."
+      note: "returns a shortlist of unique mission-fit people with evidence (source, matched projects, signals) and contact where the plan allows. Contact is withheld for unpaid/free callers. Bots and service accounts are filtered server-side. Price does not change with limit."
     test_request:
       body: {input: "Senior Rust engineer for systems and infrastructure. Prefer open-source maintainers.", limit: 1}
     cost:
@@ -119,7 +119,7 @@ endpoints:
       body:
         repo: {type: string, required: true, note: "owner/name or a github.com URL; the server strips the prefix.", example: "karpathy/llm.c"}
         limit: {type: integer, required: false, note: "number of similar projects, default 10, max 25. Not a price dial.", example: 1}
-      note: "landscape mapping, not a JD-ranked shortlist. Follow with find_candidates for hiring matches."
+      note: "landscape mapping, not a hiring shortlist. Follow with find_candidates for unique mission fit."
     test_request:
       body: {repo: "karpathy/llm.c", limit: 1}
     cost:
