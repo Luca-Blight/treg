@@ -405,8 +405,9 @@ When the resolver already knows the account is out (the exhausted view) **and** 
 ladder skips the direct attempt entirely (`MarketplaceCall.skip_direct`): no parent hold, no vendor
 402, straight to the child — the plan's tier 4b.
 
-**An aggregator failure is data.** Its own 401/402/403 (or a vendor 402 relayed through it — seen live)
-releases the child hold, marks `overflow:<name>` unhealthy for 15 minutes, and answers the typed
+**An aggregator failure is data.** Its own 401/402/403, a malformed envelope, or a relayed vendor
+answer that is a 402 or that the signature table reads as that vendor's own out-of-credit dialect
+(Apollo's 422 through Orthogonal's dry Apollo account) releases the child hold, marks `overflow:<name>` unhealthy for 15 minutes, and answers the typed
 `provider_capacity` 503 with alternatives; a second aggregator is never tried on the same call. Its
 stricter-schema refusal (`contract`) releases the child and lets the vendor's own answer stand.
 

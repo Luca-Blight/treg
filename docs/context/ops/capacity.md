@@ -154,7 +154,9 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
 - **`infra/upstream/aggregators/`** — the envelopes, and nothing else: `build()` wraps the
   vendor request (Orthogonal `POST /run {api, path, query, body}`; Monid `POST /run {provider,
   endpoint, input}`), `parse()` unwraps the vendor status + body + the real in-band charge, and
-  names who to blame when the aggregator itself refused (`aggregator_auth`, `aggregator_balance`,
+  names who to blame when the aggregator itself refused (`AGGREGATOR_SIDE` = `aggregator_auth`,
+  `aggregator_balance`, `malformed` - the call path marks the aggregator unhealthy on them, the
+  verifier leaves the route alone;
   `contract` = its stricter schema, no vendor call, no charge; `pending` = a Monid async run to
   poll). Fixtures are recorded bodies (PII hashed) in `tests/fixtures/aggregators/`; every fixture
   round-trips. Keys are passed in by the caller and never read, logged or stored here.
@@ -168,9 +170,15 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   stamps, so **every verify is followed by a sync**; a route disabled by one failed verify is only
   re-enabled by that sync. A failed route is a result, not a failed run: the command exits 0 after
   completing (it used to exit 1 whenever any route failed, which made every Render run read
-  "failed"); it exits 1 for a failed RUN - an aggregator refused our key, ran dry or was
-  unreachable (`verify.aggregator_failed`; those routes are left as they are, never disabled), or
-  nothing was attempted at all - so a schedule's failure notification still means something.
+  "failed"). `verify.verdict` is the one place that decides what a verification means: `passed`
+  stamps; `failed` (contract refusal, relay non-2xx, a 2xx of a different shape) disables with the
+  reason; `aggregator` (`AGGREGATOR_SIDE` + `relay unreachable`: our key, its account, host or
+  envelope) and `inconclusive` (relay 2xx but nothing sound to compare with - no vendor key, the
+  direct call unreachable or non-2xx, which is exactly OUR account being dry, the moment these
+  routes exist for - or an async run still pending) leave the row untouched. The run exits 1 when
+  our key or the aggregator's balance was refused on any route, when every attempt was lost to
+  the aggregator's side, or when nothing was attempted - so a schedule's failure notification
+  means something and one timeout does not trip it.
   Spends real money; needs the aggregator keys in the env - a Render job, never the dataplane.
   How it is scheduled and run by hand is in `ops/deploy.md` § Worker commands.
 

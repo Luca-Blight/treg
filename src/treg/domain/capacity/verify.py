@@ -16,7 +16,7 @@ from datetime import datetime
 import httpx
 
 from ...timeutil import utcnow_naive
-from ...infra.upstream.aggregators import by_name
+from ...infra.upstream.aggregators import AGGREGATOR_SIDE, by_name
 
 
 def shape(obj, depth: int = 0):
@@ -52,12 +52,25 @@ class Verification:
         return bool(self.same_shape) and self.relay_status is not None and 200 <= self.relay_status < 300
 
 
-AGGREGATOR_FAILURES = ("aggregator_auth", "aggregator_balance", "relay unreachable")
-"""`note` prefixes that blame our key, the aggregator's account or its host - never this route."""
-
-
-def aggregator_failed(v: Verification) -> bool:
-    return v.note.startswith(AGGREGATOR_FAILURES)
+def verdict(v: Verification) -> str:
+    """What one verification means for its route (worker.py acts on it, nothing else decides):
+      passed       - relay 2xx and the same shape as the direct call → stamp `last_verified_at`
+      aggregator   - our key, the aggregator's account, its host or envelope (AGGREGATOR_SIDE,
+                     `relay unreachable`) → the ROUTE is untouched; the RUN failed
+      inconclusive - the relay answered 2xx but there was nothing sound to compare it with: no
+                     direct key, the direct call unreachable or non-2xx (our own account dry is
+                     exactly the moment these routes exist for), or an async run still pending
+                     → untouched, no stamp
+      failed       - the aggregator relayed but this route is wrong: contract refusal, relay
+                     non-2xx, or a 2xx of a different shape → disable with the reason"""
+    if v.passed:
+        return "passed"
+    if v.note.startswith(AGGREGATOR_SIDE + ("relay unreachable",)):
+        return "aggregator"
+    relay_ok = v.relay_status is not None and 200 <= v.relay_status < 300
+    if v.note.startswith("pending") or (relay_ok and (v.direct_status is None or not 200 <= v.direct_status < 300)):
+        return "inconclusive"
+    return "failed"
 
 
 async def relay_once(client: httpx.AsyncClient, route, key: str, query: dict, body: bytes | None,

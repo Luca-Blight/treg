@@ -7,7 +7,8 @@ one thing everywhere. Pure functions over (provider, status, headers, body).
   balance  — the account is out of money/credits → exhausted until a top-up (no reset time)
   quota    — the period allowance is used up (a 429 wearing quota clothes) → exhausted until reset
   burst    — a genuine rate limit with a short retry-after → smoothed, NEVER exhausted
-  unknown  — a 429 we cannot classify → logged for classification (treated as burst: never refuse)
+  unknown  — a 429 we cannot classify and whose body names no capacity phrase → logged for
+             classification (treated as burst: never refuse)
   edge_block - the vendor's CDN refused the request's shape before the vendor's code saw it → NEVER
              exhausted, only recorded (so a chart can attribute it to a UA family)
   unrecorded - a 4xx no row matched whose body still names credits/quota/balance → NEVER exhausted,
@@ -50,11 +51,12 @@ _TABLE: list[tuple[str, int, str, str]] = [
 # period words, not capacity words, and stay out) plus word-bounded generic nouns. A bare
 # "insufficient", "quota" or "balance" would flag "insufficient parameters", "quotation mark" and
 # "unbalanced quotes" - a caller's error echoed back.
-_UNRECORDED = re.compile(r"\b(?:" + "|".join(
+_UNRECORDED = re.compile(r"\b(?:" + "|".join(dict.fromkeys(
     [p.lower() for _, st, p, _ in _TABLE if p and st != 429]
     + [r"insufficient (?:credits?|balance|funds)", r"out of credits?",
-       r"credits? (?:exhausted|remaining|left)", r"(?:account |api |credit )?(?:balance|quota)(?:(?: has been| is| was)? (?:exceeded|reached|exhausted)| limit)?",
-       r"payment required", r"upgrade your plan"]) + r")\b")
+       r"credits? (?:exhausted|remaining|left)",
+       r"(?:account |api |credit )?(?:balance|quota)(?: (?:has been|is|was))? (?:exceeded|reached|exhausted|limit)",
+       r"upgrade your plan"])) + r")\b")
 
 
 @dataclass(frozen=True)

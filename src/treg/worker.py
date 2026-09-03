@@ -112,7 +112,8 @@ async def _overflow_verify(args) -> int:
         rows = (await db.execute(select(OverflowRoute))).scalars().all()
     todo = [r for r in rows if args.all or r.enabled or r.last_verified_at]
     keys = {"orthogonal": s.overflow_key_orthogonal, "monid": s.overflow_key_monid}
-    passed = failed = skipped = unreachable = 0
+    tally = {"passed": 0, "failed": 0, "aggregator": 0, "inconclusive": 0}
+    skipped, key_failures = 0, []
     # One SHORT transaction per route. The first prod run (2026-08-28) kept a single session open
     # across every network round-trip: each `db.get` autoflushed the previous row's UPDATE, the row
     # locks piled up for minutes, and db.py's 5 s lock_timeout — there to keep the worker from
@@ -150,31 +151,33 @@ async def _overflow_verify(args) -> int:
                 if body is not None:
                     hdrs["Content-Type"] = "application/json"
             v = await V.verify_route(c, r, key=key, direct=direct, test_request=tr, direct_headers=hdrs)
+            if v.note.startswith(("aggregator_auth", "aggregator_balance")):
+                key_failures.append(v.note)
             async with session_maker() as db:
                 row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
                 if row is None:
                     skipped += 1
                     continue
-                if v.passed:
+                verdict = V.verdict(v)
+                tally[verdict] += 1
+                if verdict == "passed":
                     row.last_verified_at = v.verified_at or utcnow_naive()
-                    passed += 1
-                elif V.aggregator_failed(v):
-                    # Our key or the aggregator itself, not this route: leave the row as it is.
-                    unreachable += 1
-                else:
-                    failed += 1
-                    if row.enabled:
-                        row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
+                elif verdict == "failed" and row.enabled:
+                    row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
                 row.updated_at = utcnow_naive()
                 await db.commit()
-            tag = "ok " if v.passed else "AGG " if V.aggregator_failed(v) else "FAIL"
-            print(f"{tag} {r.endpoint_id} via {r.aggregator} "
+            print(f"{verdict:<12} {r.endpoint_id} via {r.aggregator} "
                   f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
-    print(f"verified {passed}, failed {failed}, skipped {skipped}, aggregator errors {unreachable}")
+    attempted = sum(tally.values())
+    print(f"verified {tally['passed']}, failed {tally['failed']}, inconclusive {tally['inconclusive']}, "
+          f"aggregator errors {tally['aggregator']}, skipped {skipped}")
     # A failed ROUTE is a result (its row is disabled with the reason). A failed RUN is one that
-    # could not verify: an aggregator refused our key / ran dry / was unreachable, or nothing was
+    # could not verify: our key refused or the aggregator dry on any route, every attempt lost
+    # to the aggregator's side (a host down for the whole run, not one timeout), or nothing
     # attempted at all (ops/capacity.md).
-    if unreachable or passed + failed == 0:
+    keys_or_balance = any(
+        note.startswith(("aggregator_auth", "aggregator_balance")) for note in key_failures)
+    if attempted == 0 or keys_or_balance or tally["aggregator"] == attempted:
         print("overflow verify: run failed - check aggregator keys, balances and the route table", file=sys.stderr)
         return 1
     return 0

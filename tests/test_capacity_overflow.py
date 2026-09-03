@@ -523,6 +523,27 @@ async def test_apollo_out_of_credits_on_a_per_call_endpoint_pays_the_aggregator_
     assert kinds == sorted([("reserve", parent), ("release", parent), ("reserve", f"{parent}:overflow"), ("settle", f"{parent}:overflow")])
 
 
+async def test_aggregator_relaying_the_vendors_own_out_of_credits_dialect_is_the_aggregators_dry_account(
+        clients: AsyncClient, overflow_on, monkeypatch):
+    """Orthogonal's Apollo account can be empty too, and Apollo says so with a 422, not a 402. The
+    child is released (never billed at the aggregator's price for a request no vendor served), the
+    aggregator is marked unhealthy, and the caller gets the typed 503 - not a 422 served 'via'."""
+    await _route(endpoint_id=APOLLO_SEARCH, provider="apollo", method="POST", path=APOLLO_SEARCH_PATH, price_micro=10_000, ratio=0.38)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
+    seen = []
+    relayed = {"success": False, "error": "Upstream returned status 422", "data": json.loads(APOLLO_OUT_OF_CREDITS),
+               "priceCents": 1.0, "requestId": "run_c"}
+    monkeypatch.setattr(O, "_send", _orthogonal([(422, relayed)], seen))
+    before = await _balance(clients)
+    r = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
+    assert r.status_code == 503 and r.json()["detail"]["error"] == "provider_capacity_unavailable", r.text
+    assert await _balance(clients) == before and await _holds() == []
+    assert {e.kind for e in await _rows(LedgerEntry) if e.kind != "grant"} == {"reserve", "release"}
+    async with session_maker() as db:
+        lock = Lock.from_json(await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal"))
+    assert lock.is_active(), "the aggregator's own Apollo account is dry: skip it for a while"
+
+
 async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):
     await _route(endpoint_id=APOLLO_EP, provider="apollo", method="POST", path=APOLLO_PATH, price_micro=10_000, ratio=0.38)
     monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_VALIDATION))

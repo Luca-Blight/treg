@@ -27,6 +27,12 @@ class AggregatorRequest:
     poll_url: str | None = None  # set by parse() on an async run, not by build()
 
 
+AGGREGATOR_SIDE = ("aggregator_auth", "aggregator_balance", "malformed")
+"""The `failure` kinds that blame the aggregator (our key, its account, its host or envelope), never
+the route or the vendor: the call path marks the aggregator unhealthy on them, the verifier leaves
+the route as it is. `contract` is this route's fault; `pending` is nobody's yet."""
+
+
 @dataclass(frozen=True)
 class AggregatorResult:
     """`failure` is None when the aggregator relayed the vendor's answer (whatever its status).

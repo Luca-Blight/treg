@@ -207,6 +207,9 @@ def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
     assert S.classify("exa", 400, None, b"unbalanced quotes in query") is None
     assert S.classify("tikhub", 400, None, b"unterminated quotation mark") is None
     assert S.classify("twelvedata", 400, None, b"/balance_sheet: symbol parameter is missing") is None
+    assert S.classify("tikhub", 400, None, b'{"error":"field balance is required"}') is None
+    assert S.classify("tikhub", 400, None, b"quota must be an integer") is None
+    assert S.classify("someone", 403, None, b"Your API quota limit was reached").kind == "unrecorded"
     # a rowless vendor saying it with a 429 and no retry-after trips the same wire, not `unknown`
     sig = S.classify("serpstat", 429, None, b'{"error":"Your monthly quota has been exhausted"}')
     assert sig.kind == "unrecorded" and sig.detail == "quota has been exhausted"
@@ -362,6 +365,55 @@ def test_shape_empty_vs_nonempty_list_differs_but_both_empty_match():
     assert V.shapes_match(no_jobs, both_empty) is True, "both-empty lists must have same shape"
     assert V.shape({"jobs": []}) == {"jobs": []}
     assert V.shape({"jobs": [{"id": "x"}]}) == {"jobs": [{"id": "leaf"}]}
+
+
+def _verification(**kw) -> V.Verification:
+    base = dict(endpoint_id="e", aggregator="orthogonal", direct_status=200, relay_status=200, same_shape=True,
+                cost_micro=1, verified_at=utcnow_naive(), note="")
+    return V.Verification(**{**base, **kw})
+
+
+def test_verdict_disables_only_a_route_that_is_actually_wrong():
+    """The verifier must never switch off the routes that exist to cover OUR key running dry, nor
+    every route behind an aggregator that is having a bad morning."""
+    assert V.verdict(_verification()) == "passed"
+    # our own account dry (the 2026-09-01 state), or no vendor key at all: nothing to compare with
+    assert V.verdict(_verification(direct_status=422, same_shape=None, verified_at=None,
+                                   note="direct 422, relay 200, shape differs")) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
+                                   note="relay ok, direct not attempted")) == "inconclusive"
+    assert V.verdict(_verification(direct_status=None, same_shape=None, verified_at=None,
+                                   note="direct unreachable: ConnectTimeout: x")) == "inconclusive"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None,
+                                   note="pending: RUNNING")) == "inconclusive"
+    # the aggregator's side: key, account, host, envelope
+    for note in ("aggregator_auth: key rejected", "aggregator_balance: empty", "malformed: orthogonal: not JSON",
+                 "relay unreachable: ReadTimeout: x"):
+        assert V.verdict(_verification(direct_status=None, relay_status=None, same_shape=None, verified_at=None,
+                                       note=note)) == "aggregator", note
+    # this route is wrong
+    assert V.verdict(_verification(same_shape=False, verified_at=None,
+                                   note="direct 200, relay 200, shape differs")) == "failed"
+    assert V.verdict(_verification(relay_status=None, same_shape=None, verified_at=None,
+                                   note="contract: Required parameters are missing")) == "failed"
+    assert V.verdict(_verification(relay_status=500, same_shape=None, verified_at=None,
+                                   note="direct 200, relay 500, shape differs")) == "failed"
+
+
+async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure():
+    import httpx
+    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.orthogonal.dev" or "/run" in request.url.path:
+            return httpx.Response(200, json={"success": True, "data": {"person": {"id": "p"}}, "priceCents": 1.0})
+        return httpx.Response(422, json={"error": "Insufficient credits. Please upgrade your plan."})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
+                                 test_request={"body": {"email": "x@y.z"}}, direct_headers={})
+    assert not v.passed and v.direct_status == 422 and v.relay_status == 200
+    assert V.verdict(v) == "inconclusive", "the route still works; it is our account that is dry"
 
 
 async def test_verify_route_marks_same_shape_and_polls_async_runs():

@@ -35,7 +35,7 @@ from ...domain.capacity import signatures as capacity_signatures
 from ...domain.capacity.routes_view import view as routes_view
 from ...domain.capacity.verify import shape
 from ...domain.capacity.view import view as capacity_view
-from ...infra.upstream.aggregators import AggregatorRequest, AggregatorResult, by_name
+from ...infra.upstream.aggregators import AggregatorRequest, AggregatorResult, by_name, AGGREGATOR_SIDE
 from ...timeutil import utcnow_naive
 from .resolve import MarketplaceCall
 from .reserve import _platform_reserve
@@ -275,8 +275,14 @@ async def _maybe_overflow_attempt(
     delta = (budget.actual_micro - budget.direct_micro
              if budget.actual_micro is not None else None)
     # --- decide ---
-    if res.failure in ("aggregator_auth", "aggregator_balance", "malformed") or res.upstream_status == 402:
-        why_agg = res.failure or "upstream 402 through the aggregator"
+    # The aggregator's OWN account for this vendor can be dry too, and the vendor says so in its
+    # own dialect (Apollo's 422), not only with a 402: ask the table before treating a relayed
+    # 4xx as an answer the caller should pay for.
+    relayed_dry = (res.failure is None and res.upstream_status is not None
+                   and capacity_signatures.is_exhausting(capacity_signatures.classify(
+                       mk.provider, res.upstream_status, None, res.upstream_body[:4096])))
+    if res.failure in AGGREGATOR_SIDE or res.upstream_status == 402 or relayed_dry:
+        why_agg = res.failure or f"upstream {res.upstream_status} through the aggregator"
         await capacity_marks.strike(
             f"overflow:{aggregator}", endpoint_id=None, kind="balance", immediate=True,
             resets_at=utcnow_naive().replace(microsecond=0) + timedelta(seconds=AGGREGATOR_UNHEALTHY_S),
