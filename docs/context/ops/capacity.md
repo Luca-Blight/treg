@@ -172,10 +172,13 @@ pays the aggregator's real price, 0% markup, disclosed in-band when it ships (st
   completing (it used to exit 1 whenever any route failed, which made every Render run read
   "failed"). `verify.verdict` is the one place that decides what a verification means: `passed`
   stamps; `failed` (contract refusal, relay non-2xx, a 2xx of a different shape) disables with the
-  reason; `aggregator` (`AGGREGATOR_SIDE` + `relay unreachable`: our key, its account, host or
-  envelope) and `inconclusive` (relay 2xx but nothing sound to compare with - no vendor key, the
-  direct call unreachable or non-2xx, which is exactly OUR account being dry, the moment these
-  routes exist for - or an async run still pending) leave the row untouched. The run exits 1 when
+  reason; `aggregator` (`AGGREGATOR_SIDE` + `relay unreachable` + `aggregator dry`, the last
+  being the vendor's own out-of-credit answer relayed through it: our key, its account, host or
+  envelope) leaves the row untouched; `inconclusive` (relay 2xx but nothing sound to compare with
+  - no vendor key, the direct call unreachable or non-2xx, which is exactly OUR account being dry,
+  the moment these routes exist for - or an async run still pending) never disables, and a relay
+  2xx among them still STAMPS, because the route demonstrably serves and an unstamped route would
+  be decayed by the next sync precisely while our account is dry. The run exits 1 when
   our key or the aggregator's balance was refused on any route, when every attempt was lost to
   the aggregator's side, or when nothing was attempted - so a schedule's failure notification
   means something and one timeout does not trip it.

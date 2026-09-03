@@ -223,7 +223,7 @@ def test_an_unrecorded_vendor_phrase_is_a_tripwire_never_a_mark():
 # gap, not a claim the vendor never runs dry: their 4xx trips `unrecorded` instead.
 _UNRECORDED_SIGNATURE = {
     "apify", "aviato", "branddev", "brightdata", "coingecko", "coresignal", "crustdata", "dataforseo",
-    "diffbot", "exa", "fiber_ai", "finnhub", "icypeas", "influencersclub", "justoneapi", "marketstack",
+    "diffbot", "exa", "fiber-ai", "finnhub", "icypeas", "influencersclub", "justoneapi", "marketstack",
     "moz", "oceanio", "pdl", "scrapecreators", "seranking", "serpapi", "serpstat", "spyfu", "tiingo",
     "tikhub", "tomba", "twelvedata",
 }
@@ -232,8 +232,15 @@ _UNRECORDED_SIGNATURE = {
 def test_every_platform_provider_has_a_recorded_or_acknowledged_signature():
     """The guard. A provider gains a `platform_key_*` slot → record how it says "out of credits"
     (a row in `_TABLE`) or add it above knowingly. Silence is how Apollo's 422 went unseen."""
+    from treg.config import platform_setting_name
     from treg.domain.capacity.collectors import all_platform_providers
-    slots = set(all_platform_providers())
+    from treg.domain.catalog import store as catalog_store
+    # Slot spelling is not provider spelling (`fiber_ai` vs `fiber-ai`); rows match `mk.provider`,
+    # the catalog id, so the guard must speak that or a row written to satisfy it never fires.
+    settings = {"platform_key_" + s for s in all_platform_providers()}
+    catalog_ids = {e["provider"] for e in catalog_store.load().endpoints}
+    slots = {p for p in catalog_ids if platform_setting_name(p) in settings}
+    assert len(slots) == len(settings), f"a key slot with no catalog provider: {sorted(settings - {platform_setting_name(p) for p in slots})}"
     recorded = {p for p, *_ in S._TABLE if p != "*"}
     missing = slots - recorded - _UNRECORDED_SIGNATURE
     assert not missing, f"record how these say 'out of credits' or acknowledge them: {sorted(missing)}"
@@ -414,6 +421,24 @@ async def test_verify_route_with_our_own_key_dry_is_inconclusive_not_a_failure()
                                  test_request={"body": {"email": "x@y.z"}}, direct_headers={})
     assert not v.passed and v.direct_status == 422 and v.relay_status == 200
     assert V.verdict(v) == "inconclusive", "the route still works; it is our account that is dry"
+
+
+async def test_verify_route_reads_a_relayed_out_of_credits_answer_as_the_aggregators_dry_account():
+    import httpx
+    r = _route(aggregator="orthogonal", agg_slug="apollo", agg_path="/people/match", method="POST", path="/people/match",
+               provider="apollo")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/run" in request.url.path:  # Orthogonal relays Apollo's 422 with its body
+            return httpx.Response(422, json={"success": False, "error": "Upstream returned status 422",
+                                             "data": {"error": "Insufficient credits. Please upgrade your plan."}, "priceCents": 1.0})
+        return httpx.Response(200, json={"person": {"id": "p"}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        v = await V.verify_route(c, r, key="K", direct=("https://api.apollo.io/api/v1/people/match", {}, b"{}"),
+                                 test_request={"body": {"email": "x@y.z"}}, direct_headers={})
+    assert v.relay_status == 422 and v.note.startswith("aggregator dry")
+    assert V.verdict(v) == "aggregator", "Orthogonal's Apollo account is empty; the route is not wrong"
 
 
 async def test_verify_route_marks_same_shape_and_polls_async_runs():

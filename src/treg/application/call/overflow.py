@@ -277,10 +277,11 @@ async def _maybe_overflow_attempt(
     # --- decide ---
     # The aggregator's OWN account for this vendor can be dry too, and the vendor says so in its
     # own dialect (Apollo's 422), not only with a 402: ask the table before treating a relayed
-    # 4xx as an answer the caller should pay for.
-    relayed_dry = (res.failure is None and res.upstream_status is not None
-                   and capacity_signatures.is_exhausting(capacity_signatures.classify(
-                       mk.provider, res.upstream_status, None, res.upstream_body[:4096])))
+    # 4xx as an answer the caller should pay for. BALANCE only: the mark below takes the whole
+    # aggregator offline for every provider, which one vendor's daily quota must never do.
+    relayed = (capacity_signatures.classify(mk.provider, res.upstream_status, None, res.upstream_body[:4096])
+               if res.failure is None and res.upstream_status is not None else None)
+    relayed_dry = relayed is not None and relayed.kind == "balance"
     if res.failure in AGGREGATOR_SIDE or res.upstream_status == 402 or relayed_dry:
         why_agg = res.failure or f"upstream {res.upstream_status} through the aggregator"
         await capacity_marks.strike(

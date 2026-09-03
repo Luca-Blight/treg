@@ -160,7 +160,11 @@ async def _overflow_verify(args) -> int:
                     continue
                 verdict = V.verdict(v)
                 tally[verdict] += 1
-                if verdict == "passed":
+                if verdict == "passed" or (verdict == "inconclusive" and v.relay_status is not None
+                                           and 200 <= v.relay_status < 300):
+                    # An inconclusive relay 2xx (our own key dry, no key) still proves the route
+                    # serves; without the stamp `overflow sync` would decay it after 7 days -
+                    # exactly while our account is dry, when it is needed.
                     row.last_verified_at = v.verified_at or utcnow_naive()
                 elif verdict == "failed" and row.enabled:
                     row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]

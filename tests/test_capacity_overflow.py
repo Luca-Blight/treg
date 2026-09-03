@@ -544,6 +544,22 @@ async def test_aggregator_relaying_the_vendors_own_out_of_credits_dialect_is_the
     assert lock.is_active(), "the aggregator's own Apollo account is dry: skip it for a while"
 
 
+async def test_a_vendors_period_quota_through_the_aggregator_is_that_vendors_answer_not_an_aggregator_outage(
+        clients: AsyncClient, overflow_on, monkeypatch):
+    """Apollo's daily cap on Orthogonal's account is Apollo's 429 for THIS caller. It must not mark
+    the whole aggregator unhealthy: that would take hunter, lusha and everyone else offline too."""
+    await _route(endpoint_id=APOLLO_SEARCH, provider="apollo", method="POST", path=APOLLO_SEARCH_PATH, price_micro=10_000, ratio=0.38)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_OUT_OF_CREDITS))
+    relayed = {"success": False, "error": "Upstream returned status 429",
+               "data": {"error": "You have exceeded the rate limit per day"}, "priceCents": 0}
+    monkeypatch.setattr(O, "_send", _orthogonal([(429, relayed)], []))
+    r = await clients.post(f"/call/{APOLLO_SEARCH}", json={"q_organization_name": "x"})
+    assert r.status_code == 429 and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal"
+    async with session_maker() as db:
+        raw = await ratestore.kv_get(db, LOCK_NS, "overflow:orthogonal")
+    assert raw is None or not Lock.from_json(raw).is_active(), "one vendor's quota is not the aggregator's outage"
+
+
 async def test_apollo_validation_422_is_the_callers_and_never_overflows(clients: AsyncClient, overflow_on, monkeypatch):
     await _route(endpoint_id=APOLLO_EP, provider="apollo", method="POST", path=APOLLO_PATH, price_micro=10_000, ratio=0.38)
     monkeypatch.setattr(call_service, "relay", _fake_relay(422, APOLLO_VALIDATION))
